@@ -15,10 +15,12 @@ import {
 } from 'react-native';
 
 import { AppText, Button, Card, Screen } from '@/components/ui';
+import { useToast } from '@/components/feedback/AppToast';
 import { colors, radius, spacing } from '@/design-system';
 import { type SpaceMember } from '@/features/collaboration/api';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
 import { itemsApi } from '@/features/items/api';
+import { metadataRefreshInterval } from '@/features/items/hooks';
 import type { Item } from '@/features/items/types';
 import { useCreateList, useLists } from '@/features/lists/hooks';
 import type { List } from '@/features/lists/types';
@@ -384,6 +386,7 @@ function ListRow({
 }
 
 export default function HomeScreen() {
+  const { showToast } = useToast();
   const user = useAuthStore((state) => state.user);
   const spaces = useSpaces();
   const selectedSpaceId = useSpaceStore((state) => state.selectedSpaceId);
@@ -401,6 +404,9 @@ export default function HomeScreen() {
       queryKey: ['lists', list.id, 'items'],
       queryFn: () => itemsApi.list(list.id),
       enabled: Boolean(list.id),
+      refetchOnMount: 'always',
+      refetchInterval: (query: { state: { data?: { data: Item[] } } }) =>
+        metadataRefreshInterval(query.state.data?.data),
     })),
   });
   const allItems = useMemo(
@@ -424,7 +430,13 @@ export default function HomeScreen() {
   const dailyMessage = getDailyMessage(allItems);
   const createTemplateList = (name: string) => {
     createList.mutate(name, {
-      onSuccess: () => Alert.alert('Liste oluşturuldu', `${name} listen hazır.`),
+      onSuccess: (list) =>
+        showToast({
+          title: 'Liste oluşturuldu',
+          message: `${name} listen hazır.`,
+          actionLabel: 'Aç',
+          onAction: () => router.push(`/list/${list.id}`),
+        }),
       onError: (error: any) => {
         const isConflict = error?.message?.includes('409') || error?.status === 409;
         Alert.alert(

@@ -8,6 +8,8 @@ from app.core.pagination import PageResponse, PaginationDep, paginate
 from app.modules.activities.schemas import ActivityResponse
 from app.modules.activities.service import list_item_activities
 from app.modules.auth.dependencies import CurrentUserDep
+from app.modules.items.enums import MetadataStatus
+from app.modules.items.repository import item_repository
 from app.modules.items.schemas import ItemCreate, ItemMove, ItemResponse, ItemUpdate
 from app.modules.items.service import (
     complete_item,
@@ -25,6 +27,16 @@ from app.modules.metadata.service import run_item_metadata_task
 from app.modules.spaces.permissions import get_space_member
 
 router = APIRouter()
+
+
+def _needs_legacy_short_link_refresh(item) -> bool:
+    """Retry old short links that were completed before redirect handling existed."""
+    source_domain = (item.source_domain or "").lower()
+    return (
+        item.metadata_status == MetadataStatus.COMPLETED
+        and item.preview_image_url is None
+        and (source_domain == "ty.gl" or source_domain.endswith(".ty.gl"))
+    )
 
 
 def _check_list_access(session, list_id: UUID, user_id: UUID):
@@ -64,9 +76,21 @@ def list_items_endpoint(
     session: SessionDep,
     current_user: CurrentUserDep,
     pagination: PaginationDep,
+    background_tasks: BackgroundTasks,
 ) -> PageResponse[ItemResponse]:
     _check_list_access(session, list_id, current_user.id)
     page, page_size = pagination
+    if settings.metadata_enabled:
+        legacy_items = [
+            item
+            for item in item_repository.list_for_list(session, list_id)
+            if _needs_legacy_short_link_refresh(item)
+        ]
+        if legacy_items:
+            for item in legacy_items:
+                item.metadata_status = MetadataStatus.PENDING
+                background_tasks.add_task(run_item_metadata_task, item.id)
+            session.commit()
     return paginate(list_items(session, list_id), page, page_size)
 
 

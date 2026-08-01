@@ -3,12 +3,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/query-keys';
 import { useAuthStore } from '@/store/auth-store';
 import { itemsApi } from './api';
+import type { Item } from './types';
+
+const METADATA_REFRESH_INTERVAL_MS = 2_000;
+
+export function metadataRefreshInterval(items: Item[] | undefined): number | false {
+  return items?.some(
+    (item) => item.metadata_status === 'pending' || item.metadata_status === 'processing',
+  )
+    ? METADATA_REFRESH_INTERVAL_MS
+    : false;
+}
 
 export function useItems(listId: string) {
   return useQuery({
     queryKey: queryKeys.items(listId),
     queryFn: () => itemsApi.list(listId),
     enabled: Boolean(useAuthStore((state) => state.accessToken) && listId),
+    refetchOnMount: 'always',
+    refetchInterval: (query) => metadataRefreshInterval(query.state.data?.data),
   });
 }
 export function useItem(itemId: string) {

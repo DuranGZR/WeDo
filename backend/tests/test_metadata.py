@@ -1,8 +1,13 @@
+from types import SimpleNamespace
+
 import pytest
+from app.modules.items.enums import MetadataStatus
+from app.modules.items.router import _needs_legacy_short_link_refresh
 from app.modules.metadata.exceptions import MetadataError
 from app.modules.metadata.parser import parse_metadata
 from app.modules.metadata.providers import resolve_provider_metadata
 from app.modules.metadata.security import validate_url
+from app.modules.metadata.service import process_item_metadata
 
 
 def test_metadata_parser_prefers_open_graph() -> None:
@@ -82,3 +87,69 @@ def test_provider_metadata_uses_oembed_preview(
         "description": "WeDo",
         "image_url": "https://cdn.example.com/preview.jpg",
     }
+
+
+def test_metadata_processing_uses_the_resolved_short_link_destination(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    item = SimpleNamespace(
+        original_url="https://ty.gl/example-product",
+        metadata_status=MetadataStatus.PENDING,
+        title=None,
+        description=None,
+        preview_image_url=None,
+        canonical_url=None,
+        source_domain="ty.gl",
+        shared_text="Tişört",
+    )
+
+    class FakeFetcher:
+        def fetch(self, url: str) -> SimpleNamespace:
+            assert url == item.original_url
+            return SimpleNamespace(
+                url="https://www.trendyol.com/brand/tisort-p-123",
+                text="""
+                    <meta property=\"og:title\" content=\"Marka Tişört\">
+                    <meta property=\"og:image\" content=\"https://cdn.example.com/tisort.jpg\">
+                    <link rel=\"canonical\" href=\"/brand/tisort-p-123\">
+                """,
+            )
+
+        def close(self) -> None:
+            pass
+
+    class FakeSession:
+        committed = False
+
+        def commit(self) -> None:
+            self.committed = True
+
+    session = FakeSession()
+    monkeypatch.setattr(
+        "app.modules.metadata.service.item_repository.get_by_id",
+        lambda _session, _item_id: item,
+    )
+
+    process_item_metadata(session, item_id=object(), fetcher=FakeFetcher())
+
+    assert item.metadata_status == MetadataStatus.COMPLETED
+    assert item.source_domain == "www.trendyol.com"
+    assert item.canonical_url == "https://www.trendyol.com/brand/tisort-p-123"
+    assert item.preview_image_url == "https://cdn.example.com/tisort.jpg"
+    assert session.committed is True
+
+
+def test_completed_legacy_trendyol_short_links_are_retried_once() -> None:
+    legacy_item = SimpleNamespace(
+        metadata_status=MetadataStatus.COMPLETED,
+        preview_image_url=None,
+        source_domain="ty.gl",
+    )
+    completed_item_with_preview = SimpleNamespace(
+        metadata_status=MetadataStatus.COMPLETED,
+        preview_image_url="https://cdn.example.com/image.jpg",
+        source_domain="ty.gl",
+    )
+
+    assert _needs_legacy_short_link_refresh(legacy_item) is True
+    assert _needs_legacy_short_link_refresh(completed_item_with_preview) is False

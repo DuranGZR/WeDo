@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { initializeDatabase } from '@/database/client';
 import { NotificationEffects } from './notification-effects';
 import { syncOutbox } from '@/features/sharing/sync';
+import { ToastProvider } from '@/components/feedback/AppToast';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -26,7 +27,7 @@ export function AppProviders({ children }: PropsWithChildren) {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <NotificationEffects />
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

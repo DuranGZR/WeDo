@@ -13,6 +13,8 @@ export function getItemPreviewImage(item: Item): string {
 
   if (
     domain.includes('trendyol') ||
+    domain === 'ty.gl' ||
+    domain.endsWith('.ty.gl') ||
     domain.includes('amazon') ||
     domain.includes('hepsiburada')
   ) {
@@ -56,7 +58,9 @@ export function getItemSourceLabel(item: Item): string {
   if (domain.includes('instagram')) return 'Instagram / Reels';
   if (domain.includes('youtube') || domain.includes('youtu.be')) return 'YouTube';
   if (domain.includes('tiktok')) return 'TikTok';
-  if (domain.includes('trendyol')) return 'Trendyol';
+  if (domain.includes('trendyol') || domain === 'ty.gl' || domain.endsWith('.ty.gl')) {
+    return 'Trendyol';
+  }
   if (domain.includes('amazon') || domain.includes('hepsiburada')) return 'Alışveriş';
   if (domain.includes('google') || domain.includes('maps')) return 'Mekan';
   return item.source_domain ?? 'Link';

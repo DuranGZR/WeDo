@@ -1,3 +1,4 @@
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -8,6 +9,11 @@ from app.modules.metadata.exceptions import MetadataError
 from app.modules.metadata.fetcher import MetadataFetcher
 from app.modules.metadata.parser import parse_metadata
 from app.modules.metadata.providers import resolve_provider_metadata
+
+
+def _source_domain(url: str) -> str | None:
+    """Return a normalized host for the URL users will actually visit."""
+    return urlsplit(url).hostname
 
 
 def process_item_metadata(
@@ -21,8 +27,9 @@ def process_item_metadata(
     item.metadata_status = MetadataStatus.PROCESSING
     try:
         response = active_fetcher.fetch(item.original_url)
-        metadata = parse_metadata(response.text, base_url=response.url)
-        provider_metadata = resolve_provider_metadata(item.original_url, active_fetcher)
+        resolved_url = response.url
+        metadata = parse_metadata(response.text, base_url=resolved_url)
+        provider_metadata = resolve_provider_metadata(resolved_url, active_fetcher)
         item.title = (
             item.title
             or metadata["title"]
@@ -35,7 +42,8 @@ def process_item_metadata(
             or provider_metadata["description"]
         )
         item.preview_image_url = metadata["image_url"] or provider_metadata["image_url"]
-        item.canonical_url = metadata["canonical_url"]
+        item.canonical_url = metadata["canonical_url"] or resolved_url
+        item.source_domain = _source_domain(item.canonical_url)
         item.metadata_status = MetadataStatus.COMPLETED
     except MetadataError:
         item.metadata_status = MetadataStatus.FAILED

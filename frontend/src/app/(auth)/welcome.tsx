@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Screen } from '@/components/ui';
 import { radius, spacing } from '@/design-system';
@@ -40,29 +40,78 @@ const previewCards = [
   },
 ] as const;
 
-export default function WelcomeScreen() {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+type CardPose = {
+  opacity: number;
+  rotate: number;
+  scale: number;
+  translateY: number;
+  zIndex: number;
+};
 
-  const startTimer = () => {
+function cardPose(index: number, activeIndex: number): CardPose {
+  const position = (index - activeIndex + previewCards.length) % previewCards.length;
+  if (position === 0) return { opacity: 1, rotate: -2, scale: 1, translateY: 10, zIndex: 3 };
+  if (position === 1) return { opacity: 0.84, rotate: 6, scale: 0.95, translateY: -7, zIndex: 2 };
+  return { opacity: 0.55, rotate: -9, scale: 0.88, translateY: -28, zIndex: 1 };
+}
+
+export default function WelcomeScreen() {
+  const [deck, setDeck] = useState({ from: 0, to: 0 });
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeIndexRef = useRef(0);
+  const cardProgress = useRef(new Animated.Value(1)).current;
+
+  const showNextCard = useCallback(() => {
+    const from = activeIndexRef.current;
+    const to = (from + 1) % previewCards.length;
+    activeIndexRef.current = to;
+    cardProgress.stopAnimation();
+    cardProgress.setValue(0);
+    setDeck({ from, to });
+    Animated.spring(cardProgress, {
+      toValue: 1,
+      speed: 16,
+      bounciness: 5,
+      useNativeDriver: true,
+    }).start();
+  }, [cardProgress]);
+
+  const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setActiveIndex((current) => (current + 1) % previewCards.length);
+      showNextCard();
     }, 3500);
-  };
+  }, [showNextCard]);
 
   useEffect(() => {
     startTimer();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [startTimer]);
 
   const getCardStyle = (index: number) => {
-    const position = (index - activeIndex + previewCards.length) % previewCards.length;
-    if (position === 0) return [styles.previewCard, styles.cardFront];
-    if (position === 1) return [styles.previewCard, styles.cardMiddle];
-    return [styles.previewCard, styles.cardBack];
+    const from = cardPose(index, deck.from);
+    const to = cardPose(index, deck.to);
+    return {
+      opacity: cardProgress.interpolate({ inputRange: [0, 1], outputRange: [from.opacity, to.opacity] }),
+      transform: [
+        {
+          rotate: cardProgress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [`${from.rotate}deg`, `${to.rotate}deg`],
+          }),
+        },
+        {
+          translateY: cardProgress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [from.translateY, to.translateY],
+          }),
+        },
+        { scale: cardProgress.interpolate({ inputRange: [0, 1], outputRange: [from.scale, to.scale] }) },
+      ],
+      zIndex: to.zIndex,
+    };
   };
 
   return (
@@ -88,13 +137,13 @@ export default function WelcomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="Sonraki içerik kartını göster"
           onPress={() => {
-            setActiveIndex((current) => (current + 1) % previewCards.length);
+            showNextCard();
             startTimer();
           }}
           style={styles.previewStage}
         >
           {previewCards.map((card, index) => (
-            <View key={card.title} style={getCardStyle(index)}>
+            <Animated.View key={card.title} style={[styles.previewCard, getCardStyle(index)]}>
               <Image
                 source={{ uri: card.image }}
                 style={styles.cardImage}
@@ -127,7 +176,7 @@ export default function WelcomeScreen() {
                   </View>
                 </View>
               </View>
-            </View>
+            </Animated.View>
           ))}
         </Pressable>
 
@@ -210,14 +259,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '88%',
     maxWidth: 360,
-    height: 214,
+    height: 210,
     overflow: 'hidden',
     borderRadius: 20,
     backgroundColor: onboardingColors.paper,
     borderWidth: 1,
     borderColor: '#9C9C9A',
     ...Platform.select({
-      web: { transition: 'all 0.55s cubic-bezier(0.16, 1, 0.3, 1)' },
       default: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 8 },
@@ -227,29 +275,12 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cardBack: {
-    transform: [{ rotate: '-9deg' }, { translateY: -28 }, { scale: 0.88 }],
-    zIndex: 1,
-    opacity: 0.55,
-  },
-  cardMiddle: {
-    transform: [{ rotate: '6deg' }, { translateY: -7 }, { scale: 0.95 }],
-    zIndex: 2,
-    opacity: 0.84,
-  },
-  cardFront: {
-    transform: [{ rotate: '-2deg' }, { translateY: 16 }],
-    zIndex: 3,
-    ...Platform.select({
-      web: { boxShadow: '0px 15px 0px rgba(0, 0, 0, 0.14)' },
-      default: { shadowOpacity: 0.2, elevation: 8 },
-    }),
-  },
-  cardImage: { width: '100%', height: 110 },
+  cardImage: { width: '100%', height: 94 },
   cardDetails: {
     flex: 1,
-    padding: spacing.md,
-    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    gap: 4,
     backgroundColor: onboardingColors.paper,
   },
   cardHeader: {
@@ -259,14 +290,14 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   sourcePill: {
-    maxWidth: 94,
+    maxWidth: 88,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: radius.sm,
     backgroundColor: '#E8E8E6',
   },
-  sourcePillText: { color: onboardingColors.ink, fontSize: 9, fontWeight: '700' },
-  cardDetail: { flex: 1, color: '#666664', fontSize: 10, textAlign: 'right' },
+  sourcePillText: { color: onboardingColors.ink, fontSize: 8, fontWeight: '700' },
+  cardDetail: { flex: 1, color: '#666664', fontSize: 9, textAlign: 'right' },
   backCard: {
     position: 'absolute',
     width: '82%',
@@ -358,8 +389,8 @@ const styles = StyleSheet.create({
   previewBody: { gap: 4, marginTop: spacing.md },
   previewTitle: {
     color: onboardingColors.ink,
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 17,
+    lineHeight: 21,
     fontWeight: '700',
     letterSpacing: -0.4,
   },
@@ -368,13 +399,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 'auto',
+    marginTop: 0,
   },
   avatarPair: { flexDirection: 'row' },
   avatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#E7E7E5',
@@ -387,12 +418,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    maxWidth: '64%',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
     borderRadius: radius.pill,
     backgroundColor: onboardingColors.ink,
   },
-  agreementText: { color: onboardingColors.paper, fontSize: 9, fontWeight: '600' },
+  agreementText: { color: onboardingColors.paper, fontSize: 8, fontWeight: '600' },
   copy: { alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
   title: {
     color: onboardingColors.ink,

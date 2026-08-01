@@ -20,6 +20,8 @@ import { useSpaces } from '@/features/spaces/hooks';
 import { useAuthStore } from '@/store/auth-store';
 import { useSpaceStore } from '@/store/space-store';
 import { itemsApi } from '@/features/items/api';
+import { metadataRefreshInterval } from '@/features/items/hooks';
+import type { Item } from '@/features/items/types';
 import { getItemPreviewImage } from '@/components/domain/ItemCard';
 
 const { width } = Dimensions.get('window');
@@ -81,6 +83,9 @@ export default function ListsScreen() {
       queryKey: ['lists', list.id, 'items'],
       queryFn: () => itemsApi.list(list.id),
       enabled: Boolean(list.id),
+      refetchOnMount: 'always',
+      refetchInterval: (query: { state: { data?: { data: Item[] } } }) =>
+        metadataRefreshInterval(query.state.data?.data),
     })),
   });
 
