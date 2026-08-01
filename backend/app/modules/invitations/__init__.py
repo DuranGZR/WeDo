@@ -1,0 +1,1 @@
+"""Space invitation feature module."""

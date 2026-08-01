@@ -1,0 +1,1 @@
+"""Shared item feature module."""

@@ -1,0 +1,46 @@
+[project]
+name = "wedo-backend"
+version = "0.1.0"
+description = "WeDo modular monolith backend"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "alembic>=1.16,<2.0",
+    "fastapi>=0.116,<1.0",
+    "httpx>=0.28,<1.0",
+    "PyJWT>=2.10,<3.0",
+    "email-validator>=2.2,<3.0",
+    "beautifulsoup4>=4.13,<5.0",
+    "boto3>=1.39,<2.0",
+    "curl-cffi>=0.14,<1.0",
+    "pwdlib[argon2]>=0.2,<1.0",
+    "psycopg[binary]>=3.2,<4.0",
+    "pydantic-settings>=2.10,<3.0",
+    "sqlalchemy>=2.0,<3.0",
+    "uvicorn[standard]>=0.35,<1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<9.0",
+    "pytest-cov>=6.2,<7.0",
+    "ruff>=0.12,<1.0",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

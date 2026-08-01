@@ -1,0 +1,1 @@
+"""WeDo backend application package."""

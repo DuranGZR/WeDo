@@ -1,0 +1,22 @@
+export type Item = {
+  id: string;
+  space_id: string;
+  list_id: string;
+  created_by: string;
+  created_by_name: string;
+  client_item_id: string | null;
+  type: string;
+  status: string;
+  title: string | null;
+  description: string | null;
+  preview_image_url: string | null;
+  original_url: string | null;
+  canonical_url: string | null;
+  source_domain: string | null;
+  source_app: string | null;
+  shared_text: string | null;
+  metadata_status: string;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
