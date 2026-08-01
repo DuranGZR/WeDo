@@ -1,65 +1,8 @@
 services:
-  db:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: wedo
-      POSTGRES_PASSWORD: wedo
-      POSTGRES_DB: wedo
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wedo -d wedo"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  api:
-    build:
-      context: ./backend
-    env_file:
-      - ./backend/.env
-    environment:
-      DATABASE_URL: postgresql+psycopg://wedo:wedo@db:5432/wedo
-      FRONTEND_URL: http://localhost:8081
-      CORS_ORIGINS: '["http://localhost:8081","http://127.0.0.1:8081"]'
-    command: >
-      sh -c "uv run --no-dev alembic upgrade head &&
-      uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port 8000"
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  worker:
-    build:
-      context: ./backend
-    env_file:
-      - ./backend/.env
-    environment:
-      DATABASE_URL: postgresql+psycopg://wedo:wedo@db:5432/wedo
-    command: ["uv", "run", "--no-dev", "python", "-m", "app.worker"]
-    depends_on:
-      api:
-        condition: service_healthy
-
   web:
     build:
       context: ./frontend
       args:
-        EXPO_PUBLIC_API_URL: http://localhost:8081
+        EXPO_PUBLIC_API_URL: https://wedo-production-3ad2.up.railway.app
     ports:
       - "127.0.0.1:8081:80"
-    depends_on:
-      api:
-        condition: service_healthy
-
-volumes:
-  postgres_data:
