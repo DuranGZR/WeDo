@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Avatar, Screen } from '@/components/ui';
+import { ScreenMotion } from '@/components/motion/ScreenMotion';
 import { colors, mono, spacing } from '@/design-system';
 import { useSpaces } from '@/features/spaces/hooks';
 import { useAuthStore } from '@/store/auth-store';
@@ -57,7 +58,8 @@ export default function ProfileScreen() {
   const activeSpaceCount = spaces.data?.data.length ?? 0;
   const activeSpaceLabel = `${activeSpaceCount} aktif alan`;
   return (
-    <Screen scroll={true} backgroundColor={mono.background}>
+    <ScreenMotion>
+      <Screen scroll={true} backgroundColor={mono.background}>
       <View style={styles.contourTop} pointerEvents="none" />
       <View style={styles.content}>
         <AppText variant="pageTitle">Profil</AppText>
@@ -156,7 +158,8 @@ export default function ProfileScreen() {
           />
         </View>
       </View>
-    </Screen>
+      </Screen>
+    </ScreenMotion>
   );
 }
 

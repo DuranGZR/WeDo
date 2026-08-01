@@ -13,6 +13,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { AppText, Card, EmptyState, Screen } from '@/components/ui';
+import { ScreenMotion } from '@/components/motion/ScreenMotion';
 import { colors, mono, radius, spacing } from '@/design-system';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
 import { useLists } from '@/features/lists/hooks';
@@ -100,7 +101,8 @@ export default function ListsScreen() {
   const activitySummary = `${entries.length} liste · ${newItemsToday} yeni içerik`;
 
   return (
-    <Screen
+    <ScreenMotion>
+      <Screen
       scroll={true}
       backgroundColor={mono.background}
       contentContainerStyle={styles.screen}
@@ -340,7 +342,8 @@ export default function ListsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </Screen>
+      </Screen>
+    </ScreenMotion>
   );
 }
 

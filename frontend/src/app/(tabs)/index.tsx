@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { AppText, Button, Card, Screen } from '@/components/ui';
+import { ScreenMotion } from '@/components/motion/ScreenMotion';
 import { useToast } from '@/components/feedback/AppToast';
 import { colors, radius, spacing } from '@/design-system';
 import { type SpaceMember } from '@/features/collaboration/api';
@@ -455,7 +456,8 @@ export default function HomeScreen() {
     );
 
   return (
-    <Screen backgroundColor={homeColors.background} contentContainerStyle={styles.screen}>
+    <ScreenMotion>
+      <Screen backgroundColor={homeColors.background} contentContainerStyle={styles.screen}>
       <View pointerEvents="none" style={styles.contourTop} />
       <View pointerEvents="none" style={styles.contourBottom} />
       <View style={styles.topBar}>
@@ -743,7 +745,8 @@ export default function HomeScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </Screen>
+      </Screen>
+    </ScreenMotion>
   );
 }
 
