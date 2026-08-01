@@ -14,10 +14,10 @@ export async function registerForPushNotifications(accessToken: string) {
     });
   }
   const existing = await Notifications.getPermissionsAsync();
-  const permission = existing.granted
+  const permission = existing.status === Notifications.PermissionStatus.GRANTED
     ? existing
     : await Notifications.requestPermissionsAsync();
-  if (!permission.granted) return false;
+  if (permission.status !== Notifications.PermissionStatus.GRANTED) return false;
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
   if (!projectId) return false;

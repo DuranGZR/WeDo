@@ -1,2 +1,10 @@
 allowBuilds:
   unrs-resolver: set this to true or false
+
+packageExtensions:
+  expo-notifications@0.32.17:
+    dependencies:
+      expo-modules-core: ~3.0.30
+  jest-expo@54.0.17:
+    dependencies:
+      expo-modules-core: ~3.0.30
