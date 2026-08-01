@@ -2,8 +2,20 @@
   "cli": { "version": ">= 16.0.0" },
   "build": {
     "development": { "developmentClient": true, "distribution": "internal" },
-    "preview": { "distribution": "internal", "channel": "preview" },
-    "production": { "autoIncrement": true }
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://wedo-production-3ad2.up.railway.app"
+      },
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://wedo-production-3ad2.up.railway.app"
+      }
+    }
   },
   "submit": {
     "production": {}
