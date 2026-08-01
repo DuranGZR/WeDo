@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { AppText, EmptyState, Screen } from '@/components/ui';
+import { ApiClientError } from '@/api/client/api-client';
 import { collaborationApi } from '@/features/collaboration/api';
 import { colors, radius, spacing } from '@/design-system';
 import { useAuthStore } from '@/store/auth-store';
@@ -45,8 +46,13 @@ export default function InviteLandingScreen() {
       await collaborationApi.acceptInvitation(token);
       await queryClient.invalidateQueries({ queryKey: ['spaces'] });
       router.replace('/invite/accepted');
-    } catch {
-      Alert.alert('Davet kabul edilemedi', 'Davet geçersiz veya süresi dolmuş olabilir.');
+    } catch (error) {
+      Alert.alert(
+        'Davet kabul edilemedi',
+        error instanceof ApiClientError && error.status === 409
+          ? 'Bu alanın zaten üyesisin.'
+          : 'Davet geçersiz veya süresi dolmuş olabilir.',
+      );
     } finally {
       setAccepting(false);
     }

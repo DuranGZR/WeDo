@@ -127,11 +127,15 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
     existing = space_member_repository.get_by_space_and_user(
         session, invitation.space_id, user_id
     )
-    if existing is None:
-        space_member_repository.create(
-            session, SpaceMember(space_id=invitation.space_id, user_id=user_id)
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Bu alanın zaten üyesisin.",
         )
-        create_notification(
+    space_member_repository.create(
+        session, SpaceMember(space_id=invitation.space_id, user_id=user_id)
+    )
+    create_notification(
             session,
             user_id=invitation.created_by,
             notification_type="invitation_accepted",
@@ -140,7 +144,7 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
             space_id=invitation.space_id,
             actor_id=user_id,
             data={"space_id": str(invitation.space_id)},
-        )
+    )
     invitation.use_count += 1
     session.commit()
     dispatch_pending_pushes(session)

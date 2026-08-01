@@ -37,6 +37,11 @@ def test_invitation_preview_accept_and_revoke(auth_client: TestClient) -> None:
     invitation = created.json()
     token = invitation["invite_url"].rsplit("/", 1)[-1]
 
+    owner_opened_own_invite = auth_client.post(
+        f"/api/v1/invitations/token/{token}/accept", headers=owner_headers
+    )
+    assert owner_opened_own_invite.status_code == 409
+
     preview = auth_client.get(f"/api/v1/invitations/token/{token}")
     assert preview.status_code == 200
     assert preview.json()["remaining_uses"] == 1
