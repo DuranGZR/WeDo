@@ -41,6 +41,13 @@ def _validate(invitation: Invitation) -> None:
 
 
 def _response(invitation: Invitation, token: str | None = None) -> InvitationResponse:
+    invite_url = None
+    if token:
+        invite_url = (
+            f"{settings.mobile_scheme}://invite/{token}"
+            if settings.environment == "production"
+            else f"{settings.frontend_url}/invite/{token}"
+        )
     return InvitationResponse(
         id=invitation.id,
         space_id=invitation.space_id,
@@ -48,7 +55,7 @@ def _response(invitation: Invitation, token: str | None = None) -> InvitationRes
         max_uses=invitation.max_uses,
         use_count=invitation.use_count,
         revoked_at=invitation.revoked_at,
-        invite_url=f"{settings.frontend_url}/invite/{token}" if token else None,
+        invite_url=invite_url,
     )
 
 

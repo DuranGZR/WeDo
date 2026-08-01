@@ -1,3 +1,8 @@
+from datetime import UTC, datetime
+from uuid import uuid4
+
+from app.core.config import settings
+from app.modules.invitations.service import _response
 from fastapi.testclient import TestClient
 
 
@@ -64,3 +69,22 @@ def test_invitation_preview_accept_and_revoke(auth_client: TestClient) -> None:
         f"/api/v1/invitations/{second['id']}", headers=owner_headers
     )
     assert revoked.status_code == 204
+
+
+def test_production_invitation_uses_the_mobile_deep_link(
+    monkeypatch,
+) -> None:
+    invitation = type("InvitationStub", (), {
+        "id": uuid4(),
+        "space_id": uuid4(),
+        "expires_at": datetime(2026, 8, 8, tzinfo=UTC),
+        "max_uses": 1,
+        "use_count": 0,
+        "revoked_at": None,
+    })()
+    monkeypatch.setattr(settings, "environment", "production")
+    monkeypatch.setattr(settings, "mobile_scheme", "wedo")
+
+    response = _response(invitation, "invite-token")
+
+    assert response.invite_url == "wedo://invite/invite-token"
