@@ -6,12 +6,17 @@ def _sign_up(client: TestClient, email: str) -> dict:
         "/api/v1/auth/sign-up",
         json={
             "email": email,
-            "password": "correct-horse-battery-staple",
+            "password": "Correct-horse-battery-staple1",
             "display_name": "Test User",
         },
     )
     assert response.status_code == 201
-    return response.json()
+    sign_in = client.post(
+        "/api/v1/auth/sign-in",
+        json={"email": email, "password": "Correct-horse-battery-staple1"},
+    )
+    assert sign_in.status_code == 200
+    return sign_in.json()
 
 
 def test_space_lifecycle_and_permissions(auth_client: TestClient) -> None:

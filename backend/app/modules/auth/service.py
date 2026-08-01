@@ -23,6 +23,10 @@ class EmailAlreadyRegisteredError(AuthError):
     """Raised when sign-up conflicts with an existing account."""
 
 
+class PasswordPolicyError(AuthError):
+    """Raised when a password does not meet the account security policy."""
+
+
 def _is_expired(expires_at: datetime) -> bool:
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=UTC)
@@ -59,12 +63,11 @@ def _issue_tokens(session: Session, user: User, device_id: str | None) -> TokenR
     )
 
 
-def sign_up(session: Session, data: SignUpRequest) -> TokenResponse:
+def sign_up(session: Session, data: SignUpRequest) -> UserResponse:
     email = str(data.email).lower()
     if user_repository.get_by_email(session, email):
-        raise EmailAlreadyRegisteredError(
-            "Bu e-posta adresiyle zaten bir hesap var."
-        )
+        raise EmailAlreadyRegisteredError("Bu e-posta adresiyle zaten bir hesap var.")
+    _validate_password_strength(data.password)
     user = user_repository.create(
         session,
         User(
@@ -82,9 +85,8 @@ def sign_up(session: Session, data: SignUpRequest) -> TokenResponse:
             provider_email=email,
         ),
     )
-    response = _issue_tokens(session, user, data.device_id)
     session.commit()
-    return response
+    return UserResponse.model_validate(user)
 
 
 def sign_in(
@@ -145,4 +147,35 @@ def sign_out(session: Session, refresh_token: str) -> None:
 
 def sign_out_all(session: Session, user_id: UUID) -> None:
     auth_repository.revoke_all_for_user(session, user_id)
+    session.commit()
+
+
+def _validate_new_password(current_password: str, new_password: str) -> None:
+    if current_password == new_password:
+        raise AuthError("Yeni şifre mevcut şifrenle aynı olamaz.")
+    _validate_password_strength(new_password)
+
+
+def _validate_password_strength(password: str) -> None:
+    if not (
+        len(password) >= 8
+        and any(character.isupper() for character in password)
+        and any(character.islower() for character in password)
+        and any(character.isdigit() for character in password)
+    ):
+        raise PasswordPolicyError(
+            "Şifre en az bir büyük harf, küçük harf ve rakam içermeli."
+        )
+
+
+def change_password(
+    session: Session, user: User, current_password: str, new_password: str
+) -> None:
+    if user.password_hash is None or not verify_password(
+        current_password, user.password_hash
+    ):
+        raise AuthError("Mevcut şifren doğru değil.")
+    _validate_new_password(current_password, new_password)
+    user.password_hash = hash_password(new_password)
+    auth_repository.revoke_all_for_user(session, user.id)
     session.commit()

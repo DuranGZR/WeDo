@@ -13,11 +13,11 @@ type AuthState = {
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   updateProfile: (data: {
     displayName: string;
-    avatarUrl?: string | null;
     notifyPartnerActivity?: boolean;
     pushNotificationsEnabled?: boolean;
   }) => Promise<void>;
-  deleteAccount: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  deleteAccount: (currentPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<boolean>;
 };
@@ -53,20 +53,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: result.user, accessToken: result.access_token });
   },
   async signUp(email, password, displayName) {
-    const raw = await apiClient<unknown>('/api/v1/auth/sign-up', {
+    await apiClient('/api/v1/auth/sign-up', {
       method: 'POST',
       body: { email, password, display_name: displayName },
     });
-    const result = tokenResponseSchema.parse(raw);
-    await secureStorage.setTokens(result.access_token, result.refresh_token);
-    set({ user: result.user, accessToken: result.access_token });
   },
-  async updateProfile({
-    displayName,
-    avatarUrl,
-    notifyPartnerActivity,
-    pushNotificationsEnabled,
-  }) {
+  async updateProfile({ displayName, notifyPartnerActivity, pushNotificationsEnabled }) {
     const token = get().accessToken;
     if (!token) throw new Error('Oturum bulunamadı.');
     const user = await apiClient<User>('/api/v1/users/me', {
@@ -74,7 +66,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       accessToken: token,
       body: {
         display_name: displayName.trim(),
-        ...(avatarUrl !== undefined ? { avatar_url: avatarUrl?.trim() || null } : {}),
         ...(notifyPartnerActivity !== undefined
           ? { notify_partner_activity: notifyPartnerActivity }
           : {}),
@@ -85,10 +76,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     set({ user });
   },
-  async deleteAccount() {
+  async changePassword(currentPassword, newPassword) {
+    const token = get().accessToken;
+    if (!token) throw new Error('Oturum bulunamadı.');
+    await apiClient<void>('/api/v1/auth/change-password', {
+      method: 'POST',
+      accessToken: token,
+      body: { current_password: currentPassword, new_password: newPassword },
+    });
+    await secureStorage.clear();
+    set({ user: null, accessToken: null });
+  },
+  async deleteAccount(currentPassword) {
     const token = get().accessToken;
     if (token) {
-      await apiClient<void>('/api/v1/users/me', { method: 'DELETE', accessToken: token });
+      await apiClient<void>('/api/v1/users/me', {
+        method: 'DELETE',
+        accessToken: token,
+        body: { current_password: currentPassword },
+      });
     }
     await secureStorage.clear();
     set({ user: null, accessToken: null });

@@ -20,7 +20,5 @@ from app.db.url import sqlalchemy_database_url
         ),
     ],
 )
-def test_sqlalchemy_database_url_uses_psycopg(
-    database_url: str, expected: str
-) -> None:
+def test_sqlalchemy_database_url_uses_psycopg(database_url: str, expected: str) -> None:
     assert sqlalchemy_database_url(database_url) == expected

@@ -1,395 +1,194 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Switch,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, Screen, TextField } from '@/components/ui';
+import { useToast } from '@/components/feedback/AppToast';
+import { AppText, TextField } from '@/components/ui';
+import {
+  AccountCard,
+  AccountRow,
+  AccountScaffold,
+  accountStyles,
+} from '@/features/account/components/AccountScaffold';
 import { mono, spacing } from '@/design-system';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function SettingsScreen() {
-  const { user, updateProfile, deleteAccount } = useAuthStore();
+  const { user, updateProfile } = useAuthStore();
+  const { showToast } = useToast();
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '');
   const [saving, setSaving] = useState(false);
-  const [partnerNotifications, setPartnerNotifications] = useState(
-    user?.notify_partner_activity ?? true,
-  );
-  const [pushNotifications, setPushNotifications] = useState(
-    user?.push_notifications_enabled ?? true,
-  );
 
-  useEffect(() => {
-    setDisplayName(user?.display_name ?? '');
-    setAvatarUrl(user?.avatar_url ?? '');
-    setPartnerNotifications(user?.notify_partner_activity ?? true);
-    setPushNotifications(user?.push_notifications_enabled ?? true);
-  }, [
-    user?.display_name,
-    user?.avatar_url,
-    user?.notify_partner_activity,
-    user?.push_notifications_enabled,
-  ]);
+  useEffect(() => setDisplayName(user?.display_name ?? ''), [user?.display_name]);
 
+  const isDirty = displayName.trim() !== (user?.display_name ?? '');
   const saveProfile = async () => {
     if (displayName.trim().length < 2) {
-      Alert.alert('Adını kontrol et', 'Görünen ad en az 2 karakter olmalı.');
+      showToast({
+        title: 'Adını kontrol et',
+        message: 'Görünen ad en az 2 karakter olmalı.',
+      });
       return;
     }
     setSaving(true);
     try {
-      await updateProfile({
-        displayName,
-        avatarUrl,
-        notifyPartnerActivity: partnerNotifications,
-        pushNotificationsEnabled: pushNotifications,
-      });
-      Alert.alert('Kaydedildi', 'Profil bilgilerin güncellendi.');
+      await updateProfile({ displayName });
+      showToast({ title: 'Profil güncellendi', message: 'Görünen adın kaydedildi.' });
     } catch (error) {
-      Alert.alert(
-        'Kaydedilemedi',
-        error instanceof Error ? error.message : 'Tekrar deneyin.',
-      );
+      showToast({
+        title: 'Kaydedilemedi',
+        message: error instanceof Error ? error.message : 'Lütfen tekrar dene.',
+      });
     } finally {
       setSaving(false);
     }
   };
-  const saveNotificationPreference = async (kind: 'partner' | 'push', value: boolean) => {
-    if (kind === 'partner') setPartnerNotifications(value);
-    else setPushNotifications(value);
-    try {
-      await updateProfile({
-        displayName,
-        avatarUrl,
-        notifyPartnerActivity: kind === 'partner' ? value : partnerNotifications,
-        pushNotificationsEnabled: kind === 'push' ? value : pushNotifications,
-      });
-    } catch {
-      if (kind === 'partner') setPartnerNotifications(!value);
-      else setPushNotifications(!value);
-      Alert.alert('Kaydedilemedi', 'Bildirim ayarın güncellenemedi.');
-    }
-  };
-
-  const confirmDelete = () =>
-    Alert.alert('Hesabı sil?', 'Bu işlem hesabını devre dışı bırakır ve geri alınamaz.', [
-      { text: 'Vazgeç', style: 'cancel' },
-      {
-        text: 'Hesabı sil',
-        style: 'destructive',
-        onPress: () =>
-          void deleteAccount()
-            .then(() => router.replace('/(auth)/sign-in'))
-            .catch(() => Alert.alert('İşlem tamamlanamadı', 'Lütfen tekrar dene.')),
-      },
-    ]);
 
   return (
-    <Screen scroll={true} backgroundColor={mono.background}>
-      <View style={styles.contourTop} pointerEvents="none" />
-      <View style={styles.contourBottom} pointerEvents="none" />
-      <View style={styles.headerBar}>
+    <AccountScaffold
+      title="Hesap ayarları"
+      subtitle="Kimliğini, güvenliğini ve tercihlerini yönet."
+    >
+      <AccountCard>
+        <View style={styles.identityHeader}>
+          <View style={styles.initialAvatar}>
+            <AppText style={styles.initialText}>
+              {user?.display_name?.trim().charAt(0).toUpperCase() ?? 'W'}
+            </AppText>
+          </View>
+          <View style={styles.identityCopy}>
+            <AppText variant="sectionTitle">Profilin</AppText>
+            <AppText muted style={styles.identityHint}>
+              WeDo’da yalnızca baş harfin görünür.
+            </AppText>
+          </View>
+        </View>
+        <TextField
+          label="Görünen ad"
+          value={displayName}
+          onChangeText={setDisplayName}
+          autoCapitalize="words"
+          maxLength={80}
+          placeholder="Adın"
+          returnKeyType="done"
+        />
+        <View style={styles.emailBox}>
+          <Ionicons name="mail-outline" size={18} color={mono.ink} />
+          <View style={styles.emailCopy}>
+            <AppText variant="caption" muted>
+              E-posta adresi
+            </AppText>
+            <AppText numberOfLines={1}>{user?.email ?? '—'}</AppText>
+          </View>
+        </View>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel="Profil değişikliklerini kaydet"
+          disabled={!isDirty || saving}
+          onPress={() => void saveProfile()}
+          style={({ pressed }) => [
+            accountStyles.primaryButton,
+            (!isDirty || saving) && styles.disabledButton,
+            (pressed || saving) && accountStyles.pressed,
+          ]}
         >
-          <Ionicons name="arrow-back" size={22} color={mono.ink} />
+          {saving ? (
+            <ActivityIndicator color={mono.paper} />
+          ) : (
+            <Ionicons name="checkmark" size={19} color={mono.paper} />
+          )}
+          <AppText style={accountStyles.primaryButtonText}>
+            {isDirty ? 'Değişiklikleri kaydet' : 'Değişiklikler kaydedildi'}
+          </AppText>
         </Pressable>
-      </View>
-      <View style={styles.content}>
-        <AppText variant="pageTitle">Ayarlar</AppText>
-        <AppText muted style={styles.intro}>
-          Hesabını ve WeDo deneyimini yönet.
+      </AccountCard>
+
+      <View style={styles.sectionGroup}>
+        <AppText variant="caption" style={accountStyles.label}>
+          HESAP VE GÜVENLİK
         </AppText>
-        <View style={[styles.glassCard, styles.section]}>
-          <View style={styles.sectionHeading}>
-            <Ionicons name="person-outline" size={18} color={mono.paper} />
-            <AppText variant="sectionTitle">Profil bilgileri</AppText>
-          </View>
-          <TextField
-            label="Görünen ad"
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="Adın"
+        <AccountCard>
+          <AccountRow
+            icon="lock-closed-outline"
+            title="Şifre ve oturumlar"
+            description="Şifreni değiştir veya tüm cihazlardan çıkış yap"
+            onPress={() => router.push('/settings/security' as never)}
           />
-          <TextField
-            label="Profil görseli bağlantısı"
-            value={avatarUrl}
-            onChangeText={setAvatarUrl}
-            autoCapitalize="none"
-            placeholder="https://..."
-          />
-          <View style={styles.emailInfo}>
-            <Ionicons name="mail-outline" size={17} color={mono.ink} />
-            <View>
-              <AppText variant="caption" style={styles.infoLabel}>
-                E-posta
-              </AppText>
-              <AppText>{user?.email ?? '—'}</AppText>
-            </View>
-          </View>
-          <Pressable
-            onPress={() => void saveProfile()}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              (pressed || saving) && styles.btnPressed,
-            ]}
-          >
-            {saving ? (
-              <ActivityIndicator color={mono.paper} />
-            ) : (
-              <>
-                <AppText style={styles.primaryButtonText}>Değişiklikleri kaydet</AppText>
-                <Ionicons name="checkmark" size={18} color={mono.paper} />
-              </>
-            )}
-          </Pressable>
-          <Pressable
+          <View style={accountStyles.divider} />
+          <AccountRow
+            icon="notifications-outline"
+            title="Bildirimler"
+            description="Partner ve telefon bildirimlerini yönet"
             onPress={() => router.push('/notifications')}
-            style={({ pressed }) => [styles.rowButton, pressed && styles.btnPressed]}
-          >
-            <View style={styles.rowButtonIcon}>
-              <Ionicons name="notifications-outline" size={18} color={mono.ink} />
-            </View>
-            <View style={styles.rowButtonBody}>
-              <AppText>Bildirimler</AppText>
-              <AppText variant="caption" muted>
-                Güncellemelerini yönet
-              </AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={mono.ink} />
-          </Pressable>
-          <View style={styles.preferenceRow}>
-            <View style={styles.rowButtonBody}>
-              <AppText>Partner etkinlikleri</AppText>
-              <AppText variant="caption" muted>
-                Partnerin içerik eklediğinde haber ver
-              </AppText>
-            </View>
-            <Switch
-              value={partnerNotifications}
-              onValueChange={(value) => void saveNotificationPreference('partner', value)}
-            />
-          </View>
-          <View style={styles.preferenceRow}>
-            <View style={styles.rowButtonBody}>
-              <AppText>Anlık bildirimler</AppText>
-              <AppText variant="caption" muted>
-                Telefonuna bildirim gönder
-              </AppText>
-            </View>
-            <Switch
-              value={pushNotifications}
-              onValueChange={(value) => void saveNotificationPreference('push', value)}
-            />
-          </View>
-        </View>
-        <View style={[styles.glassCard, styles.section]}>
-          <View style={styles.sectionHeading}>
-            <Ionicons name="shield-checkmark-outline" size={18} color={mono.paper} />
-            <AppText variant="sectionTitle">Gizlilik</AppText>
-          </View>
-          <AppText muted>
-            Alanların, listelerin ve içeriklerin varsayılan olarak özeldir.
-          </AppText>
-          <Pressable
-            onPress={() =>
-              Alert.alert(
-                'Gizlilik',
-                'Alanların, listelerin ve kayıtların yalnızca davet ettiğin kişilerle paylaşılır.',
-              )
-            }
-            style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
-          >
-            <AppText style={styles.ghostBtnText}>Gizlilik hakkında</AppText>
-          </Pressable>
-        </View>
-        <View style={[styles.glassCard, styles.section]}>
-          <View style={styles.sectionHeading}>
-            <Ionicons name="help-circle-outline" size={18} color={mono.paper} />
-            <AppText variant="sectionTitle">Yardım</AppText>
-          </View>
-          <AppText muted>
-            WeDo, birlikte kaydetmeyi ve gerçekten yapmayı kolaylaştırır.
-          </AppText>
-          <Pressable
-            onPress={() =>
-              Alert.alert(
-                'Kullanım koşulları',
-                'WeDo, birlikte kaydetmek ve karar vermek için tasarlanmıştır.',
-              )
-            }
-            style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
-          >
-            <AppText style={styles.ghostBtnText}>Kullanım koşulları</AppText>
-          </Pressable>
-        </View>
-        <View style={[styles.glassCard, styles.dangerSection]}>
-          <AppText variant="sectionTitle">Hesap</AppText>
-          <AppText muted>
-            Hesabını silersen alanlarına ve kayıtlarına erişemezsin.
-          </AppText>
-          <Pressable
-            onPress={confirmDelete}
-            style={({ pressed }) => [styles.deleteButton, pressed && styles.btnPressed]}
-          >
-            <Ionicons name="trash-outline" size={18} color={mono.danger} />
-            <AppText style={styles.deleteText}>Hesabı sil</AppText>
-          </Pressable>
-        </View>
+          />
+        </AccountCard>
       </View>
-    </Screen>
+
+      <View style={styles.sectionGroup}>
+        <AppText variant="caption" style={accountStyles.label}>
+          BİLGİ VE DESTEK
+        </AppText>
+        <AccountCard>
+          <AccountRow
+            icon="shield-checkmark-outline"
+            title="Gizlilik"
+            description="Verilerin ve ortak alanların nasıl korunduğu"
+            onPress={() => router.push('/settings/privacy' as never)}
+          />
+          <View style={accountStyles.divider} />
+          <AccountRow
+            icon="help-circle-outline"
+            title="Yardım ve kullanım"
+            description="WeDo’yu birlikte kullanma rehberi"
+            onPress={() => router.push('/settings/help' as never)}
+          />
+        </AccountCard>
+      </View>
+
+      <View style={styles.sectionGroup}>
+        <AppText variant="caption" style={accountStyles.label}>
+          HESAP İŞLEMLERİ
+        </AppText>
+        <AccountCard danger>
+          <AccountRow
+            icon="trash-outline"
+            title="Hesabı sil"
+            description="Şifre onayıyla kalıcı olarak devre dışı bırak"
+            onPress={() => router.push('/settings/delete-account' as never)}
+            danger
+          />
+        </AccountCard>
+      </View>
+    </AccountScaffold>
   );
 }
 
-const styles: any = StyleSheet.create({
-  contourTop: {
-    position: 'absolute',
-    top: -150,
-    right: -155,
-    width: 330,
-    height: 330,
-    borderRadius: 165,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.75,
-  },
-  contourBottom: {
-    position: 'absolute',
-    bottom: -160,
-    left: -185,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.5,
-  },
-  headerBar: {
-    height: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-    marginTop: Platform.OS === 'ios' ? 0 : spacing.sm,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: mono.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: mono.ink,
-  },
-  content: {
-    flex: 1,
-    gap: spacing.lg,
-    maxWidth: 480,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.huge,
-  },
-  glassCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
-    padding: spacing.xl,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)',
-      },
-    }),
-  },
-  intro: { marginVertical: spacing.md },
-  section: { gap: spacing.md, marginBottom: spacing.md },
-  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  emailInfo: {
-    minHeight: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: mono.ink,
-    borderRadius: 10,
-    backgroundColor: mono.soft,
-  },
-  infoLabel: { color: mono.muted, marginBottom: 2 },
-  primaryButton: {
-    minHeight: 52,
-    borderRadius: 11,
+const styles = StyleSheet.create({
+  identityHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  initialAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: mono.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
   },
-  primaryButtonText: { color: mono.paper, fontWeight: '800', fontSize: 14 },
-  rowButton: {
-    minHeight: 58,
+  initialText: { color: mono.paper, fontSize: 22, fontWeight: '800' },
+  identityCopy: { flex: 1, gap: 2 },
+  identityHint: { fontSize: 12, lineHeight: 17 },
+  emailBox: {
+    minHeight: 62,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: mono.ink,
-    borderRadius: 11,
-    paddingHorizontal: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  rowButtonIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: mono.line,
     backgroundColor: mono.soft,
   },
-  rowButtonBody: { flex: 1, gap: 2 },
-  preferenceRow: {
-    minHeight: 58,
-    borderWidth: 1,
-    borderColor: mono.ink,
-    borderRadius: 11,
-    paddingHorizontal: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  btnPressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
-  ghostBtn: {
-    minHeight: 52,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    backgroundColor: 'transparent',
-  },
-  ghostBtnText: {
-    color: mono.ink,
-    fontWeight: '600',
-  },
-  dangerSection: { gap: spacing.md, marginBottom: spacing.huge },
-  deleteButton: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: mono.danger,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  deleteText: { color: mono.danger, fontWeight: '800' },
+  emailCopy: { flex: 1, gap: 1 },
+  disabledButton: { opacity: 0.48 },
+  sectionGroup: { gap: spacing.sm },
 });

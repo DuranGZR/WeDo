@@ -1,22 +1,31 @@
-import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
-import { Controller } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Controller } from 'react-hook-form';
 
 import { AuthShell, authColors } from '@/components/auth/AuthShell';
 import { AppText, TextField } from '@/components/ui';
 import { spacing } from '@/design-system';
-import { useSignInForm } from '@/features/auth/forms';
 import { getAuthSubmitError } from '@/features/auth/error-message';
+import { PasswordField } from '@/features/auth/PasswordField';
+import { useSignInForm } from '@/features/auth/forms';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function SignInScreen() {
   const signIn = useAuthStore((state) => state.signIn);
-  const { inviteToken } = useLocalSearchParams<{ inviteToken?: string }>();
+  const { inviteToken, email: registeredEmail } = useLocalSearchParams<{
+    inviteToken?: string;
+    email?: string;
+  }>();
   const form = useSignInForm();
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (registeredEmail)
+      form.setValue('email', registeredEmail, { shouldValidate: true });
+  }, [form, registeredEmail]);
 
   async function submit(values: { email: string; password: string }) {
     setSubmitError(null);
@@ -34,24 +43,25 @@ export default function SignInScreen() {
   return (
     <AuthShell
       title="Tekrar hoş geldin"
-      subtitle="Ortak planlarına kaldığın yerden devam et."
+      subtitle="Ortak planlarına kaldığın yerden güvenle devam et."
       footer={
         <AppText style={styles.footerText}>
           Hesabın yok mu?{' '}
-          <Link
-            href={
-              inviteToken
-                ? `/(auth)/sign-up?inviteToken=${inviteToken}`
-                : '/(auth)/sign-up'
-            }
-            style={styles.footerLink}
-          >
+          <Link href="/(auth)/sign-up" style={styles.footerLink}>
             Kayıt ol
           </Link>
         </AppText>
       }
     >
       <View style={styles.form}>
+        {registeredEmail ? (
+          <View style={styles.registrationNotice}>
+            <Ionicons name="checkmark-circle" size={18} color="#47734B" />
+            <AppText style={styles.registrationNoticeText}>
+              Hesabın oluşturuldu. Şifrenle giriş yap.
+            </AppText>
+          </View>
+        ) : null}
         <Controller
           control={form.control}
           name="email"
@@ -59,6 +69,7 @@ export default function SignInScreen() {
             <TextField
               label="E-posta"
               autoCapitalize="none"
+              autoCorrect={false}
               autoComplete="email"
               keyboardType="email-address"
               placeholder="ornek@email.com"
@@ -73,26 +84,25 @@ export default function SignInScreen() {
           control={form.control}
           name="password"
           render={({ field, fieldState }) => (
-            <TextField
+            <PasswordField
               label="Şifre"
               autoComplete="password"
+              textContentType="password"
               placeholder="Şifren"
-              secureTextEntry
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
               style={styles.input}
+              onSubmitEditing={() => void form.handleSubmit(submit)()}
             />
           )}
         />
-
         {submitError ? (
           <View accessibilityRole="alert" style={styles.errorBanner}>
             <Ionicons name="alert-circle-outline" size={18} color="#9D1F1F" />
             <AppText style={styles.errorText}>{submitError}</AppText>
           </View>
         ) : null}
-
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Giriş yap"
@@ -112,33 +122,9 @@ export default function SignInScreen() {
             </>
           )}
         </Pressable>
-
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <AppText style={styles.dividerText}>veya</AppText>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <View style={styles.socials}>
-          <Pressable
-            onPress={() => Alert.alert('Giriş', 'Google ile giriş yakında aktif olacak.')}
-            style={({ pressed }) => [styles.socialButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="logo-google" size={18} color={authColors.ink} />
-            <AppText style={styles.socialButtonText}>Google ile giriş</AppText>
-          </Pressable>
-          <Pressable
-            onPress={() => Alert.alert('Giriş', 'Apple ile giriş yakında aktif olacak.')}
-            style={({ pressed }) => [styles.socialButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="logo-apple" size={18} color={authColors.ink} />
-            <AppText style={styles.socialButtonText}>Apple ile giriş</AppText>
-          </Pressable>
-        </View>
-
-        <Link href="/(auth)/forgot-password" style={styles.forgotLink}>
-          Şifremi unuttum
-        </Link>
+        <AppText muted style={styles.securityHint}>
+          E-posta doğrulama ve şifre sıfırlama, güvenli kod sistemiyle yakında eklenecek.
+        </AppText>
       </View>
     </AuthShell>
   );
@@ -152,6 +138,23 @@ const styles = StyleSheet.create({
     backgroundColor: authColors.paper,
     fontSize: 15,
   },
+  registrationNotice: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+    padding: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#89A98C',
+    backgroundColor: '#EFF7EF',
+  },
+  registrationNoticeText: {
+    flex: 1,
+    color: '#29522E',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+  },
   primaryButton: {
     minHeight: 54,
     marginTop: spacing.xs,
@@ -163,34 +166,11 @@ const styles = StyleSheet.create({
     backgroundColor: authColors.ink,
   },
   primaryButtonText: { color: authColors.paper, fontSize: 14, fontWeight: '700' },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginVertical: spacing.xs,
-  },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#B8B8B6' },
-  dividerText: { color: '#626260', fontSize: 11, fontWeight: '600' },
-  socials: { gap: spacing.sm },
-  socialButton: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: authColors.ink,
-    borderRadius: 9,
-    backgroundColor: authColors.paper,
-  },
-  socialButtonText: { color: authColors.ink, fontSize: 14, fontWeight: '600' },
-  forgotLink: {
-    marginTop: spacing.xs,
-    color: authColors.ink,
-    fontSize: 13,
-    fontWeight: '600',
+  securityHint: {
     textAlign: 'center',
-    paddingVertical: spacing.xs,
+    fontSize: 11,
+    lineHeight: 16,
+    paddingHorizontal: spacing.md,
   },
   errorBanner: {
     flexDirection: 'row',

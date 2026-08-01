@@ -31,5 +31,6 @@ def main():
         fetcher.close()
         session.close()
 
+
 if __name__ == "__main__":
     main()

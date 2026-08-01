@@ -17,6 +17,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         is_auth_attempt = request.method == "POST" and request.url.path in {
             "/api/v1/auth/sign-in",
             "/api/v1/auth/sign-up",
+            "/api/v1/auth/change-password",
         }
         limit = (
             settings.auth_rate_limit_per_minute

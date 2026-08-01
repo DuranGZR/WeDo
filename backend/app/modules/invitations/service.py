@@ -136,14 +136,14 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
         session, SpaceMember(space_id=invitation.space_id, user_id=user_id)
     )
     create_notification(
-            session,
-            user_id=invitation.created_by,
-            notification_type="invitation_accepted",
-            title="Davet kabul edildi",
-            body="Partnerin ortak alana katıldı.",
-            space_id=invitation.space_id,
-            actor_id=user_id,
-            data={"space_id": str(invitation.space_id)},
+        session,
+        user_id=invitation.created_by,
+        notification_type="invitation_accepted",
+        title="Davet kabul edildi",
+        body="Partnerin ortak alana katıldı.",
+        space_id=invitation.space_id,
+        actor_id=user_id,
+        data={"space_id": str(invitation.space_id)},
     )
     invitation.use_count += 1
     session.commit()

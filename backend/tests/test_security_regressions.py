@@ -6,12 +6,17 @@ def _signup(client: TestClient, email: str) -> dict:
         "/api/v1/auth/sign-up",
         json={
             "email": email,
-            "password": "correct-horse-battery-staple",
+            "password": "Correct-horse-battery-staple1",
             "display_name": "Regression User",
         },
     )
     assert response.status_code == 201
-    return response.json()
+    sign_in = client.post(
+        "/api/v1/auth/sign-in",
+        json={"email": email, "password": "Correct-horse-battery-staple1"},
+    )
+    assert sign_in.status_code == 200
+    return sign_in.json()
 
 
 def test_admin_cannot_promote_member_to_owner(auth_client: TestClient) -> None:
@@ -114,15 +119,63 @@ def test_item_creation_creates_member_notification(auth_client: TestClient) -> N
     ).json() == {"count": 1}
 
 
-def test_user_avatar_endpoint_updates_avatar(auth_client: TestClient) -> None:
+def test_user_avatar_url_endpoint_is_not_exposed(auth_client: TestClient) -> None:
     auth = _signup(auth_client, "avatar-contract@example.com")
     response = auth_client.post(
         "/api/v1/users/me/avatar",
         headers={"Authorization": f"Bearer {auth['access_token']}"},
         json={"avatar_url": "https://cdn.example.com/avatar.png"},
     )
-    assert response.status_code == 200
-    assert response.json()["avatar_url"] == "https://cdn.example.com/avatar.png"
+    assert response.status_code == 404
+
+
+def test_password_change_revokes_all_sessions(auth_client: TestClient) -> None:
+    auth = _signup(auth_client, "password-change@example.com")
+    headers = {"Authorization": f"Bearer {auth['access_token']}"}
+
+    response = auth_client.post(
+        "/api/v1/auth/change-password",
+        headers=headers,
+        json={
+            "current_password": "Correct-horse-battery-staple1",
+            "new_password": "New-secure-password-2026",
+        },
+    )
+
+    assert response.status_code == 204
+    assert auth_client.get("/api/v1/users/me", headers=headers).status_code == 401
+    assert (
+        auth_client.post(
+            "/api/v1/auth/sign-in",
+            json={
+                "email": "password-change@example.com",
+                "password": "New-secure-password-2026",
+            },
+        ).status_code
+        == 200
+    )
+
+
+def test_account_deletion_requires_current_password(auth_client: TestClient) -> None:
+    auth = _signup(auth_client, "delete-account@example.com")
+    headers = {"Authorization": f"Bearer {auth['access_token']}"}
+
+    denied = auth_client.request(
+        "DELETE",
+        "/api/v1/users/me",
+        headers=headers,
+        json={"current_password": "wrong-password"},
+    )
+    assert denied.status_code == 401
+
+    deleted = auth_client.request(
+        "DELETE",
+        "/api/v1/users/me",
+        headers=headers,
+        json={"current_password": "Correct-horse-battery-staple1"},
+    )
+    assert deleted.status_code == 204
+    assert auth_client.get("/api/v1/users/me", headers=headers).status_code == 401
 
 
 def test_device_endpoint_updates_registered_device(auth_client: TestClient) -> None:

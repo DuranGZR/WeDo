@@ -1,8 +1,10 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import SessionDep
 from app.modules.auth.dependencies import CurrentUserDep
-from app.modules.users.schemas import UserAvatarUpdate, UserResponse, UserUpdate
+from app.modules.auth.passwords import verify_password
+from app.modules.auth.repository import auth_repository
+from app.modules.users.schemas import AccountDeleteRequest, UserResponse, UserUpdate
 
 router = APIRouter()
 
@@ -18,8 +20,6 @@ def update_current_user(
 ) -> UserResponse:
     if data.display_name is not None:
         current_user.display_name = data.display_name.strip()
-    if data.avatar_url is not None:
-        current_user.avatar_url = data.avatar_url
     if data.notify_partner_activity is not None:
         current_user.notify_partner_activity = data.notify_partner_activity
     if data.push_notifications_enabled is not None:
@@ -28,16 +28,14 @@ def update_current_user(
     return current_user
 
 
-@router.post("/me/avatar", response_model=UserResponse)
-def update_current_user_avatar(
-    data: UserAvatarUpdate, current_user: CurrentUserDep, session: SessionDep
-) -> UserResponse:
-    current_user.avatar_url = data.avatar_url
-    session.commit()
-    return current_user
-
-
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-def delete_current_user(current_user: CurrentUserDep, session: SessionDep) -> None:
+def delete_current_user(
+    data: AccountDeleteRequest, current_user: CurrentUserDep, session: SessionDep
+) -> None:
+    if current_user.password_hash is None or not verify_password(
+        data.current_password, current_user.password_hash
+    ):
+        raise HTTPException(status_code=401, detail="Mevcut şifren doğru değil.")
     current_user.is_active = False
+    auth_repository.revoke_all_for_user(session, current_user.id)
     session.commit()

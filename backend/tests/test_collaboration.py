@@ -4,12 +4,20 @@ from fastapi.testclient import TestClient
 def test_item_exposes_creator_and_collaboration_actions_are_removed(
     auth_client: TestClient,
 ) -> None:
-    auth = auth_client.post(
+    sign_up = auth_client.post(
         "/api/v1/auth/sign-up",
         json={
             "email": "collab-owner@example.com",
-            "password": "correct-horse-battery-staple",
+            "password": "Correct-horse-battery-staple1",
             "display_name": "Liste Sahibi",
+        },
+    )
+    assert sign_up.status_code == 201
+    auth = auth_client.post(
+        "/api/v1/auth/sign-in",
+        json={
+            "email": "collab-owner@example.com",
+            "password": "Correct-horse-battery-staple1",
         },
     ).json()
     headers = {"Authorization": f"Bearer {auth['access_token']}"}

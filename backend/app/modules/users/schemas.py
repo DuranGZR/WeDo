@@ -20,10 +20,9 @@ class UserResponse(BaseModel):
 
 class UserUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=2, max_length=80)
-    avatar_url: str | None = Field(default=None, max_length=2000)
     notify_partner_activity: bool | None = None
     push_notifications_enabled: bool | None = None
 
 
-class UserAvatarUpdate(BaseModel):
-    avatar_url: str = Field(min_length=1, max_length=2000)
+class AccountDeleteRequest(BaseModel):
+    current_password: str = Field(min_length=8, max_length=128)

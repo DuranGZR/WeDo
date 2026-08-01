@@ -6,15 +6,24 @@ def test_auth_lifecycle(auth_client: TestClient) -> None:
         "/api/v1/auth/sign-up",
         json={
             "email": "ipek@example.com",
-            "password": "correct-horse-battery-staple",
+            "password": "Correct-horse-battery-staple1",
             "display_name": "İpek",
             "device_id": "iphone-1",
         },
     )
     assert sign_up.status_code == 201
-    tokens = sign_up.json()
-    assert tokens["token_type"] == "bearer"
-    assert tokens["user"]["email"] == "ipek@example.com"
+    assert sign_up.json()["email"] == "ipek@example.com"
+
+    sign_in = auth_client.post(
+        "/api/v1/auth/sign-in",
+        json={
+            "email": "IPEK@EXAMPLE.COM",
+            "password": "Correct-horse-battery-staple1",
+            "device_id": "iphone-1",
+        },
+    )
+    assert sign_in.status_code == 200
+    tokens = sign_in.json()
 
     me = auth_client.get(
         "/api/v1/users/me",
@@ -37,15 +46,6 @@ def test_auth_lifecycle(auth_client: TestClient) -> None:
     )
     assert old_refresh.status_code == 401
 
-    sign_in = auth_client.post(
-        "/api/v1/auth/sign-in",
-        json={
-            "email": "IPEK@EXAMPLE.COM",
-            "password": "correct-horse-battery-staple",
-        },
-    )
-    assert sign_in.status_code == 200
-
     sign_out = auth_client.post(
         "/api/v1/auth/sign-out",
         json={"refresh_token": refreshed_tokens["refresh_token"]},
@@ -56,10 +56,25 @@ def test_auth_lifecycle(auth_client: TestClient) -> None:
 def test_duplicate_email_is_rejected(auth_client: TestClient) -> None:
     payload = {
         "email": "can@example.com",
-        "password": "correct-horse-battery-staple",
+        "password": "Correct-horse-battery-staple1",
         "display_name": "Can",
     }
     assert auth_client.post("/api/v1/auth/sign-up", json=payload).status_code == 201
     duplicate = auth_client.post("/api/v1/auth/sign-up", json=payload)
 
     assert duplicate.status_code == 409
+
+
+def test_sign_up_rejects_password_without_all_required_character_types(
+    auth_client: TestClient,
+) -> None:
+    response = auth_client.post(
+        "/api/v1/auth/sign-up",
+        json={
+            "email": "weak-password@example.com",
+            "password": "onlylowercase1",
+            "display_name": "Weak Password",
+        },
+    )
+
+    assert response.status_code == 422

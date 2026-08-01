@@ -2,12 +2,20 @@ from fastapi.testclient import TestClient
 
 
 def test_memory_and_upload_lifecycle(auth_client: TestClient) -> None:
-    auth = auth_client.post(
+    sign_up = auth_client.post(
         "/api/v1/auth/sign-up",
         json={
             "email": "memories@example.com",
-            "password": "correct-horse-battery-staple",
+            "password": "Correct-horse-battery-staple1",
             "display_name": "Memories User",
+        },
+    )
+    assert sign_up.status_code == 201
+    auth = auth_client.post(
+        "/api/v1/auth/sign-in",
+        json={
+            "email": "memories@example.com",
+            "password": "Correct-horse-battery-staple1",
         },
     ).json()
     headers = {"Authorization": f"Bearer {auth['access_token']}"}

@@ -11,12 +11,17 @@ def _sign_up(client: TestClient, email: str) -> dict:
         "/api/v1/auth/sign-up",
         json={
             "email": email,
-            "password": "correct-horse-battery-staple",
+            "password": "Correct-horse-battery-staple1",
             "display_name": "Test User",
         },
     )
     assert response.status_code == 201
-    return response.json()
+    sign_in = client.post(
+        "/api/v1/auth/sign-in",
+        json={"email": email, "password": "Correct-horse-battery-staple1"},
+    )
+    assert sign_in.status_code == 200
+    return sign_in.json()
 
 
 def test_invitation_preview_accept_and_revoke(auth_client: TestClient) -> None:
@@ -79,14 +84,18 @@ def test_invitation_preview_accept_and_revoke(auth_client: TestClient) -> None:
 def test_production_invitation_uses_the_mobile_deep_link(
     monkeypatch,
 ) -> None:
-    invitation = type("InvitationStub", (), {
-        "id": uuid4(),
-        "space_id": uuid4(),
-        "expires_at": datetime(2026, 8, 8, tzinfo=UTC),
-        "max_uses": 1,
-        "use_count": 0,
-        "revoked_at": None,
-    })()
+    invitation = type(
+        "InvitationStub",
+        (),
+        {
+            "id": uuid4(),
+            "space_id": uuid4(),
+            "expires_at": datetime(2026, 8, 8, tzinfo=UTC),
+            "max_uses": 1,
+            "use_count": 0,
+            "revoked_at": None,
+        },
+    )()
     monkeypatch.setattr(settings, "environment", "production")
     monkeypatch.setattr(settings, "mobile_scheme", "wedo")
 
