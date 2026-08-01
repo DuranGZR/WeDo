@@ -18,7 +18,7 @@ import { AppText, Button, Card, Screen } from '@/components/ui';
 import { ScreenMotion } from '@/components/motion/ScreenMotion';
 import { useToast } from '@/components/feedback/AppToast';
 import { colors, radius, spacing } from '@/design-system';
-import { type SpaceMember } from '@/features/collaboration/api';
+import { collaborationApi, type SpaceMember } from '@/features/collaboration/api';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
 import { itemsApi } from '@/features/items/api';
 import { metadataRefreshInterval } from '@/features/items/hooks';
@@ -399,6 +399,14 @@ export default function HomeScreen() {
   const lists = useLists(space?.id ?? '');
   const listEntries = lists.data?.data ?? [];
   const members = useSpaceMembers(space?.id ?? '');
+  const spaceMemberQueries = useQueries({
+    queries: spaceSheetOpen
+      ? (spaces.data?.data ?? []).map((entry) => ({
+          queryKey: ['spaces', entry.id, 'members'],
+          queryFn: () => collaborationApi.members(entry.id),
+        }))
+      : [],
+  });
   const createList = useCreateList(space?.id ?? '');
   const itemQueries = useQueries({
     queries: listEntries.map((list) => ({
@@ -428,6 +436,12 @@ export default function HomeScreen() {
   );
   const memberNames = (members.data?.data ?? []).map((member) => member.display_name);
   const spaceLabel = space?.name ?? 'Ortak alan';
+  const memberLabel = needsInvite
+    ? 'Davet bekleniyor'
+    : (members.data?.data ?? [])
+        .slice(0, 2)
+        .map((member) => member.display_name)
+        .join(' · ');
   const dailyMessage = getDailyMessage(allItems);
   const createTemplateList = (name: string) => {
     createList.mutate(name, {
@@ -488,7 +502,7 @@ export default function HomeScreen() {
                 <PendingAvatar />
               )}
               <AppText variant="caption" muted>
-                {needsInvite ? '1 kişi bekleniyor' : 'Ortak alan'}
+                {memberLabel}
               </AppText>
             </View>
           </View>
@@ -720,7 +734,18 @@ export default function HomeScreen() {
                     {entry.name}
                   </AppText>
                   <AppText style={styles.sheetRowMeta}>
-                    {entry.id === space?.id ? 'Şu an bu alandasın' : 'Ortak alan'}
+                    {(() => {
+                      const memberQuery =
+                        spaceMemberQueries[
+                          (spaces.data?.data ?? []).findIndex((space) => space.id === entry.id)
+                        ];
+                      const entryMembers = memberQuery?.data?.data ?? [];
+                      if (entryMembers.length > 0) {
+                        return entryMembers.map((member) => member.display_name).join(' · ');
+                      }
+                      if (memberQuery?.isLoading) return 'Üyeler yükleniyor…';
+                      return 'Davet bekleniyor';
+                    })()}
                   </AppText>
                 </View>
                 {entry.id === space?.id && (

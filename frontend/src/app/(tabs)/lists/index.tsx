@@ -16,6 +16,7 @@ import { AppText, Card, EmptyState, Screen } from '@/components/ui';
 import { ScreenMotion } from '@/components/motion/ScreenMotion';
 import { colors, mono, radius, spacing } from '@/design-system';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
+import { collaborationApi } from '@/features/collaboration/api';
 import { useLists } from '@/features/lists/hooks';
 import { useSpaces } from '@/features/spaces/hooks';
 import { useAuthStore } from '@/store/auth-store';
@@ -79,6 +80,14 @@ export default function ListsScreen() {
   const lists = useLists(space?.id ?? '');
   const entries = lists.data?.data ?? [];
   const members = useSpaceMembers(space?.id ?? '');
+  const spaceMemberQueries = useQueries({
+    queries: spaceSheetOpen
+      ? (spaces.data?.data ?? []).map((entry) => ({
+          queryKey: ['spaces', entry.id, 'members'],
+          queryFn: () => collaborationApi.members(entry.id),
+        }))
+      : [],
+  });
   const itemQueries = useQueries({
     queries: entries.map((list) => ({
       queryKey: ['lists', list.id, 'items'],
@@ -99,6 +108,13 @@ export default function ListsScreen() {
     (item) => new Date(item.created_at).toDateString() === today,
   ).length;
   const activitySummary = `${entries.length} liste · ${newItemsToday} yeni içerik`;
+
+  const memberLabel = needsInvite
+    ? 'Davet bekleniyor'
+    : (members.data?.data ?? [])
+        .slice(0, 2)
+        .map((member) => member.display_name)
+        .join(' · ');
 
   return (
     <ScreenMotion>
@@ -137,7 +153,7 @@ export default function ListsScreen() {
                 <PendingAvatar />
               )}
               <AppText variant="caption" muted>
-                {needsInvite ? '1 kişi bekleniyor' : 'Ortak alan'}
+                {memberLabel}
               </AppText>
             </View>
           </View>
@@ -320,7 +336,22 @@ export default function ListsScreen() {
                 <View style={styles.listIcon}>
                   <Ionicons name="people-outline" size={19} color={mono.paper} />
                 </View>
-                <AppText variant="cardTitle">{entry.name}</AppText>
+                <View style={styles.sheetRowBody}>
+                  <AppText variant="cardTitle">{entry.name}</AppText>
+                  <AppText variant="caption" muted numberOfLines={1}>
+                    {(() => {
+                      const memberQuery =
+                        spaceMemberQueries[
+                          (spaces.data?.data ?? []).findIndex((space) => space.id === entry.id)
+                        ];
+                      const entryMembers = memberQuery?.data?.data ?? [];
+                      if (memberQuery?.isLoading) return 'Üyeler yükleniyor…';
+                      return entryMembers.length > 0
+                        ? entryMembers.map((member) => member.display_name).join(' · ')
+                        : 'Davet bekleniyor';
+                    })()}
+                  </AppText>
+                </View>
                 {entry.id === space?.id ? (
                   <Ionicons name="checkmark" size={20} color={mono.ink} />
                 ) : null}
@@ -642,6 +673,7 @@ const styles: any = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: mono.soft,
   },
+  sheetRowBody: { flex: 1, gap: 2 },
   listIcon: {
     width: 34,
     height: 34,
