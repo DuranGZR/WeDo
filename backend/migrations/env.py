@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 from app.core.config import settings
 from app.db.base import Base
+from app.db.url import sqlalchemy_database_url
 from app.modules.activities import models as activity_models  # noqa: F401
 from app.modules.auth import models as auth_models  # noqa: F401
 from app.modules.comments import models as comment_models  # noqa: F401
@@ -18,7 +19,8 @@ from app.modules.users import models as user_models  # noqa: F401
 from sqlalchemy import engine_from_config, pool
 
 config = context.config
-config.set_main_option("sqlalchemy.url", str(settings.database_url).replace("%", "%%"))
+database_url = sqlalchemy_database_url(str(settings.database_url))
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -27,7 +29,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=str(settings.database_url),
+        url=database_url,
         target_metadata=target_metadata,
         literal_binds=True,
     )

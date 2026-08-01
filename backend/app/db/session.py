@@ -4,15 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
-
-
-def sqlalchemy_database_url(database_url: str) -> str:
-    """Use the installed Psycopg driver for standard PostgreSQL URLs."""
-    for scheme in ("postgres://", "postgresql://"):
-        if database_url.startswith(scheme):
-            return f"postgresql+psycopg://{database_url.removeprefix(scheme)}"
-    return database_url
-
+from app.db.url import sqlalchemy_database_url
 
 engine = create_engine(
     sqlalchemy_database_url(str(settings.database_url)),

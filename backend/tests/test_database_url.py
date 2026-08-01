@@ -1,5 +1,5 @@
 import pytest
-from app.db.session import sqlalchemy_database_url
+from app.db.url import sqlalchemy_database_url
 
 
 @pytest.mark.parametrize(
