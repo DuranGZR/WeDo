@@ -439,10 +439,10 @@ export default function HomeScreen() {
     spaces.data?.data[0];
 
   useEffect(() => {
-    if (spaces.isSuccess && spaces.data?.data.length === 0) {
+    if (spaces.isSuccess && spaces.data?.data.length === 0 && !selectedSpaceId) {
       router.replace('/space/create');
     }
-  }, [spaces.isSuccess, spaces.data?.data]);
+  }, [spaces.isSuccess, spaces.data?.data, selectedSpaceId]);
 
   const lists = useLists(space?.id ?? '');
   const listEntries = lists.data?.data ?? [];
@@ -564,14 +564,17 @@ export default function HomeScreen() {
             </View>
             <View style={styles.memberRow}>
               <MonoAvatar
-                name={members.data?.data[0]?.display_name ?? 'Duran'}
+                name={user?.display_name || user?.email?.split('@')[0] || 'Kullanıcı'}
                 size={26}
               />
-              {members.data?.data.length && members.data.data.length > 1 ? (
-                <MemberAvatar member={members.data.data[1]} />
-              ) : (
-                <PendingAvatar />
-              )}
+              {(() => {
+                const partner = members.data?.data?.find((m) => m.user_id !== user?.id);
+                return partner ? (
+                  <MemberAvatar member={partner} size={26} />
+                ) : (
+                  <PendingAvatar />
+                );
+              })()}
               <AppText variant="caption" muted>
                 {memberLabel}
               </AppText>
@@ -592,13 +595,13 @@ export default function HomeScreen() {
             accessibilityLabel="Profil"
             onPress={() => router.push('/profile')}
           >
-            <MonoAvatar name={user?.display_name ?? 'Duran'} size={40} />
+            <MonoAvatar name={user?.display_name || user?.email?.split('@')[0] || 'Kullanıcı'} size={40} />
           </Pressable>
         </View>
       </View>
       <View style={styles.greeting}>
         <AppText style={styles.greetingSub}>
-          Merhaba, {user?.display_name ?? 'Duran'}
+          Merhaba, {user?.display_name || user?.email?.split('@')[0] || 'Kullanıcı'}
         </AppText>
         <AppText style={styles.heroTitle}>
           Neler planlıyoruz?

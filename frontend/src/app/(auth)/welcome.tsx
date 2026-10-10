@@ -25,7 +25,7 @@ const previewCards = [
   {
     source: 'trendyol.com',
     title: 'Nike ayakkabı',
-    detail: 'Duran ekledi · bugün',
+    detail: 'İpek ekledi · bugün',
     image:
       'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=500&auto=format&fit=crop',
     tag: 'Alınacaklar',

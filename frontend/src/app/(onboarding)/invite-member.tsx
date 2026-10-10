@@ -15,11 +15,19 @@ import {
 import { AppText, Card, Screen } from '@/components/ui';
 import { mono, spacing } from '@/design-system';
 import { collaborationApi } from '@/features/collaboration/api';
+import { useSpaceStore } from '@/store/space-store';
 
 export default function InviteMemberScreen() {
   const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
   const [sending, setSending] = useState(false);
   const [createdInvite, setCreatedInvite] = useState<{ invite_url: string } | null>(null);
+
+  function goToHome() {
+    if (spaceId) {
+      useSpaceStore.getState().setSelectedSpaceId(spaceId);
+    }
+    router.replace('/(tabs)');
+  }
 
   async function shareInvitation() {
     if (!spaceId) {
@@ -36,7 +44,7 @@ export default function InviteMemberScreen() {
         setCreatedInvite({ invite_url: inviteUrl });
       }
       const message = `WeDo'da birlikte kaydedelim. Daveti kabul et: ${inviteUrl}`;
-      const result = await Share.share(
+      await Share.share(
         Platform.OS === 'ios'
           ? {
               url: inviteUrl,
@@ -46,9 +54,7 @@ export default function InviteMemberScreen() {
               message,
             },
       );
-      if (result.action === Share.sharedAction) {
-        router.replace('/(tabs)');
-      }
+      goToHome();
     } catch {
       Alert.alert('Davet paylaşılamadı', 'Bağlantıyı kontrol edip tekrar dene.');
     } finally {
@@ -61,12 +67,12 @@ export default function InviteMemberScreen() {
       <View style={styles.contourTop} pointerEvents="none" />
       <View style={styles.contourBottom} pointerEvents="none" />
       <Pressable
-        onPress={() => router.back()}
+        onPress={goToHome}
         style={styles.backButton}
         accessibilityRole="button"
-        accessibilityLabel="Geri git"
+        accessibilityLabel="Ana ekrana git"
       >
-        <Ionicons name="arrow-back" size={22} color={mono.ink} />
+        <Ionicons name="close" size={24} color={mono.ink} />
       </Pressable>
       <View style={styles.content}>
         <View style={styles.heading}>
@@ -106,7 +112,7 @@ export default function InviteMemberScreen() {
             )}
           </Pressable>
           <Pressable
-            onPress={() => router.replace('/(tabs)')}
+            onPress={goToHome}
             style={styles.secondaryButton}
           >
             <AppText style={styles.secondaryText}>Şimdilik geç</AppText>

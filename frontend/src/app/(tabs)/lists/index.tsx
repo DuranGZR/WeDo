@@ -40,8 +40,16 @@ function PendingAvatar() {
   );
 }
 
-function MemberAvatar({ member, fallback }: { member?: any; fallback?: string }) {
-  return <MonoAvatar name={member?.display_name ?? fallback ?? 'Kullanıcı'} size={28} />;
+function MemberAvatar({
+  member,
+  fallback,
+  size = 28,
+}: {
+  member?: any;
+  fallback?: string;
+  size?: number;
+}) {
+  return <MonoAvatar name={member?.display_name ?? fallback ?? 'Kullanıcı'} size={size} />;
 }
 
 function MonoAvatar({ name, size = 28 }: { name?: string; size?: number }) {
@@ -79,10 +87,10 @@ export default function ListsScreen() {
     spaces.data?.data[0];
 
   useEffect(() => {
-    if (spaces.isSuccess && spaces.data?.data.length === 0) {
+    if (spaces.isSuccess && spaces.data?.data.length === 0 && !selectedSpaceId) {
       router.replace('/space/create');
     }
-  }, [spaces.isSuccess, spaces.data?.data]);
+  }, [spaces.isSuccess, spaces.data?.data, selectedSpaceId]);
 
   const lists = useLists(space?.id ?? '');
   const entries = lists.data?.data ?? [];
@@ -151,14 +159,17 @@ export default function ListsScreen() {
             </View>
             <View style={styles.memberRow}>
               <MonoAvatar
-                name={members.data?.data[0]?.display_name ?? 'Duran'}
+                name={user?.display_name || user?.email?.split('@')[0] || 'Kullanıcı'}
                 size={26}
               />
-              {members.data?.data.length && members.data.data.length > 1 ? (
-                <MemberAvatar member={members.data.data[1]} />
-              ) : (
-                <PendingAvatar />
-              )}
+              {(() => {
+                const partner = members.data?.data?.find((m) => m.user_id !== user?.id);
+                return partner ? (
+                  <MemberAvatar member={partner} size={26} />
+                ) : (
+                  <PendingAvatar />
+                );
+              })()}
               <AppText variant="caption" muted>
                 {memberLabel}
               </AppText>
@@ -179,7 +190,7 @@ export default function ListsScreen() {
             accessibilityLabel="Profil"
             onPress={() => router.push('/profile')}
           >
-            <MonoAvatar name={user?.display_name ?? 'Duran'} size={40} />
+            <MonoAvatar name={user?.display_name || user?.email?.split('@')[0] || 'Kullanıcı'} size={40} />
           </Pressable>
         </View>
       </View>
