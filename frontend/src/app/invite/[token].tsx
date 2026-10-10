@@ -27,28 +27,28 @@ export default function InviteInvalidScreen() {
           <View style={styles.mark}>
             <AppText style={styles.markText}>!</AppText>
           </View>
-          <Badge label="Davet bulunamadÄ±" tone="error" />
-          <AppText variant="pageTitle">Bu davet baÄŸlantÄ±sÄ± artÄ±k geÃ§erli deÄŸil.</AppText>
+          <Badge label="Davet bulunamadı" tone="error" />
+          <AppText variant="pageTitle">Bu davet bağlantısı artık geçerli değil.</AppText>
           <AppText muted style={styles.copy}>
-            BaÄŸlantÄ±nÄ±n sÃ¼resi dolmuÅŸ veya davet daha Ã¶nce iptal edilmiÅŸ olabilir.
+            Bağlantının süresi dolmuş veya davet daha önce iptal edilmiş olabilir.
           </AppText>
           <View style={[styles.glassCard, styles.card]}>
             <AppText variant="cardTitle">Ne yapabilirsin?</AppText>
             <AppText muted>
-              Alan sahibinden yeni bir davet baÄŸlantÄ±sÄ± istemeyi deneyebilirsin.
+              Alan sahibinden yeni bir davet bağlantısı istemeyi deneyebilirsin.
             </AppText>
           </View>
           <Pressable
             onPress={() => router.replace('/(tabs)')}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.primaryBtnText}>Ana sayfaya dÃ¶n</AppText>
+            <AppText style={styles.primaryBtnText}>Ana sayfaya dön</AppText>
           </Pressable>
           <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.ghostBtnText}>Geri dÃ¶n</AppText>
+            <AppText style={styles.ghostBtnText}>Geri dön</AppText>
           </Pressable>
         </View>
       </View>

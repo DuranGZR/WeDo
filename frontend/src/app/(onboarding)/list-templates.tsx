@@ -6,14 +6,14 @@ import { AppText, Card, Screen } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
 
 const options = [
-  { label: 'Gidilecek Yerler', emoji: 'ğŸ“' },
-  { label: 'Ä°zlenecekler', emoji: 'ğŸ¿' },
-  { label: 'AlÄ±nacaklar', emoji: 'ğŸ›’' },
-  { label: 'YapÄ±lacaklar', emoji: 'ğŸ“' },
-  { label: 'Tarifler', emoji: 'ğŸ³' },
-  { label: 'Seyahat', emoji: 'âœˆï¸' },
-  { label: 'Etkinlikler', emoji: 'ğŸŸï¸' },
-  { label: 'Okunacaklar', emoji: 'ğŸ“š' },
+  { label: 'Gidilecek Yerler', emoji: '📍' },
+  { label: 'İzlenecekler', emoji: '🎬' },
+  { label: 'Alınacaklar', emoji: '🛒' },
+  { label: 'Yapılacaklar', emoji: '✅' },
+  { label: 'Tarifler', emoji: '🍳' },
+  { label: 'Seyahat', emoji: '✈️' },
+  { label: 'Etkinlikler', emoji: '🎟️' },
+  { label: 'Okunacaklar', emoji: '📚' },
 ];
 
 export default function ListTemplatesScreen() {
@@ -51,10 +51,10 @@ export default function ListTemplatesScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="pageTitle" style={styles.title}>
-            En Ã§ok neleri birlikte kaydediyorsunuz?
+            En çok neleri birlikte kaydediyorsunuz?
           </AppText>
           <AppText muted style={styles.subtitle}>
-            En fazla dÃ¶rt seÃ§enek seÃ§ebilirsin.
+            En fazla dört seçenek seçebilirsin.
           </AppText>
         </View>
 
@@ -98,7 +98,7 @@ export default function ListTemplatesScreen() {
             (!selected.length || pressed) && styles.btnDisabled,
           ]}
         >
-          <AppText style={styles.primaryBtnText}>AlanÄ±mÄ± oluÅŸtur</AppText>
+          <AppText style={styles.primaryBtnText}>Alanımı oluştur</AppText>
           <Ionicons name="arrow-forward" size={18} color={colors.surface} />
         </Pressable>
       </View>

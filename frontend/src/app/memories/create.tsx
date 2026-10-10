@@ -28,7 +28,7 @@ export default function CreateMemoryScreen() {
     if (Platform.OS !== 'web') {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionResult.granted === false) {
-        Alert.alert('Ä°zin Gerekli', 'FotoÄŸraflarÄ±nÄ±za eriÅŸim izni vermeniz gerekmektedir.');
+        Alert.alert('İzin Gerekli', 'Fotoğraflarınıza erişim izni vermeniz gerekmektedir.');
         return;
       }
     }
@@ -83,13 +83,13 @@ export default function CreateMemoryScreen() {
       </View>
 
       <View style={styles.content}>
-        <AppText variant="pageTitle">AnÄ± ekle</AppText>
+        <AppText variant="pageTitle">Anı ekle</AppText>
 
         <View style={styles.glassCard}>
           <TextField
             value={note}
             onChangeText={setNote}
-            placeholder="Bu iÃ§erikle ilgili notun"
+            placeholder="Bu içerikle ilgili notun"
             multiline
           />
           <View style={{ height: spacing.md }} />
@@ -104,7 +104,7 @@ export default function CreateMemoryScreen() {
 
           {/* Memory Photo Picker */}
           <AppText variant="caption" muted style={styles.photoSectionLabel}>
-            ANI FOTOÄRAFI
+            ANI FOTOĞRAFI
           </AppText>
           {imageUri ? (
             <View style={styles.imagePreviewContainer}>
@@ -125,10 +125,10 @@ export default function CreateMemoryScreen() {
                 pressed && styles.btnPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="FotoÄŸraf ekle"
+              accessibilityLabel="Fotoğraf ekle"
             >
               <Ionicons name="camera-outline" size={24} color={colors.accent} />
-              <AppText style={styles.photoPickerText}>FotoÄŸraf Ekle</AppText>
+              <AppText style={styles.photoPickerText}>Fotoğraf Ekle</AppText>
             </Pressable>
           )}
         </View>
@@ -149,7 +149,7 @@ export default function CreateMemoryScreen() {
           {saving ? (
             <ActivityIndicator color={colors.surface} />
           ) : (
-            <AppText style={styles.primaryBtnText}>AnÄ±yÄ± kaydet</AppText>
+            <AppText style={styles.primaryBtnText}>Anıyı kaydet</AppText>
           )}
         </Pressable>
       </View>

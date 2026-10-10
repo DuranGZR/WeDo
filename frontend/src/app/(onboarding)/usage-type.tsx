@@ -6,12 +6,12 @@ import { AppText, Card, Screen } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
 
 const options = [
-  { label: 'Sevgilimle', emoji: 'ğŸ§¡' },
-  { label: 'ArkadaÅŸlarÄ±mla', emoji: 'ğŸ‘¥' },
-  { label: 'Ev arkadaÅŸÄ±mla', emoji: 'ğŸ ' },
-  { label: 'Ailemle', emoji: 'ğŸ‘¨â€ğŸ‘©â€ğŸ‘§â€ğŸ‘¦' },
-  { label: 'Bir grupla', emoji: 'ğŸ’' },
-  { label: 'Tek baÅŸÄ±ma', emoji: 'ğŸ¦Š' },
+  { label: 'Sevgilimle', emoji: '🧡' },
+  { label: 'Arkadaşlarımla', emoji: '👥' },
+  { label: 'Ev arkadaşımla', emoji: '🏠' },
+  { label: 'Ailemle', emoji: '👨‍👩‍👧‍👦' },
+  { label: 'Bir grupla', emoji: '🎒' },
+  { label: 'Tek başıma', emoji: '🦊' },
 ];
 
 export default function UsageTypeScreen() {
@@ -39,10 +39,10 @@ export default function UsageTypeScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="pageTitle" style={styles.title}>
-            WeDoâ€™yu kiminle kullanacaksÄ±n?
+            WeDo’yu kiminle kullanacaksın?
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Buna gÃ¶re sana uygun baÅŸlangÄ±Ã§ listeleri hazÄ±rlayacaÄŸÄ±z.
+            Buna göre sana uygun başlangıç listeleri hazırlayacağız.
           </AppText>
         </View>
 

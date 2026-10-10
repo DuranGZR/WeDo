@@ -30,20 +30,20 @@ export default function MemoriesScreen() {
       </View>
 
       <View style={styles.content}>
-        <AppText variant="pageTitle">AnÄ±lar</AppText>
+        <AppText variant="pageTitle">Anılar</AppText>
         {result.isLoading ? (
           <ActivityIndicator />
         ) : memories.length === 0 ? (
           <EmptyState
-            title="HenÃ¼z anÄ± yok"
-            description="Tamamlanan iÃ§eriklere not ve puan ekleyebilirsin."
+            title="Henüz anı yok"
+            description="Tamamlanan içeriklere not ve puan ekleyebilirsin."
           />
         ) : (
           memories.map((memory) => (
             <View key={memory.id} style={styles.glassCard}>
               <AppText>{memory.note}</AppText>
               <AppText variant="caption" muted style={{ marginTop: spacing.xs }}>
-                {memory.rating ? `Puan: ${memory.rating}/5` : 'PuansÄ±z'}
+                {memory.rating ? `Puan: ${memory.rating}/5` : 'Puansız'}
               </AppText>
             </View>
           ))

@@ -28,14 +28,14 @@ export default function InviteAcceptedScreen() {
             <AppText style={styles.markText}>âœ“</AppText>
           </View>
           <Badge label="Davet kabul edildi" tone="success" />
-          <AppText variant="pageTitle">Birlikte karar vermeye hazÄ±rsÄ±n.</AppText>
+          <AppText variant="pageTitle">Birlikte karar vermeye hazırsın.</AppText>
           <AppText muted style={styles.copy}>
-            ArtÄ±k ortak listeleri gÃ¶rebilir, yeni fikirler ekleyebilir ve seÃ§imleri
-            birlikte netleÅŸtirebilirsiniz.
+            Artık ortak listeleri görebilir, yeni fikirler ekleyebilir ve seçimleri
+            birlikte netleştirebilirsiniz.
           </AppText>
           <View style={[styles.glassCard, styles.card]}>
-            <AppText variant="cardTitle">SÄ±radaki adÄ±m</AppText>
-            <AppText muted>AlanÄ±na git ve ilk ortak listenizi aÃ§.</AppText>
+            <AppText variant="cardTitle">Sıradaki adım</AppText>
+            <AppText muted>Alanına git ve ilk ortak listenizi aç.</AppText>
           </View>
           <Pressable
             onPress={() => router.replace('/(tabs)')}

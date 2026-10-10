@@ -28,9 +28,9 @@ export default function NotFound() {
 
       <View style={styles.content}>
         <View style={styles.glassCard}>
-          <AppText variant="pageTitle">Sayfa bulunamadÄ±</AppText>
+          <AppText variant="pageTitle">Sayfa bulunamadı</AppText>
           <AppText muted style={styles.copy}>
-            Bu baÄŸlantÄ± artÄ±k geÃ§erli deÄŸil veya taÅŸÄ±nmÄ±ÅŸ olabilir.
+            Bu bağlantı artık geçerli değil veya taşınmış olabilir.
           </AppText>
         </View>
 
@@ -38,7 +38,7 @@ export default function NotFound() {
           <Pressable
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.primaryBtnText}>Ana sayfaya dÃ¶n</AppText>
+            <AppText style={styles.primaryBtnText}>Ana sayfaya dön</AppText>
           </Pressable>
         </Link>
       </View>

@@ -31,17 +31,17 @@ export default function ShareTutorialScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="largeTitle" style={styles.title}>
-            GÃ¶rdÃ¼ÄŸÃ¼n her ÅŸeyi WeDoâ€™ya kaydet
+            Gördüğün her şeyi WeDo’ya kaydet
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Ä°nternette dolaÅŸÄ±rken beÄŸendiÄŸin her ÅŸeyi 3 basit adÄ±mda ortak alanÄ±na
+            İnternette dolaşırken beğendiğin her şeyi 3 basit adımda ortak alanına
             aktarabilirsin.
           </AppText>
         </View>
 
         {/* Steps Cards */}
         <View style={styles.stepsContainer}>
-          {/* Step 1: PaylaÅŸ'a dokun */}
+          {/* Step 1: Paylaş'a dokun */}
           <Card style={styles.stepCard}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.stepBadge}>
@@ -50,12 +50,12 @@ export default function ShareTutorialScreen() {
                 </AppText>
               </View>
               <AppText variant="cardTitle" style={styles.stepTitle}>
-                PaylaÅŸâ€™a dokun
+                Paylaş’a dokun
               </AppText>
             </View>
             <AppText muted style={styles.stepDescription}>
-              Instagram, TikTok veya tarayÄ±cÄ±nda gezinirken beÄŸendiÄŸin iÃ§eriÄŸin altÄ±ndaki
-              paylaÅŸÄ±m menÃ¼sÃ¼nÃ¼ aÃ§.
+              Instagram, TikTok veya tarayıcında gezinirken beğendiğin içeriğin altındaki
+              paylaşım menüsünü aç.
             </AppText>
 
             {/* Mock Visual: Social Badges */}
@@ -93,7 +93,7 @@ export default function ShareTutorialScreen() {
             </View>
           </Card>
 
-          {/* Step 2: WeDo'yu seÃ§ */}
+          {/* Step 2: WeDo'yu seç */}
           <Card style={styles.stepCard}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.stepBadge}>
@@ -102,11 +102,11 @@ export default function ShareTutorialScreen() {
                 </AppText>
               </View>
               <AppText variant="cardTitle" style={styles.stepTitle}>
-                WeDoâ€™yu seÃ§
+                WeDo’yu seç
               </AppText>
             </View>
             <AppText muted style={styles.stepDescription}>
-              AÃ§Ä±lan paylaÅŸÄ±m listesinden WeDoâ€™yu bul ve dokun.
+              Açılan paylaşım listesinden WeDo’yu bul ve dokun.
             </AppText>
 
             {/* Mock Visual: Share Sheet */}
@@ -172,17 +172,17 @@ export default function ShareTutorialScreen() {
               </AppText>
             </View>
             <AppText muted style={styles.stepDescription}>
-              Ä°Ã§eriÄŸin kaydedileceÄŸi ortak listeyi seÃ§, hepsi bu kadar!
+              İçeriğin kaydedileceği ortak listeyi seç, hepsi bu kadar!
             </AppText>
 
             {/* Mock Visual: Destination List */}
             <View style={styles.listsMock}>
               <View style={styles.mockListItem}>
                 <View style={styles.mockListIcon}>
-                  <AppText style={styles.emojiIcon}>ğŸ</AppText>
+                  <AppText style={styles.emojiIcon}>🍽️</AppText>
                 </View>
                 <AppText variant="secondary" style={styles.mockListText}>
-                  AkÅŸam YemeÄŸi
+                  Akşam Yemeği
                 </AppText>
                 <Ionicons
                   name="chevron-forward"
@@ -199,7 +199,7 @@ export default function ShareTutorialScreen() {
                   variant="secondary"
                   style={[styles.mockListText, { fontWeight: '600' }]}
                 >
-                  Haftasonu KaÃ§amaÄŸÄ±
+                  Haftasonu Kaçamağı
                 </AppText>
                 <View style={styles.mockCheck}>
                   <Ionicons name="checkmark" size={12} color={colors.surface} />
@@ -207,7 +207,7 @@ export default function ShareTutorialScreen() {
               </View>
               <View style={styles.mockListItem}>
                 <View style={styles.mockListIcon}>
-                  <AppText style={styles.emojiIcon}>ğŸ¿</AppText>
+                  <AppText style={styles.emojiIcon}>🎬</AppText>
                 </View>
                 <AppText variant="secondary" style={styles.mockListText}>
                   Filmler
@@ -229,9 +229,9 @@ export default function ShareTutorialScreen() {
             onPress={() => router.replace('/(tabs)')}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
             accessibilityRole="button"
-            accessibilityLabel="NasÄ±l Ã§alÄ±ÅŸtÄ±ÄŸÄ±nÄ± gÃ¶rdÃ¼m"
+            accessibilityLabel="Nasıl çalıştığını gördüm"
           >
-            <AppText style={styles.primaryBtnText}>NasÄ±l Ã§alÄ±ÅŸtÄ±ÄŸÄ±nÄ± gÃ¶rdÃ¼m</AppText>
+            <AppText style={styles.primaryBtnText}>Nasıl çalıştığını gördüm</AppText>
             <Ionicons
               name="arrow-forward"
               size={18}

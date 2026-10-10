@@ -16,7 +16,7 @@ import { useCreateSpace } from '@/features/spaces/hooks';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth-store';
 
-const suggestions = ['Bizim AlanÄ±mÄ±z', 'Hafta Sonu PlanlarÄ±', 'Birlikte YapacaklarÄ±mÄ±z'];
+const suggestions = ['Bizim Alanımız', 'Hafta Sonu Planları', 'Birlikte Yapacaklarımız'];
 
 export default function CreateSpaceScreen() {
   const [name, setName] = useState('');
@@ -34,7 +34,7 @@ export default function CreateSpaceScreen() {
 
   async function submit() {
     if (name.trim().length < 2) {
-      Alert.alert('Alan adÄ± gerekli', 'En az iki karakter kullan.');
+      Alert.alert('Alan adı gerekli', 'En az iki karakter kullan.');
       return;
     }
     try {
@@ -42,7 +42,7 @@ export default function CreateSpaceScreen() {
       // Redirect to invite screen for this newly created space
       router.replace(`/(onboarding)/invite-member?spaceId=${space.id}`);
     } catch {
-      Alert.alert('Alan oluÅŸturulamadÄ±', 'BaÄŸlantÄ±nÄ± kontrol edip tekrar dene.');
+      Alert.alert('Alan oluşturulamadı', 'Bağlantını kontrol edip tekrar dene.');
     }
   }
 
@@ -77,10 +77,10 @@ export default function CreateSpaceScreen() {
             resizeMode="contain"
           />
           <AppText variant="pageTitle" style={styles.title}>
-            Ortak alanÄ±na bir isim ver
+            Ortak alanına bir isim ver
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Bu isim yalnÄ±zca alan Ã¼yeleri tarafÄ±ndan gÃ¶rÃ¼lÃ¼r.
+            Bu isim yalnızca alan üyeleri tarafından görülür.
           </AppText>
         </View>
 
@@ -89,8 +89,8 @@ export default function CreateSpaceScreen() {
           <View style={styles.form}>
             <TextField
               autoFocus
-              label="Alan AdÄ±"
-              placeholder="Ã–rn. Ä°pek & Can"
+              label="Alan Adı"
+              placeholder="Örn. İpek & Can"
               value={name}
               onChangeText={setName}
             />
@@ -98,7 +98,7 @@ export default function CreateSpaceScreen() {
             {/* Interactive Suggestions Chips */}
             <View style={styles.suggestionsContainer}>
               <AppText variant="caption" muted style={styles.suggestionsLabel}>
-                Ã–neriler:
+                Öneriler:
               </AppText>
               <View style={styles.chipsWrapper}>
                 {suggestions.map((suggestion) => (
@@ -136,7 +136,7 @@ export default function CreateSpaceScreen() {
                 <ActivityIndicator color={colors.surface} />
               ) : (
                 <>
-                  <AppText style={styles.primaryBtnText}>AlanÄ± oluÅŸtur</AppText>
+                  <AppText style={styles.primaryBtnText}>Alanı oluştur</AppText>
                   <Ionicons name="arrow-forward" size={18} color={colors.surface} />
                 </>
               )}
