@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Response, status
+from fastapi.responses import RedirectResponse
 
 from app.api.dependencies import SessionDep
 from app.core.config import settings
@@ -23,7 +24,7 @@ from app.modules.items.service import (
     update_item,
 )
 from app.modules.lists.repository import list_repository
-from app.modules.metadata.service import run_item_metadata_task
+from app.modules.metadata.service import is_expiring_cdn, run_item_metadata_task
 from app.modules.spaces.permissions import get_space_member
 
 router = APIRouter()
@@ -37,6 +38,13 @@ def _needs_legacy_short_link_refresh(item) -> bool:
         and item.preview_image_url is None
         and (source_domain == "ty.gl" or source_domain.endswith(".ty.gl"))
     )
+
+
+def _needs_expiring_cdn_refresh(item) -> bool:
+    """Retry completed items with expiring Instagram/Facebook CDN links to permanently cache them."""
+    if not item.preview_image_url or item.preview_image_url.endswith("/preview"):
+        return False
+    return is_expiring_cdn(item.preview_image_url)
 
 
 def _check_list_access(session, list_id: UUID, user_id: UUID):
@@ -84,7 +92,7 @@ def list_items_endpoint(
         legacy_items = [
             item
             for item in item_repository.list_for_list(session, list_id)
-            if _needs_legacy_short_link_refresh(item)
+            if _needs_legacy_short_link_refresh(item) or _needs_expiring_cdn_refresh(item)
         ]
         if legacy_items:
             for item in legacy_items:
@@ -157,3 +165,25 @@ def list_item_activity_endpoint(
     item = _check_item_access(session, item_id, current_user.id)
     page, page_size = pagination
     return paginate(list_item_activities(session, item.id), page, page_size)
+
+
+@router.get("/items/{item_id}/preview")
+def get_item_preview_endpoint(
+    item_id: UUID, session: SessionDep
+) -> Response:
+    from app.modules.items.models import ItemPreviewImage
+
+    preview = session.get(ItemPreviewImage, item_id)
+    if preview is not None:
+        return Response(
+            content=preview.data,
+            media_type=preview.content_type,
+            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        )
+
+    # Fallback: check if the item exists and has an external URL
+    item = item_repository.get_by_id(session, item_id)
+    if item is not None and item.preview_image_url and not item.preview_image_url.endswith("/preview"):
+        return RedirectResponse(item.preview_image_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Görsel bulunamadı.")

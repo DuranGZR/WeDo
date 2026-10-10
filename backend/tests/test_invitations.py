@@ -81,7 +81,7 @@ def test_invitation_preview_accept_and_revoke(auth_client: TestClient) -> None:
     assert revoked.status_code == 204
 
 
-def test_production_invitation_uses_the_mobile_deep_link(
+def test_production_invitation_provides_https_url_and_deep_link(
     monkeypatch,
 ) -> None:
     invitation = type(
@@ -101,4 +101,33 @@ def test_production_invitation_uses_the_mobile_deep_link(
 
     response = _response(invitation, "invite-token")
 
-    assert response.invite_url == "wedo://invite/invite-token"
+    assert response.invite_url == "https://wedo.app/invite/invite-token"
+    assert response.deep_link == "wedo://invite/invite-token"
+    assert response.token == "invite-token"
+
+
+def test_web_invite_landing_page(auth_client: TestClient) -> None:
+    owner = _sign_up(auth_client, "web-invite-owner@example.com")
+    owner_headers = {"Authorization": f"Bearer {owner['access_token']}"}
+    space = auth_client.post(
+        "/api/v1/spaces",
+        headers=owner_headers,
+        json={"name": "Web Space", "type": "couple"},
+    ).json()
+
+    created = auth_client.post(
+        f"/api/v1/spaces/{space['id']}/invitations",
+        headers=owner_headers,
+        json={"expires_in_days": 7},
+    ).json()
+    token = created["token"]
+
+    landing = auth_client.get(f"/invite/{token}")
+    assert landing.status_code == 200
+    assert "Web Space" in landing.text
+    assert f"wedo://invite/{token}" in landing.text
+
+    invalid_landing = auth_client.get("/invite/non-existent-token")
+    assert invalid_landing.status_code == 200
+    assert "Geçersiz Davet" in invalid_landing.text
+

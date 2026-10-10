@@ -153,3 +153,76 @@ def test_completed_legacy_trendyol_short_links_are_retried_once() -> None:
 
     assert _needs_legacy_short_link_refresh(legacy_item) is True
     assert _needs_legacy_short_link_refresh(completed_item_with_preview) is False
+
+
+def test_fetcher_blocks_redirect_to_private_ip(monkeypatch: pytest.MonkeyPatch) -> None:
+    import socket
+    from app.modules.metadata.fetcher import MetadataFetcher
+
+    fetcher = MetadataFetcher()
+
+    def fake_getaddrinfo(host, port, *args, **kwargs):
+        if host == "127.0.0.1":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", port or 80))]
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 80))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+    class FakeRedirectResponse:
+        status_code = 302
+        headers = {"location": "http://127.0.0.1:5432/evil"}
+        content = b""
+
+    monkeypatch.setattr(fetcher.session, "get", lambda *args, **kwargs: FakeRedirectResponse())
+
+    with pytest.raises(MetadataError, match="Özel veya yerel ağ adreslerine erişilemez"):
+        fetcher._request("https://safe.example.com/redirect-to-localhost")
+
+
+def test_fetcher_pins_dns_to_prevent_rebinding(monkeypatch: pytest.MonkeyPatch) -> None:
+    import socket
+    from curl_cffi import CurlOpt
+    from app.modules.metadata.fetcher import MetadataFetcher
+
+    fetcher = MetadataFetcher()
+
+    def fake_getaddrinfo(host, port, *args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 443))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+    pinned_resolves: list[object] = []
+    if hasattr(fetcher.session, "curl") and fetcher.session.curl:
+        original_setopt = fetcher.session.curl.setopt
+
+        def tracking_setopt(option, value):
+            if option == CurlOpt.RESOLVE:
+                pinned_resolves.append(value)
+            return original_setopt(option, value)
+
+        monkeypatch.setattr(fetcher.session.curl, "setopt", tracking_setopt)
+
+    class FakeResponse:
+        status_code = 200
+        content = b"<html><head><title>Test</title></head></html>"
+        text = "<html><head><title>Test</title></head></html>"
+
+    monkeypatch.setattr(fetcher.session, "get", lambda *args, **kwargs: FakeResponse())
+
+    resp = fetcher._request("https://example.com/article")
+    assert resp.status_code == 200
+    assert pinned_resolves == [["example.com:443:93.184.216.34"]]
+
+
+def test_is_expiring_cdn_detects_instagram_and_signed_urls() -> None:
+    from app.modules.metadata.service import is_expiring_cdn
+
+    assert is_expiring_cdn("https://scontent-sjc6-1.cdninstagram.com/v/t51/photo.jpg?oe=6A742773") is True
+    assert is_expiring_cdn("https://fbcdn.net/v/photo.jpg?oe=123") is True
+    assert is_expiring_cdn("https://api.tiktok.com/video?x-expires=123") is True
+    assert is_expiring_cdn("https://cdn.dsmcdn.com/product.jpg") is False
+    assert is_expiring_cdn("https://i.ytimg.com/vi/abc/hqdefault.jpg") is False
+    assert is_expiring_cdn(None) is False
+
+
+

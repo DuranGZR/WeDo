@@ -42,12 +42,16 @@ def _validate(invitation: Invitation) -> None:
 
 def _response(invitation: Invitation, token: str | None = None) -> InvitationResponse:
     invite_url = None
+    deep_link = None
     if token:
-        invite_url = (
-            f"{settings.mobile_scheme}://invite/{token}"
-            if settings.environment == "production"
-            else f"{settings.frontend_url}/invite/{token}"
-        )
+        deep_link = f"{settings.mobile_scheme}://invite/{token}"
+        if settings.public_invite_base_url:
+            base = settings.public_invite_base_url.rstrip("/")
+        elif settings.environment == "production":
+            base = "https://wedo.app"
+        else:
+            base = settings.frontend_url.rstrip("/")
+        invite_url = f"{base}/invite/{token}"
     return InvitationResponse(
         id=invitation.id,
         space_id=invitation.space_id,
@@ -56,6 +60,8 @@ def _response(invitation: Invitation, token: str | None = None) -> InvitationRes
         use_count=invitation.use_count,
         revoked_at=invitation.revoked_at,
         invite_url=invite_url,
+        deep_link=deep_link,
+        token=token,
     )
 
 

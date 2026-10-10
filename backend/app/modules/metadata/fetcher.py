@@ -1,7 +1,9 @@
-from curl_cffi import requests
+from urllib.parse import urljoin
+
+from curl_cffi import CurlOpt, requests
 
 from app.modules.metadata.exceptions import MetadataError
-from app.modules.metadata.security import validate_url
+from app.modules.metadata.security import validate_and_resolve_url
 
 
 class MetadataFetcher:
@@ -12,22 +14,38 @@ class MetadataFetcher:
         self.session.close()
 
     def _request(self, url: str):
-        validate_url(url)
-        response = self.session.get(
-            url,
-            impersonate="chrome",
-            timeout=5.0,
-            allow_redirects=True,
-        )
-        for redirect in response.history:
-            validate_url(redirect.url)
-        validate_url(response.url)
+        current_url = url
+        max_redirects = 5
 
-        if len(response.content) > 2 * 1024 * 1024:
-            raise MetadataError("Sayfa boyutu izin verilen limiti aşıyor.")
-        if response.status_code >= 400:
-            raise MetadataError(f"HTTP hata kodu: {response.status_code}")
-        return response
+        for _ in range(max_redirects):
+            hostname, port, validated_ip = validate_and_resolve_url(current_url)
+            # Pin the hostname:port to the validated public IP to prevent DNS rebinding
+            if hasattr(self.session, "curl") and self.session.curl:
+                self.session.curl.setopt(
+                    CurlOpt.RESOLVE, [f"{hostname}:{port}:{validated_ip}"]
+                )
+            response = self.session.get(
+                current_url,
+                impersonate="chrome",
+                timeout=5.0,
+                allow_redirects=False,
+            )
+
+            # Follow redirects manually so each hop is validated against private network IPs
+            if response.status_code in {301, 302, 303, 307, 308}:
+                location = response.headers.get("location") or response.headers.get("Location")
+                if not location:
+                    raise MetadataError("Yönlendirme hedef adresi bulunamadı.")
+                current_url = urljoin(current_url, location)
+                continue
+
+            if len(response.content) > 2 * 1024 * 1024:
+                raise MetadataError("Sayfa boyutu izin verilen limiti aşıyor.")
+            if response.status_code >= 400:
+                raise MetadataError(f"HTTP hata kodu: {response.status_code}")
+            return response
+
+        raise MetadataError("Çok fazla yönlendirme (redirect loop).")
 
     def fetch(self, url: str):
         try:

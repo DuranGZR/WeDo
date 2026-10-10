@@ -17,6 +17,8 @@ class InvitationResponse(BaseModel):
     use_count: int
     revoked_at: datetime | None
     invite_url: str | None = None
+    deep_link: str | None = None
+    token: str | None = None
 
 
 class InvitationPreview(BaseModel):
