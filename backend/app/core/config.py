@@ -52,14 +52,28 @@ class Settings(BaseSettings):
             if self.debug:
                 raise ValueError("Production ortamında DEBUG=false olmalıdır.")
             db_url = str(self.database_url).lower()
-            valid_ssl = any(
-                mode in db_url
-                for mode in ("sslmode=require", "sslmode=verify-ca", "sslmode=verify-full")
-            )
-            if not valid_ssl:
-                raise ValueError(
-                    "Production ortamında DATABASE_URL 'sslmode=require' (veya verify-full) içermelidir."
+            is_internal_host = any(
+                h in db_url
+                for h in (
+                    ".internal",
+                    "localhost",
+                    "127.0.0.1",
+                    "@postgres:",
+                    "@postgres/",
+                    "@db:",
+                    "@db/",
+                    "::1",
                 )
+            )
+            if not is_internal_host:
+                valid_ssl = any(
+                    mode in db_url
+                    for mode in ("sslmode=require", "sslmode=verify-ca", "sslmode=verify-full")
+                )
+                if not valid_ssl:
+                    raise ValueError(
+                        "Production ortamında DATABASE_URL 'sslmode=require' (veya verify-full) içermelidir."
+                    )
         return self
 
 
