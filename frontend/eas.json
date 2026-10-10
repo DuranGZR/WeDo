@@ -14,10 +14,18 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://wedo-production-3ad2.up.railway.app"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "internal"
+      },
+      "ios": {}
+    }
   }
 }
