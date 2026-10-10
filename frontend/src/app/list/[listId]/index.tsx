@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useState, useMemo, useCallback } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -9,7 +9,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, Card, Screen, TextField } from '@/components/ui';
+import { AppText, Card, ListDetailSkeleton, Screen, TextField } from '@/components/ui';
+import { haptic } from '@/lib/haptics';
+
 import { colors, mono, radius, spacing } from '@/design-system';
 import { ItemCard } from '@/components/domain/ItemCard';
 import { useItems } from '@/features/items/hooks';
@@ -80,6 +82,12 @@ export default function ListDetailScreen() {
   const list = useList(listId);
   const result = useItems(listId);
 
+  useFocusEffect(
+    useCallback(() => {
+      void result.refetch();
+    }, [result]),
+  );
+
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>(
@@ -108,9 +116,7 @@ export default function ListDetailScreen() {
   if (result.isLoading || list.isLoading) {
     return (
       <Screen backgroundColor={mono.background}>
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={mono.ink} />
-        </View>
+        <ListDetailSkeleton />
       </Screen>
     );
   }
@@ -150,6 +156,7 @@ export default function ListDetailScreen() {
       <View style={styles.headerBar}>
         <Pressable
           onPress={() => router.push('/lists')}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
           accessibilityLabel="Geri git"
@@ -159,6 +166,7 @@ export default function ListDetailScreen() {
 
         <Pressable
           onPress={() => router.push(`/list/${listId}/edit`)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
           accessibilityLabel="Listeyi düzenle"
@@ -172,6 +180,7 @@ export default function ListDetailScreen() {
           <AppText style={styles.editBtnText}>Düzenle</AppText>
         </Pressable>
       </View>
+
 
       <View style={styles.content}>
         {/* List Identity Card (Centered) */}
@@ -271,12 +280,16 @@ export default function ListDetailScreen() {
             ).map(([value, label]) => (
               <Pressable
                 key={value}
-                onPress={() => setStatusFilter(value)}
+                onPress={() => {
+                  haptic.selection();
+                  setStatusFilter(value);
+                }}
                 style={({ pressed }) => [
                   styles.filterChip,
                   statusFilter === value && styles.filterChipActive,
                   pressed && styles.btnPressed,
                 ]}
+
                 accessibilityRole="button"
                 accessibilityLabel={`${label} filtrele`}
               >
@@ -321,18 +334,35 @@ export default function ListDetailScreen() {
             </Pressable>
           </Card>
         ) : filteredItems.length === 0 ? (
-          /* Empty Search Results Card */
+          /* Empty Search / Filter Results Card */
           <Card style={styles.emptyCard}>
             <View style={styles.emptyIconCircle}>
-              <Ionicons name="search-outline" size={32} color={colors.secondaryText} />
+              <Ionicons
+                name={
+                  isSearching && searchQuery.trim()
+                    ? 'search-outline'
+                    : statusFilter === 'completed'
+                      ? 'checkmark-done-circle-outline'
+                      : 'checkbox-outline'
+                }
+                size={32}
+                color={colors.secondaryText}
+              />
               <View style={styles.emptyBadge} />
             </View>
             <AppText variant="sectionTitle" style={styles.emptyTitle}>
-              Sonuç bulunamadı
+              {isSearching && searchQuery.trim()
+                ? 'Sonuç bulunamadı'
+                : statusFilter === 'completed'
+                  ? 'Tamamlanan içerik yok'
+                  : 'Yapılacak içerik yok'}
             </AppText>
             <AppText muted style={styles.emptySubtitle}>
-              &quot;{searchQuery}&quot; aramasıyla eşleşen bir kayıt bulunamadı. Lütfen
-              kelimeleri kontrol edip tekrar deneyin.
+              {isSearching && searchQuery.trim()
+                ? `"${searchQuery}" aramasıyla eşleşen bir kayıt bulunamadı. Lütfen kelimeleri kontrol edip tekrar deneyin.`
+                : statusFilter === 'completed'
+                  ? 'Bu listede henüz yapıldı olarak işaretlenmiş bir içerik bulunmuyor.'
+                  : 'Bu listedeki tüm içerikler tamamlandı.'}
             </AppText>
           </Card>
         ) : (

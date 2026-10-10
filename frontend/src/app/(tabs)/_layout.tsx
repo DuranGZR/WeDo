@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, View } from 'react-native';
+import { Platform, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import { radius } from '@/design-system';
 
@@ -12,53 +14,74 @@ const tabColors = {
 } as const;
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  // Responsive padding: on tablets max 460px centered, on mobile 20px side insets
+  const isTablet = width >= 600;
+  const horizontalMargin = isTablet ? Math.max(24, Math.floor((width - 460) / 2)) : 20;
+  const bottomOffset = Math.max(16, insets.bottom);
+
   return (
     <Tabs
+      screenListeners={{
+        tabPress: () => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        },
+      }}
       screenOptions={{
         headerShown: false,
+
         lazy: true,
         freezeOnBlur: true,
+        tabBarShowLabel: true,
+        tabBarLabelPosition: 'below-icon',
         tabBarActiveTintColor: tabColors.ink,
         tabBarInactiveTintColor: tabColors.muted,
         tabBarStyle: {
           backgroundColor: tabColors.paper,
-          borderTopWidth: 0,
-          borderRadius: 16,
-          height: 70,
-          left: 20,
-          right: 20,
-          bottom: 12,
-          paddingBottom: Platform.OS === 'ios' ? 10 : 8,
-          paddingTop: 8,
+          borderRadius: 24,
+          height: 64,
           position: 'absolute',
-          borderWidth: 1,
+          left: horizontalMargin,
+          right: horizontalMargin,
+          start: horizontalMargin,
+          end: horizontalMargin,
+          bottom: bottomOffset,
+          paddingBottom: 6,
+          paddingTop: 6,
+          borderWidth: 1.5,
           borderColor: tabColors.ink,
           ...Platform.select({
             web: {
-              boxShadow: '0px 8px 0px rgba(0, 0, 0, 0.12)',
+              boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.12)',
             },
             default: {
               shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.14,
-              shadowRadius: 0,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.12,
+              shadowRadius: 8,
               elevation: 6,
             },
           }),
         },
         tabBarItemStyle: {
-          borderRadius: radius.lg,
+          borderRadius: radius.md,
           marginHorizontal: 2,
-          marginVertical: 2,
-          minHeight: 50,
+          paddingVertical: 0,
           justifyContent: 'center',
-          overflow: 'hidden',
+          alignItems: 'center',
+        },
+        tabBarIconStyle: {
+          height: 24,
+          marginBottom: 2,
         },
         tabBarLabelStyle: {
-          fontSize: 9,
-          lineHeight: 12,
+          fontSize: 10,
+          lineHeight: 13,
           fontWeight: '700',
-          marginTop: 1,
+          marginTop: 0,
+          marginBottom: 0,
         },
       }}
     >
@@ -66,12 +89,13 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Ana Sayfa',
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarLabel: 'Ana Sayfa',
+          tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 30,
-                height: 26,
-                borderRadius: 8,
+                width: 28,
+                height: 23,
+                borderRadius: 7,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: focused ? tabColors.soft : 'transparent',
@@ -79,7 +103,7 @@ export default function TabsLayout() {
             >
               <Ionicons
                 name={focused ? 'home' : 'home-outline'}
-                size={size - 3}
+                size={18}
                 color={color}
               />
             </View>
@@ -90,12 +114,13 @@ export default function TabsLayout() {
         name="lists"
         options={{
           title: 'Listeler',
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarLabel: 'Listeler',
+          tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 30,
-                height: 26,
-                borderRadius: 8,
+                width: 28,
+                height: 23,
+                borderRadius: 7,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: focused ? tabColors.soft : 'transparent',
@@ -103,7 +128,7 @@ export default function TabsLayout() {
             >
               <Ionicons
                 name={focused ? 'list' : 'list-outline'}
-                size={size - 3}
+                size={18}
                 color={color}
               />
             </View>
@@ -114,12 +139,13 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarLabel: 'Profil',
+          tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 30,
-                height: 26,
-                borderRadius: 8,
+                width: 28,
+                height: 23,
+                borderRadius: 7,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: focused ? tabColors.soft : 'transparent',
@@ -127,7 +153,7 @@ export default function TabsLayout() {
             >
               <Ionicons
                 name={focused ? 'person' : 'person-outline'}
-                size={size - 3}
+                size={18}
                 color={color}
               />
             </View>

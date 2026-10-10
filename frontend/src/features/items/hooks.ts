@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/api/query-keys';
+import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth-store';
 import { itemsApi } from './api';
 import type { Item } from './types';
@@ -41,6 +42,7 @@ export function useCreateItem() {
       title?: string;
     }) => itemsApi.create(input),
     onSuccess: (_item, input) => {
+      haptic.success();
       void client.invalidateQueries({ queryKey: queryKeys.items(input.list_id) });
       void client.invalidateQueries({ queryKey: queryKeys.lists(input.space_id) });
     },
@@ -52,6 +54,7 @@ export function useMoveItem(itemId: string, sourceListId: string, spaceId: strin
   return useMutation({
     mutationFn: (targetListId: string) => itemsApi.move(itemId, targetListId),
     onSuccess: (_item, targetListId) => {
+      haptic.selection();
       void client.invalidateQueries({ queryKey: queryKeys.items(sourceListId) });
       void client.invalidateQueries({ queryKey: queryKeys.items(targetListId) });
       void client.invalidateQueries({ queryKey: queryKeys.item(itemId) });
@@ -64,8 +67,15 @@ export function useCompleteItem(itemId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: () => itemsApi.complete(itemId),
-    onSuccess: () => {
+    onSuccess: (item) => {
+      haptic.medium();
       void client.invalidateQueries({ queryKey: queryKeys.item(itemId) });
+      if (item?.list_id) {
+        void client.invalidateQueries({ queryKey: queryKeys.items(item.list_id) });
+      } else {
+        void client.invalidateQueries({ queryKey: ['items'] });
+      }
+      void client.invalidateQueries({ queryKey: ['lists'] });
     },
   });
 }
@@ -74,8 +84,15 @@ export function useRestoreItem(itemId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: () => itemsApi.restore(itemId),
-    onSuccess: () => {
+    onSuccess: (item) => {
+      haptic.light();
       void client.invalidateQueries({ queryKey: queryKeys.item(itemId) });
+      if (item?.list_id) {
+        void client.invalidateQueries({ queryKey: queryKeys.items(item.list_id) });
+      } else {
+        void client.invalidateQueries({ queryKey: ['items'] });
+      }
+      void client.invalidateQueries({ queryKey: ['lists'] });
     },
   });
 }
@@ -85,6 +102,7 @@ export function useDeleteItem(itemId: string, listId: string) {
   return useMutation({
     mutationFn: () => itemsApi.remove(itemId),
     onSuccess: () => {
+      haptic.heavy();
       if (listId) {
         void client.invalidateQueries({ queryKey: queryKeys.items(listId) });
       }
