@@ -11,6 +11,7 @@ export function NotificationEffects() {
   const pushEnabled = useAuthStore(
     (state) => state.user?.push_notifications_enabled ?? true,
   );
+
   useEffect(() => {
     if (Platform.OS === 'web') return undefined;
     const received = Notifications.addNotificationReceivedListener(() => undefined);
@@ -25,6 +26,7 @@ export function NotificationEffects() {
     };
   }, []);
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     if (!accessToken || !pushEnabled) return;
     void registerForPushNotifications(accessToken).catch(() => undefined);
   }, [accessToken, pushEnabled]);

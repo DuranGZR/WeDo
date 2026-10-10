@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+﻿import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, View, Platform } from 'react-native';
 import { AppText, EmptyState, Screen } from '@/components/ui';
 import { useLists } from '@/features/lists/hooks';
@@ -85,7 +85,7 @@ export default function SpaceDetailScreen() {
 
 const styles: any = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useShareIntentContext } from 'expo-share-intent';
 
-import { AppText, EmptyState, Screen } from '@/components/ui';
+import { AppText, EmptyState, Screen, ShareComposeSkeleton } from '@/components/ui';
 import { colors, radius, spacing } from '@/design-system';
 import { useCreateItem } from '@/features/items/hooks';
 import { useLists } from '@/features/lists/hooks';
@@ -20,6 +20,8 @@ import { sharePayloadSchema } from '@/features/sharing/types';
 import { useSpaces } from '@/features/spaces/hooks';
 import { useSpaceStore } from '@/store/space-store';
 import { ApiClientError } from '@/api/client/api-client';
+import { useToast } from '@/components/feedback/AppToast';
+import { haptic } from '@/lib/haptics';
 
 const findUrl = (value?: string | null) => value?.match(/https?:\/\/[^\s]+/i)?.[0];
 
@@ -33,6 +35,7 @@ export default function ShareComposeScreen() {
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
   const selectedSpaceId = useSpaceStore((state) => state.selectedSpaceId);
   const spaces = useSpaces();
+  const { showToast } = useToast();
   const [spaceId, setSpaceId] = useState<string | undefined>();
   const lists = useLists(spaceId ?? '');
   const [listId, setListId] = useState<string | undefined>();
@@ -85,6 +88,7 @@ export default function ShareComposeScreen() {
   }, [defaultTitle]);
 
   function leaveShareFlow() {
+    haptic.light();
     resetShareIntent();
     if (router.canGoBack()) router.back();
     else router.replace('/(tabs)');
@@ -94,6 +98,7 @@ export default function ShareComposeScreen() {
     if (!share || !space || !list) return;
     const originalUrl = share.url ?? findUrl(share.sharedText);
     if (!originalUrl) {
+      haptic.warning();
       Alert.alert(
         'Bağlantı bulunamadı',
         'Bu paylaşımda kaydedilebilecek bir bağlantı yok.',
@@ -110,12 +115,28 @@ export default function ShareComposeScreen() {
     try {
       await create.mutateAsync(input);
       resetShareIntent();
+      showToast({
+        type: 'success',
+        title: 'İçerik kaydedildi',
+        message: `${list.name} listesine eklendi.`,
+      });
       router.replace(`/list/${list.id}`);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 409) {
+        haptic.warning();
         Alert.alert(
           'Bu bağlantı zaten kayıtlı',
           `${list.name} listesinde aynı bağlantı zaten var.`,
+          [
+            { text: 'Kapat', style: 'cancel' },
+            {
+              text: 'Listeye Git',
+              onPress: () => {
+                resetShareIntent();
+                router.replace(`/list/${list.id}`);
+              },
+            },
+          ],
         );
         return;
       }
@@ -125,20 +146,19 @@ export default function ShareComposeScreen() {
         list.id,
       );
       resetShareIntent();
-      Alert.alert(
-        'Çevrimdışı kaydedildi',
-        'İnternet bağlantısı geldiğinde otomatik gönderilecek.',
-      );
+      showToast({
+        type: 'warning',
+        title: 'Çevrimdışı kaydedildi',
+        message: 'İnternet bağlantısı sağlandığında otomatik gönderilecek.',
+      });
       router.replace('/(tabs)');
     }
   }
 
   if (spaces.isLoading || (spaceId && lists.isLoading)) {
     return (
-      <Screen scroll={false}>
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primaryText} />
-        </View>
+      <Screen scroll={true}>
+        <ShareComposeSkeleton />
       </Screen>
     );
   }
@@ -190,7 +210,10 @@ export default function ShareComposeScreen() {
           {spaces.data?.data.map((entry) => (
             <Pressable
               key={entry.id}
-              onPress={() => setSpaceId(entry.id)}
+              onPress={() => {
+                haptic.selection();
+                setSpaceId(entry.id);
+              }}
               style={[styles.option, entry.id === spaceId && styles.optionSelected]}
             >
               <AppText
@@ -210,7 +233,10 @@ export default function ShareComposeScreen() {
           {lists.data?.data.map((entry) => (
             <Pressable
               key={entry.id}
-              onPress={() => setListId(entry.id)}
+              onPress={() => {
+                haptic.selection();
+                setListId(entry.id);
+              }}
               style={[styles.option, entry.id === listId && styles.optionSelected]}
             >
               <AppText

@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+﻿import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, View, StyleSheet, Platform, Pressable } from 'react-native';
 import { AppText, EmptyState, Screen } from '@/components/ui';
 import { useSpaceMemories } from '@/features/collaboration/hooks';
@@ -30,20 +30,20 @@ export default function MemoriesScreen() {
       </View>
 
       <View style={styles.content}>
-        <AppText variant="pageTitle">Anılar</AppText>
+        <AppText variant="pageTitle">AnÄ±lar</AppText>
         {result.isLoading ? (
           <ActivityIndicator />
         ) : memories.length === 0 ? (
           <EmptyState
-            title="Henüz anı yok"
-            description="Tamamlanan içeriklere not ve puan ekleyebilirsin."
+            title="HenÃ¼z anÄ± yok"
+            description="Tamamlanan iÃ§eriklere not ve puan ekleyebilirsin."
           />
         ) : (
           memories.map((memory) => (
             <View key={memory.id} style={styles.glassCard}>
               <AppText>{memory.note}</AppText>
               <AppText variant="caption" muted style={{ marginTop: spacing.xs }}>
-                {memory.rating ? `Puan: ${memory.rating}/5` : 'Puansız'}
+                {memory.rating ? `Puan: ${memory.rating}/5` : 'PuansÄ±z'}
               </AppText>
             </View>
           ))
@@ -55,7 +55,7 @@ export default function MemoriesScreen() {
 
 const styles: any = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

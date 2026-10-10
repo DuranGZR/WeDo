@@ -23,6 +23,7 @@ export function AccountScaffold({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Geri git"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() =>
             router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')
           }
@@ -31,6 +32,7 @@ export function AccountScaffold({
           <Ionicons name="arrow-back" size={21} color={mono.ink} />
         </Pressable>
       </View>
+
       <View style={styles.content}>
         <View style={styles.titleGroup}>
           <AppText variant="pageTitle" style={styles.title}>
@@ -162,7 +164,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: mono.ink,
   },
-  content: { gap: spacing.lg, paddingBottom: spacing.huge },
+  content: { gap: spacing.lg, paddingBottom: 72 },
   titleGroup: { gap: spacing.xs, paddingVertical: spacing.sm },
   title: { fontWeight: '800' },
   subtitle: { fontSize: 14, lineHeight: 20 },

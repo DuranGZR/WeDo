@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+﻿import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View, Platform, Pressable } from 'react-native';
 import { AppText, EmptyState, Screen } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
@@ -67,7 +67,7 @@ export default function ItemHistoryScreen() {
 
 const styles: any = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

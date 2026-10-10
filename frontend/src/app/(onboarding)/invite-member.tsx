@@ -19,6 +19,7 @@ import { collaborationApi } from '@/features/collaboration/api';
 export default function InviteMemberScreen() {
   const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
   const [sending, setSending] = useState(false);
+  const [createdInvite, setCreatedInvite] = useState<{ invite_url: string } | null>(null);
 
   async function shareInvitation() {
     if (!spaceId) {
@@ -27,15 +28,29 @@ export default function InviteMemberScreen() {
     }
     setSending(true);
     try {
-      const invitation = await collaborationApi.invite(spaceId);
-      if (!invitation.invite_url) throw new Error('Davet bağlantısı oluşturulamadı.');
-      await Share.share({
-        message: `WeDo'da birlikte kaydedelim. Daveti kabul et: ${invitation.invite_url}`,
-        url: invitation.invite_url,
-      });
-      router.replace('/(tabs)');
+      let inviteUrl = createdInvite?.invite_url;
+      if (!inviteUrl) {
+        const invitation = await collaborationApi.invite(spaceId);
+        if (!invitation.invite_url) throw new Error('Davet bağlantısı oluşturulamadı.');
+        inviteUrl = invitation.invite_url;
+        setCreatedInvite({ invite_url: inviteUrl });
+      }
+      const message = `WeDo'da birlikte kaydedelim. Daveti kabul et: ${inviteUrl}`;
+      const result = await Share.share(
+        Platform.OS === 'ios'
+          ? {
+              url: inviteUrl,
+              message,
+            }
+          : {
+              message,
+            },
+      );
+      if (result.action === Share.sharedAction) {
+        router.replace('/(tabs)');
+      }
     } catch {
-      Alert.alert('Davet gönderilemedi', 'Bağlantıyı kontrol edip tekrar dene.');
+      Alert.alert('Davet paylaşılamadı', 'Bağlantıyı kontrol edip tekrar dene.');
     } finally {
       setSending(false);
     }
@@ -145,7 +160,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.huge,
   },
   heading: { alignItems: 'center', gap: spacing.xs },
-  logo: { width: 64, height: 64 },
+  logo: { width: 110, height: 32 },
   title: { fontSize: 25, fontWeight: '800', color: mono.ink, textAlign: 'center' },
   subtitle: { textAlign: 'center', lineHeight: 20, color: mono.muted },
   card: {

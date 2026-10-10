@@ -154,7 +154,7 @@ export default function SettingsScreen() {
           <AccountRow
             icon="trash-outline"
             title="Hesabı sil"
-            description="Şifre onayıyla kalıcı olarak devre dışı bırak"
+            description="Hesabını ve verilerini kalıcı olarak sil"
             onPress={() => router.push('/settings/delete-account' as never)}
             danger
           />

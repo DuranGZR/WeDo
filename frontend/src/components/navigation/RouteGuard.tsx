@@ -12,7 +12,12 @@ export function RouteGuard() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!user && group !== '(auth)' && group !== 'invite' && group !== '(share)') {
+    const isPublicGroup =
+      group === '(auth)' ||
+      group === 'invite' ||
+      group === '(share)' ||
+      (group as string) === 'legal';
+    if (!user && !isPublicGroup) {
       router.replace('/(auth)/welcome');
     }
     if (user && group === '(auth)') router.replace('/(tabs)');
@@ -43,6 +48,10 @@ export function RouteGuard() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen name="invite" options={{ animation: 'fade_from_bottom' }} />
+      <Stack.Screen
+        name="legal"
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
     </Stack>
   );
 }

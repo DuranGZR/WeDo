@@ -1,10 +1,16 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, View, Image, Platform } from 'react-native';
 import { colors, mono, spacing, radius } from '@/design-system';
+import { haptic } from '@/lib/haptics';
 import type { Item } from '@/features/items/types';
 import { AppText, Badge, Card } from '@/components/ui';
 
 export function getItemPreviewImage(item: Item): string {
   if (item.preview_image_url) {
+    if (item.preview_image_url.startsWith('/')) {
+      const baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
+      return `${baseUrl}${item.preview_image_url}`;
+    }
     return item.preview_image_url;
   }
 
@@ -53,6 +59,47 @@ export function getItemPreviewImage(item: Item): string {
   return 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=300&auto=format&fit=crop&q=80';
 }
 
+export function getItemFallbackImage(item?: Item): string {
+  if (!item) {
+    return 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=400&auto=format&fit=crop&q=80';
+  }
+  const title = (item.title ?? '').toLowerCase();
+  const domain = (item.source_domain ?? '').toLowerCase();
+
+  if (
+    domain.includes('trendyol') ||
+    domain === 'ty.gl' ||
+    domain.endsWith('.ty.gl') ||
+    domain.includes('amazon') ||
+    domain.includes('hepsiburada')
+  ) {
+    if (
+      title.includes('polo') ||
+      title.includes('yaka') ||
+      title.includes('shirt') ||
+      title.includes('t-shirt') ||
+      title.includes('mavi') ||
+      title.includes('lacivert')
+    ) {
+      return 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&auto=format&fit=crop&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&auto=format&fit=crop&q=80';
+  }
+  if (domain.includes('instagram')) {
+    return 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&auto=format&fit=crop&q=80';
+  }
+  if (domain.includes('tiktok')) {
+    return 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80';
+  }
+  if (domain.includes('youtube')) {
+    return 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=400&auto=format&fit=crop&q=80';
+  }
+  if (domain.includes('google') || domain.includes('maps')) {
+    return 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&auto=format&fit=crop&q=80';
+  }
+  return 'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=400&auto=format&fit=crop&q=80';
+}
+
 export function getItemSourceLabel(item: Item): string {
   const domain = (item.source_domain ?? '').toLowerCase();
   if (domain.includes('instagram')) return 'Instagram / Reels';
@@ -75,22 +122,33 @@ export function ItemCard({
   grid?: boolean;
   onPress: () => void;
 }) {
+  const [imageError, setImageError] = useState(false);
   const completed = item.status === 'completed';
-  const imageUrl = getItemPreviewImage(item);
+  const defaultFallback = 'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=300&auto=format&fit=crop&q=80';
+  const imageUrl = imageError ? defaultFallback : getItemPreviewImage(item);
+
+  const handlePress = () => {
+    haptic.light();
+    onPress();
+  };
 
   if (grid) {
     return (
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={item.title ?? item.original_url ?? 'Kaydedilen içerik'}
-        onPress={onPress}
+        onPress={handlePress}
         style={({ pressed }) => [
           styles.gridCardPressable,
           pressed && styles.gridCardPressed,
         ]}
       >
         <Card style={styles.gridCard}>
-          <Image source={{ uri: imageUrl }} style={styles.gridCoverImage} />
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.gridCoverImage}
+            onError={() => setImageError(true)}
+          />
 
           <View style={styles.gridDetails}>
             <View style={styles.gridMeta}>
@@ -135,13 +193,17 @@ export function ItemCard({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={item.title ?? item.original_url ?? 'Kaydedilen içerik'}
-      onPress={onPress}
+      onPress={handlePress}
       style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
     >
       <Card style={styles.card}>
         <View style={styles.rowLayout}>
           {/* Cover image on the left */}
-          <Image source={{ uri: imageUrl }} style={styles.coverImage} />
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.coverImage}
+            onError={() => setImageError(true)}
+          />
 
           {/* Details on the right */}
           <View style={styles.details}>

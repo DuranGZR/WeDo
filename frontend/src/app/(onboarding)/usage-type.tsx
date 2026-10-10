@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+﻿import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,12 +6,12 @@ import { AppText, Card, Screen } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
 
 const options = [
-  { label: 'Sevgilimle', emoji: '🧡' },
-  { label: 'Arkadaşlarımla', emoji: '👥' },
-  { label: 'Ev arkadaşımla', emoji: '🏠' },
-  { label: 'Ailemle', emoji: '👨‍👩‍👧‍👦' },
-  { label: 'Bir grupla', emoji: '🎒' },
-  { label: 'Tek başıma', emoji: '🦊' },
+  { label: 'Sevgilimle', emoji: 'ğŸ§¡' },
+  { label: 'ArkadaÅŸlarÄ±mla', emoji: 'ğŸ‘¥' },
+  { label: 'Ev arkadaÅŸÄ±mla', emoji: 'ğŸ ' },
+  { label: 'Ailemle', emoji: 'ğŸ‘¨â€ğŸ‘©â€ğŸ‘§â€ğŸ‘¦' },
+  { label: 'Bir grupla', emoji: 'ğŸ’' },
+  { label: 'Tek baÅŸÄ±ma', emoji: 'ğŸ¦Š' },
 ];
 
 export default function UsageTypeScreen() {
@@ -39,10 +39,10 @@ export default function UsageTypeScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="pageTitle" style={styles.title}>
-            WeDo’yu kiminle kullanacaksın?
+            WeDoâ€™yu kiminle kullanacaksÄ±n?
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Buna göre sana uygun başlangıç listeleri hazırlayacağız.
+            Buna gÃ¶re sana uygun baÅŸlangÄ±Ã§ listeleri hazÄ±rlayacaÄŸÄ±z.
           </AppText>
         </View>
 
@@ -96,7 +96,7 @@ export default function UsageTypeScreen() {
 
 const styles = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

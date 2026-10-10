@@ -9,7 +9,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { AppText, Card, Screen, SectionHeader } from '@/components/ui';
+
 import { colors, mono, spacing, radius } from '@/design-system';
 import { collaborationApi } from '@/features/collaboration/api';
 import { useNotifications } from '@/features/collaboration/hooks';
@@ -31,6 +33,7 @@ export default function NotificationsScreen() {
       <View style={styles.headerBar}>
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
           accessibilityLabel="Geri git"
@@ -40,11 +43,13 @@ export default function NotificationsScreen() {
 
         {notifications.some((n) => !n.read_at) && (
           <Pressable
-            onPress={() =>
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               void collaborationApi
                 .readAllNotifications()
-                .then(() => client.invalidateQueries({ queryKey: ['notifications'] }))
-            }
+                .then(() => client.invalidateQueries({ queryKey: ['notifications'] }));
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={({ pressed }) => [styles.readAllBtn, pressed && styles.btnPressed]}
             accessibilityRole="button"
             accessibilityLabel="Tümünü okundu yap"
@@ -53,6 +58,7 @@ export default function NotificationsScreen() {
           </Pressable>
         )}
       </View>
+
 
       <View style={styles.content}>
         {/* Title Section */}

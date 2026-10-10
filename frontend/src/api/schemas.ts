@@ -9,6 +9,7 @@ export const userSchema = z.object({
   onboarding_completed: z.boolean(),
   notify_partner_activity: z.boolean().default(true),
   push_notifications_enabled: z.boolean().default(true),
+  has_password: z.boolean().default(true),
   created_at: z.string(),
 });
 

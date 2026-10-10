@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+﻿import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,14 +6,14 @@ import { AppText, Card, Screen } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
 
 const options = [
-  { label: 'Gidilecek Yerler', emoji: '📍' },
-  { label: 'İzlenecekler', emoji: '🍿' },
-  { label: 'Alınacaklar', emoji: '🛒' },
-  { label: 'Yapılacaklar', emoji: '📝' },
-  { label: 'Tarifler', emoji: '🍳' },
-  { label: 'Seyahat', emoji: '✈️' },
-  { label: 'Etkinlikler', emoji: '🎟️' },
-  { label: 'Okunacaklar', emoji: '📚' },
+  { label: 'Gidilecek Yerler', emoji: 'ğŸ“' },
+  { label: 'Ä°zlenecekler', emoji: 'ğŸ¿' },
+  { label: 'AlÄ±nacaklar', emoji: 'ğŸ›’' },
+  { label: 'YapÄ±lacaklar', emoji: 'ğŸ“' },
+  { label: 'Tarifler', emoji: 'ğŸ³' },
+  { label: 'Seyahat', emoji: 'âœˆï¸' },
+  { label: 'Etkinlikler', emoji: 'ğŸŸï¸' },
+  { label: 'Okunacaklar', emoji: 'ğŸ“š' },
 ];
 
 export default function ListTemplatesScreen() {
@@ -51,10 +51,10 @@ export default function ListTemplatesScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="pageTitle" style={styles.title}>
-            En çok neleri birlikte kaydediyorsunuz?
+            En Ã§ok neleri birlikte kaydediyorsunuz?
           </AppText>
           <AppText muted style={styles.subtitle}>
-            En fazla dört seçenek seçebilirsin.
+            En fazla dÃ¶rt seÃ§enek seÃ§ebilirsin.
           </AppText>
         </View>
 
@@ -98,7 +98,7 @@ export default function ListTemplatesScreen() {
             (!selected.length || pressed) && styles.btnDisabled,
           ]}
         >
-          <AppText style={styles.primaryBtnText}>Alanımı oluştur</AppText>
+          <AppText style={styles.primaryBtnText}>AlanÄ±mÄ± oluÅŸtur</AppText>
           <Ionicons name="arrow-forward" size={18} color={colors.surface} />
         </Pressable>
       </View>
@@ -108,7 +108,7 @@ export default function ListTemplatesScreen() {
 
 const styles = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

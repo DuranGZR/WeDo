@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { ApiClientError } from '@/api/client/api-client';
+import { AppleAuthButton } from '@/components/auth/AppleAuthButton';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { AuthShell, authColors } from '@/components/auth/AuthShell';
 import { AppText, TextField } from '@/components/ui';
 import { spacing } from '@/design-system';
@@ -71,13 +74,34 @@ export default function SignUpScreen() {
       footer={
         <AppText style={styles.footerText}>
           Zaten hesabın var mı?{' '}
-          <Link href="/(auth)/sign-in" style={styles.footerLink}>
+          <Link
+            href={
+              inviteToken
+                ? (`/(auth)/sign-in?inviteToken=${encodeURIComponent(inviteToken)}` as any)
+                : '/(auth)/sign-in'
+            }
+            style={styles.footerLink}
+          >
             Giriş yap
           </Link>
         </AppText>
       }
     >
       <View style={styles.form}>
+        <AppleAuthButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+          inviteToken={inviteToken}
+        />
+        <GoogleAuthButton inviteToken={inviteToken} style={{ marginTop: 10 }} />
+
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <AppText muted style={styles.dividerText}>
+            veya e-posta ile
+          </AppText>
+          <View style={styles.dividerLine} />
+        </View>
+
         <Controller
           control={form.control}
           name="displayName"
@@ -182,6 +206,26 @@ export default function SignUpScreen() {
           </View>
         ) : null}
 
+        <View style={styles.legalNotice}>
+          <AppText muted style={styles.legalText}>
+            Hesap oluşturarak{' '}
+            <AppText
+              style={styles.legalLink}
+              onPress={() => router.push('/legal/terms' as never)}
+            >
+              Kullanım Koşulları
+            </AppText>
+            {' '}ve{' '}
+            <AppText
+              style={styles.legalLink}
+              onPress={() => router.push('/legal/privacy' as never)}
+            >
+              Gizlilik Politikası
+            </AppText>
+            &apos;nı kabul etmiş olursunuz.
+          </AppText>
+        </View>
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Hesap oluştur"
@@ -211,6 +255,21 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   form: { gap: spacing.md },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.xs,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#D1D1CF',
+  },
+  dividerText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   input: {
     borderRadius: 8,
     borderColor: '#8D8D8B',
@@ -267,5 +326,8 @@ const styles = StyleSheet.create({
   },
   footerText: { color: '#5F5F5D', fontSize: 13, textAlign: 'center' },
   footerLink: { color: authColors.ink, fontWeight: '700' },
+  legalNotice: { marginTop: spacing.xs, alignItems: 'center' },
+  legalText: { fontSize: 11, lineHeight: 16, textAlign: 'center', color: '#6F6F6D' },
+  legalLink: { color: authColors.ink, fontWeight: '600' },
   pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
 });

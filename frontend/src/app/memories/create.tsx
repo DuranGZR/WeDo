@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+﻿import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   View,
@@ -7,12 +7,15 @@ import {
   Pressable,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, Screen, TextField } from '@/components/ui';
 import { collaborationApi } from '@/features/collaboration/api';
 import { colors, radius, spacing } from '@/design-system';
+
 
 export default function CreateMemoryScreen() {
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
@@ -25,7 +28,7 @@ export default function CreateMemoryScreen() {
     if (Platform.OS !== 'web') {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionResult.granted === false) {
-        alert('Fotoğraflarınıza erişim izni vermeniz gerekmektedir!');
+        Alert.alert('Ä°zin Gerekli', 'FotoÄŸraflarÄ±nÄ±za eriÅŸim izni vermeniz gerekmektedir.');
         return;
       }
     }
@@ -50,6 +53,7 @@ export default function CreateMemoryScreen() {
         note: note.trim(),
         ...(rating ? { rating: Number(rating) } : {}),
       });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } finally {
       setSaving(false);
@@ -65,9 +69,11 @@ export default function CreateMemoryScreen() {
         <View style={styles.blobSand} />
       </View>
 
+      {/* Header Bar with Back Button */}
       <View style={styles.headerBar}>
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
           accessibilityLabel="Geri git"
@@ -77,13 +83,13 @@ export default function CreateMemoryScreen() {
       </View>
 
       <View style={styles.content}>
-        <AppText variant="pageTitle">Anı ekle</AppText>
+        <AppText variant="pageTitle">AnÄ± ekle</AppText>
 
         <View style={styles.glassCard}>
           <TextField
             value={note}
             onChangeText={setNote}
-            placeholder="Bu içerikle ilgili notun"
+            placeholder="Bu iÃ§erikle ilgili notun"
             multiline
           />
           <View style={{ height: spacing.md }} />
@@ -98,12 +104,16 @@ export default function CreateMemoryScreen() {
 
           {/* Memory Photo Picker */}
           <AppText variant="caption" muted style={styles.photoSectionLabel}>
-            ANI FOTOĞRAFI
+            ANI FOTOÄRAFI
           </AppText>
           {imageUri ? (
             <View style={styles.imagePreviewContainer}>
               <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-              <Pressable onPress={() => setImageUri(null)} style={styles.removeImageBtn}>
+              <Pressable
+                onPress={() => setImageUri(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.removeImageBtn}
+              >
                 <Ionicons name="close-circle" size={24} color={colors.error} />
               </Pressable>
             </View>
@@ -115,10 +125,10 @@ export default function CreateMemoryScreen() {
                 pressed && styles.btnPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Fotoğraf ekle"
+              accessibilityLabel="FotoÄŸraf ekle"
             >
               <Ionicons name="camera-outline" size={24} color={colors.accent} />
-              <AppText style={styles.photoPickerText}>Fotoğraf Ekle</AppText>
+              <AppText style={styles.photoPickerText}>FotoÄŸraf Ekle</AppText>
             </Pressable>
           )}
         </View>
@@ -139,7 +149,7 @@ export default function CreateMemoryScreen() {
           {saving ? (
             <ActivityIndicator color={colors.surface} />
           ) : (
-            <AppText style={styles.primaryBtnText}>Anıyı kaydet</AppText>
+            <AppText style={styles.primaryBtnText}>AnÄ±yÄ± kaydet</AppText>
           )}
         </Pressable>
       </View>
@@ -149,7 +159,7 @@ export default function CreateMemoryScreen() {
 
 const styles: any = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

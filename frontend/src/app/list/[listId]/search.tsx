@@ -1,4 +1,4 @@
-import { useLocalSearchParams, router } from 'expo-router';
+﻿import { useLocalSearchParams, router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View, Pressable, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -112,7 +112,7 @@ export default function ListSearchScreen() {
 
 const styles = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

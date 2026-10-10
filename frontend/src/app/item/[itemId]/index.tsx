@@ -11,8 +11,9 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { AppText, Card, EmptyState, ItemDetailSkeleton, Screen } from '@/components/ui';
+import { haptic } from '@/lib/haptics';
 
-import { AppText, Card, EmptyState, Screen } from '@/components/ui';
 import { getItemPreviewImage } from '@/components/domain/ItemCard';
 import { colors, mono, spacing } from '@/design-system';
 import {
@@ -38,19 +39,33 @@ export default function ItemDetailScreen() {
   if (item.isLoading)
     return (
       <Screen backgroundColor={mono.background}>
-        <Header onBack={goBack} />
-        <View style={styles.loader}>
-          <ActivityIndicator color={mono.ink} />
-        </View>
+        <ItemDetailSkeleton />
       </Screen>
     );
+  if (item.isError && !item.data)
+    return (
+      <Screen backgroundColor={mono.background}>
+        <Header onBack={goBack} />
+        <EmptyState
+          icon="cloud-offline-outline"
+          title="Yüklenemedi"
+          description="İçerik bilgisi alınırken bir sorun oluştu. Lütfen bağlantını kontrol et."
+          action="Yeniden Dene"
+          onAction={() => void item.refetch()}
+        />
+      </Screen>
+    );
+
   if (!item.data)
     return (
       <Screen backgroundColor={mono.background}>
         <Header onBack={goBack} />
         <EmptyState
+          icon="alert-circle-outline"
           title="İçerik bulunamadı"
-          description="Bu içerik artık erişilebilir değil."
+          description="Bu içerik artık erişilebilir değil veya silinmiş."
+          action="Geri Dön"
+          onAction={goBack}
         />
       </Screen>
     );
@@ -59,12 +74,16 @@ export default function ItemDetailScreen() {
   const completed = value.status === 'completed';
 
   const confirmDelete = () => {
+    haptic.warning();
     Alert.alert('İçeriği sil?', 'Bu içerik listeden kaldırılacak.', [
       { text: 'Vazgeç', style: 'cancel' },
       {
         text: 'Sil',
         style: 'destructive',
-        onPress: () => remove.mutate(undefined, { onSuccess: () => router.back() }),
+        onPress: () => {
+          haptic.medium();
+          remove.mutate(undefined, { onSuccess: () => router.back() });
+        },
       },
     ]);
   };
@@ -100,8 +119,16 @@ export default function ItemDetailScreen() {
           </View>
         </Card>
         <Pressable
-          onPress={() => (completed ? restore.mutate() : complete.mutate())}
+          onPress={() => {
+            haptic.medium();
+            if (completed) {
+              restore.mutate();
+            } else {
+              complete.mutate();
+            }
+          }}
           disabled={complete.isPending || restore.isPending}
+
           style={({ pressed }) => [
             styles.completeButton,
             completed && styles.restoreButton,
@@ -166,6 +193,7 @@ export default function ItemDetailScreen() {
         ) : null}
         <Pressable
           onPress={confirmDelete}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           disabled={remove.isPending}
           style={({ pressed }) => [
             styles.deleteButton,
@@ -190,6 +218,7 @@ function Header({ onBack }: { onBack: () => void }) {
     <View style={styles.header}>
       <Pressable
         onPress={onBack}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel="Geri git"
@@ -199,6 +228,7 @@ function Header({ onBack }: { onBack: () => void }) {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   contourTop: {

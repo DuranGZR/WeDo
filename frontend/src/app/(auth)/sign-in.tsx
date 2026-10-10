@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
+import { AppleAuthButton } from '@/components/auth/AppleAuthButton';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { AuthShell, authColors } from '@/components/auth/AuthShell';
 import { AppText, TextField } from '@/components/ui';
 import { spacing } from '@/design-system';
@@ -47,13 +49,31 @@ export default function SignInScreen() {
       footer={
         <AppText style={styles.footerText}>
           Hesabın yok mu?{' '}
-          <Link href="/(auth)/sign-up" style={styles.footerLink}>
+          <Link
+            href={
+              inviteToken
+                ? (`/(auth)/sign-up?inviteToken=${encodeURIComponent(inviteToken)}` as any)
+                : '/(auth)/sign-up'
+            }
+            style={styles.footerLink}
+          >
             Kayıt ol
           </Link>
         </AppText>
       }
     >
       <View style={styles.form}>
+        <AppleAuthButton inviteToken={inviteToken} />
+        <GoogleAuthButton inviteToken={inviteToken} style={{ marginTop: 10 }} />
+
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <AppText muted style={styles.dividerText}>
+            veya e-posta ile
+          </AppText>
+          <View style={styles.dividerLine} />
+        </View>
+
         {registeredEmail ? (
           <View style={styles.registrationNotice}>
             <Ionicons name="checkmark-circle" size={18} color="#47734B" />
@@ -132,6 +152,21 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   form: { gap: spacing.md },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.xs,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#D1D1CF',
+  },
+  dividerText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   input: {
     borderRadius: 8,
     borderColor: '#8D8D8B',

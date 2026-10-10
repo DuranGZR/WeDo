@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { colors, radius, spacing, systemFontFamily } from '@/design-system';
@@ -9,14 +9,38 @@ type FieldProps = TextInputProps & {
   rightAccessory?: ReactNode;
 };
 
-export function TextField({ label, error, style, rightAccessory, ...props }: FieldProps) {
+export function TextField({
+  label,
+  error,
+  style,
+  rightAccessory,
+  onFocus,
+  onBlur,
+  ...props
+}: FieldProps) {
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
     <View style={styles.wrapper}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={[styles.field, error && styles.errorInput]}>
+      <View
+        style={[
+          styles.field,
+          isFocused && styles.focusedField,
+          error && styles.errorInput,
+        ]}
+      >
         <TextInput
           {...props}
           placeholderTextColor={colors.tertiaryText}
+          onFocus={(e) => {
+            setIsFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            onBlur?.(e);
+          }}
           style={[
             styles.input,
             rightAccessory ? styles.inputWithAccessory : undefined,
@@ -48,6 +72,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surface,
   },
+  focusedField: {
+    borderColor: '#090909',
+    borderWidth: 1.5,
+    backgroundColor: '#FFFFFF',
+  },
   input: {
     flex: 1,
     minHeight: 50,
@@ -58,6 +87,6 @@ const styles = StyleSheet.create({
   },
   inputWithAccessory: { paddingRight: spacing.sm },
   accessory: { height: 50, justifyContent: 'center', paddingRight: spacing.sm },
-  errorInput: { borderColor: colors.error },
+  errorInput: { borderColor: colors.error, borderWidth: 1.5 },
   errorText: { color: colors.error, fontSize: 12, fontFamily: systemFontFamily },
 });

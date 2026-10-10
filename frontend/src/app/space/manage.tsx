@@ -120,11 +120,15 @@ export default function ManageSpacesScreen() {
       <View style={styles.headerBar}>
         <Pressable
           onPress={handleBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Geri git"
         >
           <Ionicons name="arrow-back" size={22} color={mono.ink} />
         </Pressable>
       </View>
+
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>

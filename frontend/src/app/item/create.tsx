@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { AppText, Button, Screen, TextField, Card } from '@/components/ui';
 import { useCreateItem } from '@/features/items/hooks';
 import { useList, useLists } from '@/features/lists/hooks';
@@ -59,6 +60,7 @@ export default function CreateItemScreen() {
         original_url: url.trim(),
         title: title.trim() || undefined,
       });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace(`/item/${item.id}`);
     } catch {
       Alert.alert('İçerik eklenemedi', 'Bağlantıyı kontrol edip tekrar dene.');
@@ -87,6 +89,7 @@ export default function CreateItemScreen() {
       <View style={styles.headerBar}>
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
           accessibilityLabel="Geri git"
@@ -94,6 +97,7 @@ export default function CreateItemScreen() {
           <Ionicons name="arrow-back" size={22} color={mono.ink} />
         </Pressable>
       </View>
+
 
       <View style={styles.content}>
         {/* Title Section */}

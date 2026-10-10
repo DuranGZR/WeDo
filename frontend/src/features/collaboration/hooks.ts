@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { haptic } from '@/lib/haptics';
 import { collaborationApi } from './api';
 
 export function useSpaceMembers(spaceId: string) {
@@ -29,8 +30,10 @@ export function useCreateComment(itemId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: string) => collaborationApi.createComment(itemId, body),
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: ['items', itemId, 'comments'] }),
+    onSuccess: () => {
+      haptic.success();
+      void client.invalidateQueries({ queryKey: ['items', itemId, 'comments'] });
+    },
   });
 }
 
@@ -61,6 +64,9 @@ export function useMarkNotificationRead() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => collaborationApi.readNotification(id),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: () => {
+      haptic.light();
+      void client.invalidateQueries({ queryKey: ['notifications'] });
+    },
   });
 }

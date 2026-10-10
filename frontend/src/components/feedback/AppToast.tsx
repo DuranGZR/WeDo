@@ -8,14 +8,18 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui';
+import { haptic } from '@/lib/haptics';
 
-type ToastInput = {
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+export type ToastInput = {
   title: string;
   message: string;
+  type?: ToastType;
   actionLabel?: string;
   onAction?: () => void;
 };
@@ -23,6 +27,20 @@ type ToastInput = {
 type ToastContextValue = { showToast: (toast: ToastInput) => void };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
+
+function getToastIconConfig(type: ToastType = 'success') {
+  switch (type) {
+    case 'error':
+      return { icon: 'alert-circle' as const, iconColor: '#FFFFFF', wrapBg: '#E5484D' };
+    case 'warning':
+      return { icon: 'cloud-offline-outline' as const, iconColor: '#090909', wrapBg: '#F5D90A' };
+    case 'info':
+      return { icon: 'information' as const, iconColor: '#090909', wrapBg: '#E7E7E5' };
+    case 'success':
+    default:
+      return { icon: 'checkmark' as const, iconColor: '#090909', wrapBg: '#FFFFFF' };
+  }
+}
 
 function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismiss: () => void }) {
   const insets = useSafeAreaInsets();
@@ -35,11 +53,13 @@ function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismi
       toValue: 1,
       speed: 18,
       bounciness: 5,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [progress, toast]);
 
   if (!toast) return null;
+
+  const iconConfig = getToastIconConfig(toast.type);
 
   return (
     <Animated.View
@@ -56,8 +76,8 @@ function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismi
       ]}
     >
       <View accessibilityLiveRegion="polite" style={styles.toast}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="checkmark" size={17} color="#090909" />
+        <View style={[styles.iconWrap, { backgroundColor: iconConfig.wrapBg }]}>
+          <Ionicons name={iconConfig.icon} size={17} color={iconConfig.iconColor} />
         </View>
         <View style={styles.copy}>
           <AppText style={styles.title}>{toast.title}</AppText>
@@ -71,6 +91,7 @@ function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismi
               accessibilityRole="button"
               accessibilityLabel={toast.actionLabel}
               onPress={() => {
+                haptic.light();
                 toast.onAction?.();
                 onDismiss();
               }}
@@ -83,7 +104,10 @@ function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismi
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Bildirimi kapat"
-            onPress={onDismiss}
+            onPress={() => {
+              haptic.light();
+              onDismiss();
+            }}
             hitSlop={8}
             style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
           >
@@ -108,6 +132,12 @@ export function ToastProvider({ children }: PropsWithChildren) {
   const showToast = useCallback(
     (nextToast: ToastInput) => {
       if (dismissTimer.current) clearTimeout(dismissTimer.current);
+      const type = nextToast.type ?? 'success';
+      if (type === 'success') haptic.success();
+      else if (type === 'error') haptic.error();
+      else if (type === 'warning') haptic.warning();
+      else haptic.light();
+
       setToast(nextToast);
       dismissTimer.current = setTimeout(dismissToast, 4_500);
     },

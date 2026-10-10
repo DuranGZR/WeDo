@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueries } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -12,7 +12,7 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import { AppText, Card, EmptyState, Screen } from '@/components/ui';
+import { AppText, Button, Card, EmptyState, Screen } from '@/components/ui';
 import { ScreenMotion } from '@/components/motion/ScreenMotion';
 import { colors, mono, radius, spacing } from '@/design-system';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
@@ -77,6 +77,13 @@ export default function ListsScreen() {
   const space =
     spaces.data?.data.find((entry) => entry.id === selectedSpaceId) ??
     spaces.data?.data[0];
+
+  useEffect(() => {
+    if (spaces.isSuccess && spaces.data?.data.length === 0) {
+      router.replace('/space/create');
+    }
+  }, [spaces.isSuccess, spaces.data?.data]);
+
   const lists = useLists(space?.id ?? '');
   const entries = lists.data?.data ?? [];
   const members = useSpaceMembers(space?.id ?? '');
@@ -241,6 +248,13 @@ export default function ListsScreen() {
                 Gidilecek yerler, izlenecek filmler veya ortak hedefleriniz için bir liste
                 açın.
               </AppText>
+              {space ? (
+                <Button
+                  label="Hemen Liste Oluştur"
+                  onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
+                  style={{ marginTop: spacing.md }}
+                />
+              ) : null}
             </Card>
           ) : (
             <View style={styles.listContainer}>

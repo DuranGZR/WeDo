@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useQueries } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,13 +13,14 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
-import { AppText, Button, Card, Screen } from '@/components/ui';
+import { AppText, Button, Card, EmptyState, HomeScreenSkeleton, Screen } from '@/components/ui';
 import { ScreenMotion } from '@/components/motion/ScreenMotion';
 import { useToast } from '@/components/feedback/AppToast';
-import { colors, radius, spacing } from '@/design-system';
+import { colors, mono, radius, spacing } from '@/design-system';
 import { collaborationApi, type SpaceMember } from '@/features/collaboration/api';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
 import { itemsApi } from '@/features/items/api';
@@ -28,22 +31,25 @@ import type { List } from '@/features/lists/types';
 import { useSpaces } from '@/features/spaces/hooks';
 import { useAuthStore } from '@/store/auth-store';
 import { useSpaceStore } from '@/store/space-store';
-import { getItemPreviewImage, getItemSourceLabel } from '@/components/domain/ItemCard';
+import { getItemPreviewImage, getItemSourceLabel, getItemFallbackImage } from '@/components/domain/ItemCard';
 
 const homeColors = {
   background: '#CFCFCD',
   ink: '#090909',
   paper: '#FFFFFF',
   line: '#8D8D8B',
+  border: '#090909',
+  borderSubtle: 'rgba(9, 9, 9, 0.12)',
   muted: '#5F5F5D',
+  subtle: '#8D8D8B',
   soft: '#E7E7E5',
 } as const;
 
 const listTemplates = [
-  { name: 'Gidilecek Yerler', icon: 'location-outline', color: '#E7E7E5' },
-  { name: 'İzlenecekler', icon: 'play-outline', color: '#D9D9D7' },
-  { name: 'Alınacaklar', icon: 'bag-handle-outline', color: '#EDEDEC' },
-  { name: 'Yapılacaklar', icon: 'compass-outline', color: '#D1D1CF' },
+  { name: 'Gidilecek Yerler', icon: 'map-outline', color: '#E7E7E5' },
+  { name: 'İzlenecekler', icon: 'film-outline', color: '#D9D9D7' },
+  { name: 'Alınacaklar', icon: 'cart-outline', color: '#EDEDEC' },
+  { name: 'Yapılacaklar', icon: 'checkbox-outline', color: '#D1D1CF' },
 ] as const;
 
 function Preview({
@@ -55,6 +61,7 @@ function Preview({
   compact?: boolean;
   height?: number;
 }) {
+  const [imageError, setImageError] = useState(false);
   const previewStyle = [
     styles.preview,
     compact && styles.previewCompact,
@@ -62,8 +69,16 @@ function Preview({
   ];
 
   if (item) {
-    const imageUrl = getItemPreviewImage(item);
-    return <Image source={{ uri: imageUrl }} style={previewStyle} />;
+    const rawUrl = getItemPreviewImage(item);
+    const imageUrl = imageError ? getItemFallbackImage(item) : rawUrl;
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        style={previewStyle}
+        resizeMode="cover"
+        onError={() => setImageError(true)}
+      />
+    );
   }
 
   return (
@@ -75,34 +90,54 @@ function Preview({
     </View>
   );
 }
-function PendingAvatar() {
+function PendingAvatar({ size = 26 }: { size?: number }) {
   return (
     <View
       accessible
       accessibilityLabel="Partner avatarı, davet bekleniyor"
-      style={styles.pendingAvatar}
+      style={[
+        styles.pendingAvatar,
+        size !== 26 && { width: size, height: size, borderRadius: size / 2 },
+      ]}
     >
-      <AppText style={styles.pendingInitial}>?</AppText>
+      <AppText style={[styles.pendingInitial, { fontSize: Math.max(8, size * 0.42) }]}>?</AppText>
     </View>
   );
 }
 
-function MonoAvatar({ name, size = 28 }: { name?: string | null; size?: number }) {
+function MonoAvatar({
+  name,
+  size = 28,
+  radius,
+}: {
+  name?: string | null;
+  size?: number;
+  radius?: number;
+}) {
+  const borderRadius = radius !== undefined ? radius : size / 2;
   return (
     <View
       accessible
       accessibilityLabel={`${name ?? 'Kullanıcı'} avatarı`}
-      style={[styles.monoAvatar, { width: size, height: size, borderRadius: size / 2 }]}
+      style={[styles.monoAvatar, { width: size, height: size, borderRadius }]}
     >
-      <AppText style={[styles.monoAvatarText, { fontSize: size * 0.4 }]}>
+      <AppText style={[styles.monoAvatarText, { fontSize: Math.max(9, size * 0.4) }]}>
         {name?.trim().charAt(0).toUpperCase() ?? 'W'}
       </AppText>
     </View>
   );
 }
 
-function MemberAvatar({ member, fallback }: { member?: SpaceMember; fallback?: string }) {
-  return <MonoAvatar name={member?.display_name ?? fallback ?? 'Kullanıcı'} size={28} />;
+function MemberAvatar({
+  member,
+  fallback,
+  size = 28,
+}: {
+  member?: SpaceMember;
+  fallback?: string;
+  size?: number;
+}) {
+  return <MonoAvatar name={member?.display_name ?? fallback ?? 'Kullanıcı'} size={size} />;
 }
 
 function getDailyMessage(items: Item[]) {
@@ -132,27 +167,27 @@ function getHomeListStyle(name: string) {
   const lower = name.toLocaleLowerCase('tr-TR');
   if (lower.includes('izle') || lower.includes('film') || lower.includes('dizi')) {
     return {
-      icon: 'play-outline' as const,
+      icon: 'film-outline' as const,
       backgroundColor: '#D9D9D7',
       color: homeColors.ink,
     };
   }
   if (lower.includes('alın') || lower.includes('alışveriş') || lower.includes('market')) {
     return {
-      icon: 'bag-handle-outline' as const,
+      icon: 'cart-outline' as const,
       backgroundColor: '#EDEDEC',
       color: homeColors.ink,
     };
   }
   if (lower.includes('yap') || lower.includes('hedef')) {
     return {
-      icon: 'leaf-outline' as const,
+      icon: 'checkbox-outline' as const,
       backgroundColor: '#D1D1CF',
       color: homeColors.ink,
     };
   }
   return {
-    icon: 'location-outline' as const,
+    icon: 'map-outline' as const,
     backgroundColor: '#E7E7E5',
     color: homeColors.ink,
   };
@@ -160,10 +195,10 @@ function getHomeListStyle(name: string) {
 
 function QuickSaveCard() {
   const contentTypes = [
-    { label: 'Video', icon: 'videocam-outline', color: '#E7E7E5' },
-    { label: 'Mekân', icon: 'location-outline', color: '#D9D9D7' },
-    { label: 'Ürün', icon: 'cube-outline', color: '#EDEDEC' },
-    { label: 'Etkinlik', icon: 'calendar-outline', color: '#D1D1CF' },
+    { label: 'Video', icon: 'videocam-outline', color: '#F4F4F5' },
+    { label: 'Mekân', icon: 'location-outline', color: '#F4F4F5' },
+    { label: 'Ürün', icon: 'cube-outline', color: '#F4F4F5' },
+    { label: 'Etkinlik', icon: 'calendar-outline', color: '#F4F4F5' },
   ] as const;
   return (
     <View style={styles.quickSaveWrap}>
@@ -174,7 +209,7 @@ function QuickSaveCard() {
               key={type.label}
               style={[styles.typeTile, { backgroundColor: type.color }]}
             >
-              <Ionicons name={type.icon} size={18} color={colors.primaryText} />
+              <Ionicons name={type.icon} size={18} color={homeColors.ink} />
               <AppText variant="caption">{type.label}</AppText>
             </View>
           ))}
@@ -210,22 +245,22 @@ function QuickSaveCard() {
 function InviteCard({ spaceId }: { spaceId: string }) {
   return (
     <View style={styles.inviteCard}>
-      <View style={styles.inviteStatus}>
-        <View style={styles.inviteStatusDot} />
-        <AppText variant="caption" style={styles.inviteStatusText}>
-          Davet bekleniyor
-        </AppText>
-      </View>
       <View style={styles.inviteContent}>
         <View style={styles.inviteAvatarWrap}>
-          <PendingAvatar />
+          <PendingAvatar size={34} />
           <View style={styles.plusBadge}>
-            <Ionicons name="add" size={12} color={colors.surface} />
+            <Ionicons name="add" size={10} color="#FFFFFF" />
           </View>
         </View>
         <View style={styles.inviteBody}>
-          <AppText variant="cardTitle">Partnerini davet et</AppText>
-          <AppText variant="caption" muted>
+          <View style={styles.inviteStatus}>
+            <View style={styles.inviteStatusDot} />
+            <AppText variant="caption" style={styles.inviteStatusText}>
+              Davet bekleniyor
+            </AppText>
+          </View>
+          <AppText style={styles.inviteCardTitle}>Partnerini davet et</AppText>
+          <AppText variant="caption" style={styles.inviteCardDesc}>
             Kaydettiklerinize birlikte karar verin.
           </AppText>
         </View>
@@ -233,7 +268,7 @@ function InviteCard({ spaceId }: { spaceId: string }) {
           accessibilityRole="button"
           accessibilityLabel="Davet et"
           onPress={() => router.push(`/(onboarding)/invite-member?spaceId=${spaceId}`)}
-          style={styles.inviteButton}
+          style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}
         >
           <AppText variant="caption" style={styles.inviteButtonText}>
             Davet et
@@ -275,7 +310,12 @@ function ListTemplates({
       ) : (
         <>
           <View style={styles.templateSectionHeader}>
-            <AppText style={styles.templateSectionTitle}>Ortak listeler</AppText>
+            <View style={styles.homeSectionTitleWrap}>
+              <View style={styles.sectionHeaderIconBadge}>
+                <Ionicons name="albums" size={13} color={homeColors.paper} />
+              </View>
+              <AppText style={styles.templateSectionTitle}>Ortak listeler</AppText>
+            </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Yeni liste oluştur"
@@ -294,6 +334,7 @@ function ListTemplates({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.horizontalScrollView}
         contentContainerStyle={styles.templateRow}
       >
         {availableTemplates.map((template) => (
@@ -354,17 +395,17 @@ function ListRow({
       accessibilityRole="button"
       accessibilityLabel={`${list.name} listesini aç`}
       onPress={onPress}
-      style={({ pressed }) => pressed && styles.pressed}
+      style={({ pressed }) => [styles.listRowPressable, pressed && styles.listRowPressed]}
     >
       <View style={styles.listRow}>
         <View style={[styles.listIcon, { backgroundColor: listStyle.backgroundColor }]}>
-          <Ionicons name={listStyle.icon} size={19} color={listStyle.color} />
+          <Ionicons name={listStyle.icon} size={16} color={listStyle.color} />
         </View>
         <View style={styles.listBody}>
-          <AppText variant="cardTitle" style={styles.homeListName}>
+          <AppText style={styles.homeListName}>
             {list.name}
           </AppText>
-          <AppText variant="caption" style={styles.homeListCount}>
+          <AppText style={styles.homeListCount}>
             {count} kayıt
           </AppText>
         </View>
@@ -375,12 +416,12 @@ function ListRow({
                 key={`${name}-${index}`}
                 style={[styles.memberStackItem, index > 0 && styles.memberStackOverlap]}
               >
-                <MonoAvatar name={name} size={22} />
+                <MonoAvatar name={name} size={20} />
               </View>
             ))}
           </View>
         ) : null}
-        <Ionicons name="chevron-forward" size={18} color={homeColors.ink} />
+        <Ionicons name="chevron-forward" size={14} color={homeColors.ink} />
       </View>
     </Pressable>
   );
@@ -396,6 +437,13 @@ export default function HomeScreen() {
   const space =
     spaces.data?.data.find((entry) => entry.id === selectedSpaceId) ??
     spaces.data?.data[0];
+
+  useEffect(() => {
+    if (spaces.isSuccess && spaces.data?.data.length === 0) {
+      router.replace('/space/create');
+    }
+  }, [spaces.isSuccess, spaces.data?.data]);
+
   const lists = useLists(space?.id ?? '');
   const listEntries = lists.data?.data ?? [];
   const members = useSpaceMembers(space?.id ?? '');
@@ -443,16 +491,27 @@ export default function HomeScreen() {
         .map((member) => member.display_name)
         .join(' · ');
   const dailyMessage = getDailyMessage(allItems);
+  const { width: windowWidth } = useWindowDimensions();
+  const recentCardWidth = useMemo(() => {
+    if (windowWidth > 640) return 168;
+    // Show 2 full cards and ~40-50% peek of the 3rd card on mobile
+    return Math.min(160, Math.max(130, Math.floor((windowWidth - 44) / 2.45)));
+  }, [windowWidth]);
+  const recentImageHeight = recentCardWidth < 155 ? 94 : 104;
+
   const createTemplateList = (name: string) => {
     createList.mutate(name, {
-      onSuccess: (list) =>
+      onSuccess: (list) => {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         showToast({
           title: 'Liste oluşturuldu',
           message: `${name} listen hazır.`,
           actionLabel: 'Aç',
           onAction: () => router.push(`/list/${list.id}`),
-        }),
+        });
+      },
       onError: (error: any) => {
+
         const isConflict = error?.message?.includes('409') || error?.status === 409;
         Alert.alert(
           'Liste oluşturulamadı',
@@ -462,18 +521,30 @@ export default function HomeScreen() {
     });
   };
 
-  if (spaces.isLoading)
+  if (spaces.isLoading || (Boolean(space?.id) && lists.isLoading))
     return (
-      <Screen>
-        <ActivityIndicator color={colors.accent} />
+      <Screen backgroundColor={homeColors.background}>
+        <HomeScreenSkeleton />
+      </Screen>
+    );
+
+  if (spaces.isError && !spaces.data)
+    return (
+      <Screen backgroundColor={homeColors.background}>
+        <EmptyState
+          icon="cloud-offline-outline"
+          title="Bağlantı Kurulamadı"
+          description="Sunucuyla iletişim kurulurken bir sorun oluştu. Lütfen internet bağlantını kontrol et."
+          action="Yeniden Dene"
+          onAction={() => void spaces.refetch()}
+        />
       </Screen>
     );
 
   return (
     <ScreenMotion>
       <Screen backgroundColor={homeColors.background} contentContainerStyle={styles.screen}>
-      <View pointerEvents="none" style={styles.contourTop} />
-      <View pointerEvents="none" style={styles.contourBottom} />
+      {/* Top Bar Header */}
       <View style={styles.topBar}>
         <Pressable
           accessibilityRole="button"
@@ -482,14 +553,14 @@ export default function HomeScreen() {
           style={styles.spaceSelector}
         >
           <View style={styles.spaceCover}>
-            <Ionicons name="sparkles" size={17} color={homeColors.paper} />
+            <Ionicons name="sparkles" size={17} color={mono.paper} />
           </View>
           <View style={styles.spaceSelectorBody}>
             <View style={styles.spaceTitleRow}>
               <AppText variant="cardTitle" style={styles.spaceTitle}>
-                {spaceLabel}
+                {space?.name ?? 'Ortak alan'}
               </AppText>
-              <Ionicons name="chevron-down" size={16} color={homeColors.ink} />
+              <Ionicons name="chevron-down" size={16} color={mono.ink} />
             </View>
             <View style={styles.memberRow}>
               <MonoAvatar
@@ -512,9 +583,9 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Bildirimler"
             onPress={() => router.push('/notifications')}
-            style={({ pressed }) => [styles.headerIconButton, pressed && styles.pressed]}
+            style={styles.headerIconButton}
           >
-            <Ionicons name="notifications-outline" size={21} color={homeColors.ink} />
+            <Ionicons name="notifications-outline" size={21} color={mono.ink} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -526,13 +597,13 @@ export default function HomeScreen() {
         </View>
       </View>
       <View style={styles.greeting}>
-        <AppText variant="caption" muted>
+        <AppText style={styles.greetingSub}>
           Merhaba, {user?.display_name ?? 'Duran'}
         </AppText>
-        <AppText variant="largeTitle" style={styles.heroTitle}>
+        <AppText style={styles.heroTitle}>
           Neler planlıyoruz?
         </AppText>
-        <AppText muted style={styles.dailyMessage}>
+        <AppText style={styles.dailyMessage}>
           {dailyMessage}
         </AppText>
       </View>
@@ -550,7 +621,12 @@ export default function HomeScreen() {
           {listEntries.length > 0 && (
             <View style={{ marginBottom: spacing.lg }}>
               <View style={styles.templateSectionHeader}>
-                <AppText style={styles.templateSectionTitle}>Ortak listeler</AppText>
+                <View style={styles.homeSectionTitleWrap}>
+                  <View style={styles.sectionHeaderIconBadge}>
+                    <Ionicons name="albums" size={13} color={homeColors.paper} />
+                  </View>
+                  <AppText style={styles.templateSectionTitle}>Ortak listeler</AppText>
+                </View>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Yeni liste oluştur"
@@ -561,21 +637,24 @@ export default function HomeScreen() {
                   <AppText style={styles.templateAddActionText}>Yeni liste</AppText>
                 </Pressable>
               </View>
-              <Card style={styles.listCard}>
+              <View style={styles.listCard}>
                 {listEntries.map((list, index) => {
                   const query = itemQueries[index];
                   const count = query?.data?.data?.length ?? 0;
+                  const isLast = index === listEntries.length - 1;
                   return (
-                    <ListRow
-                      key={list.id}
-                      list={list}
-                      count={count}
-                      memberNames={memberNames}
-                      onPress={() => router.push(`/list/${list.id}`)}
-                    />
+                    <View key={list.id}>
+                      <ListRow
+                        list={list}
+                        count={count}
+                        memberNames={memberNames}
+                        onPress={() => router.push(`/list/${list.id}`)}
+                      />
+                      {!isLast && <View style={styles.listDivider} />}
+                    </View>
                   );
                 })}
-              </Card>
+              </View>
             </View>
           )}
 
@@ -589,7 +668,9 @@ export default function HomeScreen() {
         <>
           <View style={styles.homeSectionHeader}>
             <View style={styles.homeSectionTitleWrap}>
-              <Ionicons name="sparkles-outline" size={15} color={homeColors.ink} />
+              <View style={styles.sectionHeaderIconBadge}>
+                <Ionicons name="time-outline" size={18} color={homeColors.ink} />
+              </View>
               <AppText style={styles.homeSectionTitle}>Son eklenenler</AppText>
             </View>
             <Pressable
@@ -597,12 +678,13 @@ export default function HomeScreen() {
               style={styles.homeSectionAction}
             >
               <AppText style={styles.homeSectionActionText}>Tümünü gör</AppText>
-              <Ionicons name="chevron-forward" size={14} color={homeColors.ink} />
+              <Ionicons name="chevron-forward" size={13} color={homeColors.muted} />
             </Pressable>
           </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={styles.horizontalScrollView}
             contentContainerStyle={styles.horizontalList}
           >
             {recentItems.map((item) => (
@@ -613,12 +695,13 @@ export default function HomeScreen() {
                 onPress={() => router.push(`/item/${item.id}`)}
                 style={({ pressed }) => [
                   styles.recentCardWrapper,
+                  { width: recentCardWidth },
                   pressed && styles.pressed,
                 ]}
               >
-                <Card style={styles.recentCard}>
-                  <View style={styles.recentPreviewWrap}>
-                    <Preview item={item} height={80} />
+                <View style={styles.recentCard}>
+                  <View style={[styles.recentPreviewWrap, { height: recentImageHeight }]}>
+                    <Preview item={item} height={recentImageHeight} />
                     <View style={styles.sourceBadge}>
                       <AppText style={styles.sourceBadgeText} numberOfLines={1}>
                         {getItemSourceLabel(item)}
@@ -627,8 +710,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.recentCardContent}>
                     <AppText
-                      variant="cardTitle"
-                      numberOfLines={1}
+                      numberOfLines={2}
                       style={styles.recentCardTitle}
                     >
                       {item.title ?? 'Kaydedilen içerik'}
@@ -639,19 +721,20 @@ export default function HomeScreen() {
                         numberOfLines={1}
                         style={[styles.recentMeta, { flex: 1 }]}
                       >
-                        {item.created_by_name} ekledi ·{' '}
-                        {formatRelativeTime(item.created_at)}
+                        {item.created_by_name} · {formatRelativeTime(item.created_at)}
                       </AppText>
-                      <MonoAvatar name={item.created_by_name} size={20} />
+                      <MonoAvatar name={item.created_by_name} size={18} />
                     </View>
                   </View>
-                </Card>
+                </View>
               </Pressable>
             ))}
           </ScrollView>
           <View style={styles.homeSectionHeader}>
             <View style={styles.homeSectionTitleWrap}>
-              <Ionicons name="people-outline" size={16} color={homeColors.ink} />
+              <View style={styles.sectionHeaderIconBadge}>
+                <Ionicons name="albums-outline" size={18} color={homeColors.ink} />
+              </View>
               <AppText style={styles.homeSectionTitle}>Ortak listeler</AppText>
             </View>
             <Pressable
@@ -667,26 +750,29 @@ export default function HomeScreen() {
               </AppText>
               <Ionicons
                 name={listEntries.length >= 2 ? 'chevron-forward' : 'add'}
-                size={15}
-                color={homeColors.ink}
+                size={14}
+                color={homeColors.muted}
               />
             </Pressable>
           </View>
-          <Card style={styles.listCard}>
+          <View style={styles.listCard}>
             {listEntries.slice(0, 4).map((list, index) => {
               const query = itemQueries[index];
               const count = query?.data?.data?.length ?? 0;
+              const isLast = index === Math.min(listEntries.length, 4) - 1;
               return (
-                <ListRow
-                  key={list.id}
-                  list={list}
-                  count={count}
-                  memberNames={memberNames}
-                  onPress={() => router.push(`/list/${list.id}`)}
-                />
+                <View key={list.id}>
+                  <ListRow
+                    list={list}
+                    count={count}
+                    memberNames={memberNames}
+                    onPress={() => router.push(`/list/${list.id}`)}
+                  />
+                  {!isLast && <View style={styles.listDivider} />}
+                </View>
               );
             })}
-          </Card>
+          </View>
           {needsInvite && <InviteCard spaceId={space.id} />}
         </>
       )}
@@ -777,37 +863,21 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   contourTop: {
-    position: 'absolute',
-    width: 230,
-    height: 230,
-    right: -154,
-    top: -104,
-    borderWidth: 1,
-    borderColor: homeColors.line,
-    borderRadius: 104,
-    transform: [{ rotate: '28deg' }],
+    display: 'none',
   },
   contourBottom: {
-    position: 'absolute',
-    width: 190,
-    height: 230,
-    left: -154,
-    bottom: 78,
-    borderWidth: 1,
-    borderColor: homeColors.line,
-    borderRadius: 90,
-    transform: [{ rotate: '-28deg' }],
+    display: 'none',
   },
   screen: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 128,
+    paddingBottom: 120,
   },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   spaceSelector: {
     flexDirection: 'row',
@@ -816,26 +886,21 @@ const styles = StyleSheet.create({
     minHeight: 58,
     padding: 6,
     paddingRight: spacing.md,
-    borderRadius: 12,
-    backgroundColor: homeColors.paper,
+    borderRadius: 18,
+    backgroundColor: mono.paper,
     borderWidth: 1,
-    borderColor: homeColors.ink,
+    borderColor: mono.ink,
   },
   spaceCover: {
     width: 44,
     height: 44,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: homeColors.ink,
+    backgroundColor: mono.ink,
   },
   spaceSelectorBody: { gap: 2 },
-  spaceTitle: {
-    fontSize: 15,
-    lineHeight: 19,
-    letterSpacing: -0.2,
-    color: homeColors.ink,
-  },
+  spaceTitle: { fontSize: 16, lineHeight: 20, letterSpacing: -0.2 },
   spaceTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   pendingAvatar: {
@@ -844,54 +909,60 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: homeColors.paper,
+    backgroundColor: mono.paper,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: homeColors.ink,
+    borderColor: mono.ink,
   },
-  pendingInitial: { color: homeColors.ink, fontSize: 11, fontWeight: '600' },
+  pendingInitial: { color: mono.ink, fontSize: 11, fontWeight: '600' },
   monoAvatar: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: homeColors.ink,
+    backgroundColor: mono.ink,
   },
-  monoAvatarText: { color: homeColors.paper, fontWeight: '700' },
-  topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  monoAvatarText: { color: mono.paper, fontWeight: '800' },
   headerIconButton: {
     width: 44,
     height: 44,
-    borderRadius: 9,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: mono.paper,
     borderWidth: 1,
-    borderColor: homeColors.ink,
-    backgroundColor: homeColors.paper,
+    borderColor: mono.ink,
   },
-  greeting: { gap: 5, marginBottom: 22 },
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  greeting: { gap: 4, marginBottom: 22, marginTop: 4 },
+  greetingSub: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: homeColors.muted,
+    letterSpacing: -0.1,
+  },
   heroTitle: {
     color: homeColors.ink,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '800',
-    letterSpacing: -0.7,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   dailyMessage: { color: homeColors.muted, fontSize: 13, lineHeight: 18 },
   noSpace: { gap: spacing.md },
   quickSaveWrap: { marginBottom: spacing.xl },
   quickSave: {
     gap: spacing.md,
-    borderRadius: 18,
+    borderRadius: 16,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: homeColors.ink,
+    borderColor: homeColors.border,
     backgroundColor: homeColors.paper,
-    ...Platform.select({ web: { boxShadow: '0px 9px 0px rgba(0, 0, 0, 0.12)' } }),
+    ...Platform.select({ web: { boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)' } }),
   },
   typeRow: { flexDirection: 'row', gap: 8 },
   typeTile: {
     flex: 1,
     minHeight: 60,
-    borderRadius: 9,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
@@ -909,14 +980,14 @@ const styles = StyleSheet.create({
   },
   quickSaveTitle: {
     color: homeColors.ink,
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 18,
+    lineHeight: 23,
     fontWeight: '700',
   },
   quickSaveDescription: { color: homeColors.muted, fontSize: 13, lineHeight: 19 },
   monoPrimaryButton: {
-    minHeight: 50,
-    borderRadius: 9,
+    minHeight: 46,
+    borderRadius: 10,
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -926,56 +997,77 @@ const styles = StyleSheet.create({
   },
   monoPrimaryButtonText: { color: homeColors.paper, fontSize: 14, fontWeight: '700' },
   inviteCard: {
-    padding: 14,
-    borderRadius: 14,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: homeColors.ink,
+    borderColor: homeColors.border,
     backgroundColor: homeColors.paper,
     marginBottom: spacing.xl,
+    ...Platform.select({
+      web: { boxShadow: '0px 5px 0px rgba(0, 0, 0, 0.12)' },
+      default: {
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 0,
+      },
+    }),
   },
   inviteStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
+    gap: 5,
+    marginBottom: 2,
   },
   inviteStatusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: homeColors.ink,
+    backgroundColor: '#10B981',
   },
-  inviteStatusText: { color: homeColors.ink, fontWeight: '700' },
-  inviteContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  inviteStatusText: { color: homeColors.muted, fontSize: 11, fontWeight: '600' },
+  inviteContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   inviteAvatarWrap: {
     position: 'relative',
-    padding: 4,
-    borderRadius: 18,
+    padding: 3,
+    borderRadius: 20,
     backgroundColor: homeColors.soft,
   },
   plusBadge: {
     position: 'absolute',
-    right: -3,
-    bottom: -3,
-    width: 17,
-    height: 17,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: homeColors.ink,
-    borderWidth: 2,
-    borderColor: homeColors.paper,
-  },
-  inviteBody: { flex: 1, gap: spacing.xs },
-  inviteButton: {
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
+    right: -2,
+    bottom: -2,
+    width: 16,
+    height: 16,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: homeColors.ink,
+    borderWidth: 1.5,
+    borderColor: homeColors.paper,
   },
-  inviteButtonText: { color: homeColors.paper, fontWeight: '700' },
+  inviteBody: { flex: 1, gap: 2 },
+  inviteCardTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: homeColors.ink,
+  },
+  inviteCardDesc: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: homeColors.muted,
+  },
+  inviteButton: {
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: homeColors.ink,
+  },
+  inviteButtonText: { color: homeColors.paper, fontSize: 12, fontWeight: '600' },
   templateSection: { marginBottom: spacing.xl },
   templateSectionHeader: {
     flexDirection: 'row',
@@ -1004,7 +1096,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.xs,
   },
-  templateRow: { gap: spacing.sm, paddingBottom: spacing.xs },
+  templateRow: { paddingHorizontal: 20, gap: spacing.sm, paddingBottom: spacing.xs },
   templateCard: {
     width: 132,
     minHeight: 88,
@@ -1115,14 +1207,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: spacing.xl,
-    marginBottom: spacing.sm,
+    marginBottom: 10,
   },
   homeSectionTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   homeSectionTitle: {
     color: homeColors.ink,
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 18,
+    lineHeight: 23,
     fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  sectionHeaderIconBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
   homeSectionAction: {
     flexDirection: 'row',
@@ -1130,8 +1228,15 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingVertical: 4,
   },
-  homeSectionActionText: { color: homeColors.ink, fontSize: 12, fontWeight: '700' },
-  horizontalList: { gap: 10, paddingBottom: spacing.xs },
+  homeSectionActionText: { color: homeColors.muted, fontSize: 13, fontWeight: '600' },
+  horizontalScrollView: {
+    marginHorizontal: -20,
+  },
+  horizontalList: {
+    paddingHorizontal: 20,
+    gap: 12,
+    paddingBottom: 8,
+  },
   decisionCard: { width: 196, padding: spacing.md, gap: spacing.sm, borderRadius: 18 },
   preview: {
     width: '100%',
@@ -1241,61 +1346,89 @@ const styles = StyleSheet.create({
   },
   planBody: { flex: 1, gap: spacing.xs },
   recentCardWrapper: {
-    width: 124,
+    width: 142,
   },
   recentCard: {
-    padding: 5,
-    borderRadius: 12,
+    padding: 0,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: homeColors.ink,
     backgroundColor: homeColors.paper,
+    overflow: 'hidden',
     ...Platform.select({
       web: {
-        backdropFilter: 'blur(12px)',
         boxShadow: '0px 6px 0px rgba(0, 0, 0, 0.12)',
+      },
+      default: {
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 0,
       },
     }),
   },
   recentCardContent: {
     gap: 3,
-    marginTop: 6,
-    paddingHorizontal: 3,
-    paddingBottom: 2,
+    padding: 9,
   },
   recentCardTitle: {
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '700',
-    color: colors.primaryText,
+    color: homeColors.ink,
   },
   recentMeta: { color: homeColors.muted, fontSize: 11, lineHeight: 15 },
-  recentPreviewWrap: { position: 'relative' },
+  recentPreviewWrap: {
+    position: 'relative',
+    width: '100%',
+    height: 104,
+    backgroundColor: homeColors.soft,
+  },
   sourceBadge: {
     position: 'absolute',
-    right: 5,
-    top: 5,
-    maxWidth: 54,
-    borderRadius: radius.pill,
-    paddingHorizontal: 5,
+    right: 7,
+    top: 7,
+    borderRadius: 9,
+    paddingHorizontal: 6,
     paddingVertical: 3,
-    backgroundColor: homeColors.ink,
+    backgroundColor: 'rgba(9, 9, 9, 0.85)',
   },
-  sourceBadgeText: { color: homeColors.paper, fontSize: 7, fontWeight: '800' },
+  sourceBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700', letterSpacing: 0.2 },
   listCard: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    padding: 0,
     borderRadius: 14,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     backgroundColor: homeColors.paper,
     borderWidth: 1,
     borderColor: homeColors.ink,
+    overflow: 'hidden',
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 5px 0px rgba(0, 0, 0, 0.12)',
+      },
+      default: {
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 0,
+      },
+    }),
+  },
+  listRowPressable: {
+    flex: 1,
+  },
+  listRowPressed: {
+    backgroundColor: homeColors.soft,
   },
   listRow: {
-    minHeight: 52,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: 8,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
   listIcon: {
     width: 30,
@@ -1303,16 +1436,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
   },
   listBody: { flex: 1, gap: 1 },
   homeListName: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: '700',
     color: homeColors.ink,
   },
-  homeListCount: { fontSize: 11, lineHeight: 15, color: homeColors.muted },
+  homeListCount: { fontSize: 11, lineHeight: 14, color: homeColors.muted },
+  listDivider: {
+    height: 1,
+    backgroundColor: homeColors.borderSubtle,
+    marginLeft: 52,
+    marginRight: 12,
+  },
   memberStack: { flexDirection: 'row', alignItems: 'center', marginRight: 2 },
   memberStackItem: { borderRadius: 11, borderWidth: 1.5, borderColor: colors.surface },
   memberStackOverlap: { marginLeft: -7 },
@@ -1328,10 +1466,10 @@ const styles = StyleSheet.create({
     padding: spacing.xxl,
     paddingBottom: spacing.section,
     backgroundColor: homeColors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderWidth: 1,
-    borderColor: homeColors.ink,
+    borderColor: homeColors.border,
   },
   sheetHandle: {
     alignSelf: 'center',
@@ -1342,14 +1480,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   sheetRow: {
-    minHeight: 62,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: homeColors.ink,
-    borderRadius: 12,
+    borderColor: homeColors.border,
+    borderRadius: 14,
   },
   sheetRowActive: { backgroundColor: homeColors.soft },
   sheetHeading: {

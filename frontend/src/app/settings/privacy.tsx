@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
 import {
@@ -69,6 +70,37 @@ export default function PrivacyScreen() {
           yerine uygulama genelinde baş harfin kullanılır.
         </AppText>
       </AccountCard>
+
+      <AccountCard>
+        <AppText variant="caption" style={accountStyles.label}>
+          YASAL BELGELER
+        </AppText>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Gizlilik Politikası sayfasını aç"
+          onPress={() => router.push('/legal/privacy' as never)}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+        >
+          <View style={styles.linkLeft}>
+            <Ionicons name="document-text-outline" size={18} color={mono.ink} />
+            <AppText style={styles.linkTitle}>Gizlilik Politikası</AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={mono.muted} />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Kullanım Koşulları sayfasını aç"
+          onPress={() => router.push('/legal/terms' as never)}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+        >
+          <View style={styles.linkLeft}>
+            <Ionicons name="shield-outline" size={18} color={mono.ink} />
+            <AppText style={styles.linkTitle}>Kullanım Koşulları ve EULA</AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={mono.muted} />
+        </Pressable>
+      </AccountCard>
     </AccountScaffold>
   );
 }
@@ -94,4 +126,23 @@ const styles = StyleSheet.create({
     backgroundColor: mono.soft,
   },
   itemTitle: { fontWeight: '800' },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  linkLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  linkTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: mono.ink,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
 });

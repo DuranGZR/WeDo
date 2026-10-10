@@ -16,12 +16,33 @@ import { isStrongPassword } from '@/features/auth/password-strength';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function ChangePasswordScreen() {
-  const { changePassword } = useAuthStore();
+  const { user, changePassword } = useAuthStore();
   const { showToast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [saving, setSaving] = useState(false);
+
+  if (user?.has_password === false) {
+    return (
+      <AccountScaffold
+        title="Şifre"
+        subtitle="Hesap güvenlik yönteminiz."
+      >
+        <AccountCard>
+          <View style={styles.appleHero}>
+            <View style={styles.appleIconWrap}>
+              <Ionicons name="logo-apple" size={28} color={mono.paper} />
+            </View>
+            <AppText variant="sectionTitle">Apple ile Korunuyor</AppText>
+            <AppText muted style={styles.appleNoticeText}>
+              Hesabınız Apple ID ile ilişkilendirilmiştir. Bu hesap için parola kullanılmaz; giriş işlemleri doğrudan Face ID / Touch ID ve Apple ile Giriş üzerinden güvenle yapılır.
+            </AppText>
+          </View>
+        </AccountCard>
+      </AccountScaffold>
+    );
+  }
 
   const submit = async () => {
     if (newPassword !== confirmation) {
@@ -124,4 +145,25 @@ const styles = StyleSheet.create({
     backgroundColor: mono.soft,
   },
   ruleText: { flex: 1, fontSize: 12, lineHeight: 17 },
+  appleHero: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    textAlign: 'center',
+  },
+  appleIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: mono.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  appleNoticeText: {
+    textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 19,
+    paddingHorizontal: spacing.sm,
+  },
 });

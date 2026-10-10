@@ -10,6 +10,18 @@ type AuthState = {
   hydrated: boolean;
   hydrate: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithApple: (
+    identityToken: string,
+    appleUserId: string,
+    email?: string,
+    displayName?: string,
+  ) => Promise<void>;
+  signInWithGoogle: (
+    idToken: string,
+    googleUserId: string,
+    email: string,
+    displayName?: string,
+  ) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   updateProfile: (data: {
     displayName: string;
@@ -17,7 +29,7 @@ type AuthState = {
     pushNotificationsEnabled?: boolean;
   }) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  deleteAccount: (currentPassword: string) => Promise<void>;
+  deleteAccount: (currentPassword?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<boolean>;
 };
@@ -47,6 +59,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const raw = await apiClient<unknown>('/api/v1/auth/sign-in', {
       method: 'POST',
       body: { email, password },
+    });
+    const result = tokenResponseSchema.parse(raw);
+    await secureStorage.setTokens(result.access_token, result.refresh_token);
+    set({ user: result.user, accessToken: result.access_token });
+  },
+  async signInWithApple(identityToken, appleUserId, email, displayName) {
+    const raw = await apiClient<unknown>('/api/v1/auth/apple', {
+      method: 'POST',
+      body: {
+        identity_token: identityToken,
+        apple_user_id: appleUserId,
+        ...(email ? { email } : {}),
+        ...(displayName ? { display_name: displayName } : {}),
+      },
+    });
+    const result = tokenResponseSchema.parse(raw);
+    await secureStorage.setTokens(result.access_token, result.refresh_token);
+    set({ user: result.user, accessToken: result.access_token });
+  },
+  async signInWithGoogle(idToken, googleUserId, email, displayName) {
+    const raw = await apiClient<unknown>('/api/v1/auth/google', {
+      method: 'POST',
+      body: {
+        id_token: idToken,
+        google_user_id: googleUserId,
+        email,
+        ...(displayName ? { display_name: displayName } : {}),
+      },
     });
     const result = tokenResponseSchema.parse(raw);
     await secureStorage.setTokens(result.access_token, result.refresh_token);
@@ -93,7 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await apiClient<void>('/api/v1/users/me', {
         method: 'DELETE',
         accessToken: token,
-        body: { current_password: currentPassword },
+        body: currentPassword ? { current_password: currentPassword } : {},
       });
     }
     await secureStorage.clear();

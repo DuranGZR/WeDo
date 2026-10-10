@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableFreeze } from 'react-native-screens';
 
+import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/store/auth-store';
 import { initializeDatabase } from '@/database/client';
 import { NotificationEffects } from './notification-effects';
@@ -18,6 +19,8 @@ enableFreeze(true);
 
 export function AppProviders({ children }: PropsWithChildren) {
   const hydrate = useAuthStore((state) => state.hydrate);
+  const hydrated = useAuthStore((state) => state.hydrated);
+
   useEffect(() => {
     initializeDatabase();
     void hydrate();
@@ -26,6 +29,12 @@ export function AppProviders({ children }: PropsWithChildren) {
     });
     return () => subscription.remove();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (hydrated) {
+      void SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [hydrated]);
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>

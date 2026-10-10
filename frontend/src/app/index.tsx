@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+﻿import { Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View, Platform } from 'react-native';
 
 import { AppText } from '@/components/ui';
@@ -31,7 +31,7 @@ export default function IndexRoute() {
 
 const styles: any = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

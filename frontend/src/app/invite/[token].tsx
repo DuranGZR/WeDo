@@ -1,98 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+﻿import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { AppText, EmptyState, Screen } from '@/components/ui';
-import { ApiClientError } from '@/api/client/api-client';
-import { collaborationApi } from '@/features/collaboration/api';
+import { AppText, Badge, Screen } from '@/components/ui';
 import { colors, radius, spacing } from '@/design-system';
-import { useAuthStore } from '@/store/auth-store';
 
-export default function InviteLandingScreen() {
-  const { token } = useLocalSearchParams<{ token: string }>();
-  const user = useAuthStore((state) => state.user);
-  const queryClient = useQueryClient();
-  const [loading, setLoading] = useState(true);
-  const [accepting, setAccepting] = useState(false);
-  const [invite, setInvite] = useState<Awaited<
-    ReturnType<typeof collaborationApi.invitation>
-  > | null>(null);
-
-  useEffect(() => {
-    if (token)
-      void collaborationApi
-        .invitation(token)
-        .then(setInvite)
-        .finally(() => setLoading(false));
-  }, [token]);
-
-  async function accept() {
-    if (!token) return;
-    if (!user) {
-      router.push(`/(auth)/sign-in?inviteToken=${encodeURIComponent(token)}`);
-      return;
-    }
-    setAccepting(true);
-    try {
-      await collaborationApi.acceptInvitation(token);
-      await queryClient.invalidateQueries({ queryKey: ['spaces'] });
-      router.replace('/invite/accepted');
-    } catch (error) {
-      Alert.alert(
-        'Davet kabul edilemedi',
-        error instanceof ApiClientError && error.status === 409
-          ? 'Bu alanın zaten üyesisin.'
-          : 'Davet geçersiz veya süresi dolmuş olabilir.',
-      );
-    } finally {
-      setAccepting(false);
-    }
-  }
-
-  if (loading)
-    return (
-      <Screen scroll={true}>
-        <ActivityIndicator />
-      </Screen>
-    );
-
-  if (!invite)
-    return (
-      <Screen scroll={true}>
-        <View style={styles.ambientContainer} pointerEvents="none">
-          <View style={styles.blobCoral} />
-          <View style={styles.blobSand} />
-        </View>
-        <View style={styles.headerBar}>
-          <Pressable
-            onPress={() =>
-              router.canGoBack() ? router.back() : router.replace('/(tabs)')
-            }
-            style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
-            accessibilityRole="button"
-            accessibilityLabel="Geri git"
-          >
-            <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
-          </Pressable>
-        </View>
-        <View style={styles.content}>
-          <EmptyState
-            title="Davet bulunamadı"
-            description="Bu davet geçersiz veya süresi dolmuş olabilir."
-          />
-        </View>
-      </Screen>
-    );
-
+export default function InviteInvalidScreen() {
   return (
     <Screen scroll={true}>
       <View style={styles.ambientContainer} pointerEvents="none">
@@ -109,27 +22,35 @@ export default function InviteLandingScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
       </View>
-
       <View style={styles.content}>
-        <AppText variant="pageTitle">Bir alana davet edildin</AppText>
-        <View style={styles.glassCard}>
-          <AppText variant="cardTitle">{invite.space_name ?? 'Ortak alan'}</AppText>
-          <AppText muted>
-            {invite.inviter_name ?? 'Bir WeDo kullanıcısı'} seni birlikte kaydetmeye davet
-            etti.
+        <View style={styles.center}>
+          <View style={styles.mark}>
+            <AppText style={styles.markText}>!</AppText>
+          </View>
+          <Badge label="Davet bulunamadÄ±" tone="error" />
+          <AppText variant="pageTitle">Bu davet baÄŸlantÄ±sÄ± artÄ±k geÃ§erli deÄŸil.</AppText>
+          <AppText muted style={styles.copy}>
+            BaÄŸlantÄ±nÄ±n sÃ¼resi dolmuÅŸ veya davet daha Ã¶nce iptal edilmiÅŸ olabilir.
           </AppText>
+          <View style={[styles.glassCard, styles.card]}>
+            <AppText variant="cardTitle">Ne yapabilirsin?</AppText>
+            <AppText muted>
+              Alan sahibinden yeni bir davet baÄŸlantÄ±sÄ± istemeyi deneyebilirsin.
+            </AppText>
+          </View>
+          <Pressable
+            onPress={() => router.replace('/(tabs)')}
+            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+          >
+            <AppText style={styles.primaryBtnText}>Ana sayfaya dÃ¶n</AppText>
+          </Pressable>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
+          >
+            <AppText style={styles.ghostBtnText}>Geri dÃ¶n</AppText>
+          </Pressable>
         </View>
-        <Pressable
-          disabled={accepting}
-          onPress={() => void accept()}
-          style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
-        >
-          {accepting ? (
-            <ActivityIndicator color={colors.surface} />
-          ) : (
-            <AppText style={styles.primaryBtnText}>Daveti kabul et</AppText>
-          )}
-        </Pressable>
       </View>
     </Screen>
   );
@@ -137,7 +58,7 @@ export default function InviteLandingScreen() {
 
 const styles: any = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },
@@ -195,6 +116,19 @@ const styles: any = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.huge,
   },
+  center: { flex: 1, justifyContent: 'center', gap: spacing.md },
+  mark: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5E1E1',
+    marginBottom: spacing.sm,
+  },
+  markText: { fontSize: 32, fontWeight: '700', color: colors.error },
+  copy: { lineHeight: 22 },
+  card: { gap: spacing.xs, marginVertical: spacing.sm },
   glassCard: {
     borderRadius: radius.xl,
     borderWidth: 1.5,
@@ -231,5 +165,17 @@ const styles: any = StyleSheet.create({
   btnPressed: {
     opacity: 0.88,
     transform: [{ scale: 0.985 }],
+  },
+  ghostBtn: {
+    minHeight: 52,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    backgroundColor: 'transparent',
+  },
+  ghostBtnText: {
+    color: colors.primaryText,
+    fontWeight: '600',
   },
 });

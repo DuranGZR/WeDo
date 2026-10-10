@@ -1,4 +1,4 @@
-import { Link, router } from 'expo-router';
+﻿import { Link, router } from 'expo-router';
 import { StyleSheet, View, Platform, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -28,9 +28,9 @@ export default function NotFound() {
 
       <View style={styles.content}>
         <View style={styles.glassCard}>
-          <AppText variant="pageTitle">Sayfa bulunamadı</AppText>
+          <AppText variant="pageTitle">Sayfa bulunamadÄ±</AppText>
           <AppText muted style={styles.copy}>
-            Bu bağlantı artık geçerli değil veya taşınmış olabilir.
+            Bu baÄŸlantÄ± artÄ±k geÃ§erli deÄŸil veya taÅŸÄ±nmÄ±ÅŸ olabilir.
           </AppText>
         </View>
 
@@ -38,7 +38,7 @@ export default function NotFound() {
           <Pressable
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.primaryBtnText}>Ana sayfaya dön</AppText>
+            <AppText style={styles.primaryBtnText}>Ana sayfaya dÃ¶n</AppText>
           </Pressable>
         </Link>
       </View>
@@ -49,7 +49,7 @@ export default function NotFound() {
 const styles: any = StyleSheet.create({
   copy: { marginVertical: spacing.lg },
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

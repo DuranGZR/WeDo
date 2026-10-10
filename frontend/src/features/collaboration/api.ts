@@ -1,3 +1,4 @@
+import { apiClient } from '@/api/client/api-client';
 import { authenticatedApiClient } from '@/api/client/authenticated-api-client';
 
 export type Page<T> = {
@@ -21,6 +22,8 @@ export type Invitation = {
   remaining_uses?: number;
   revoked_at?: string | null;
   invite_url?: string | null;
+  deep_link?: string | null;
+  token?: string;
   space_name?: string;
   inviter_name?: string;
 };
@@ -197,7 +200,7 @@ export const collaborationApi = {
   readAllNotifications: () =>
     authenticatedApiClient<void>('/api/v1/notifications/read-all', { method: 'POST' }),
   invitation: (token: string) =>
-    authenticatedApiClient<Invitation>(`/api/v1/invitations/token/${token}`),
+    apiClient<Invitation>(`/api/v1/invitations/token/${token}`),
   acceptInvitation: (token: string) =>
     authenticatedApiClient<Invitation>(`/api/v1/invitations/token/${token}/accept`, {
       method: 'POST',

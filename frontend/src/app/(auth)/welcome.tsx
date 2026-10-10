@@ -206,8 +206,21 @@ export default function WelcomeScreen() {
             <AppText style={styles.secondaryButtonText}>Zaten bir hesabım var</AppText>
           </Pressable>
           <AppText style={styles.legal}>
-            Devam ederek Kullanım Koşulları ve Gizlilik Politikasını kabul etmiş
-            olursunuz.
+            Devam ederek{' '}
+            <AppText
+              style={styles.legalLink}
+              onPress={() => router.push('/legal/terms' as never)}
+            >
+              Kullanım Koşulları
+            </AppText>
+            {' '}ve{' '}
+            <AppText
+              style={styles.legalLink}
+              onPress={() => router.push('/legal/privacy' as never)}
+            >
+              Gizlilik Politikası
+            </AppText>
+            &apos;nı kabul etmiş olursunuz.
           </AppText>
         </View>
       </View>
@@ -464,12 +477,16 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { color: onboardingColors.ink, fontSize: 14, fontWeight: '700' },
   legal: {
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.md,
-    color: '#5F5F5D',
-    fontSize: 9,
-    lineHeight: 13,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    color: '#6F6F6D',
+    fontSize: 11,
+    lineHeight: 16,
     textAlign: 'center',
+  },
+  legalLink: {
+    color: onboardingColors.ink,
+    fontWeight: '600',
   },
   pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
   contourTop: {

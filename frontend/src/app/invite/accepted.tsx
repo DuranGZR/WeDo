@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -25,17 +25,17 @@ export default function InviteAcceptedScreen() {
       <View style={styles.content}>
         <View style={styles.center}>
           <View style={styles.mark}>
-            <AppText style={styles.markText}>✓</AppText>
+            <AppText style={styles.markText}>âœ“</AppText>
           </View>
           <Badge label="Davet kabul edildi" tone="success" />
-          <AppText variant="pageTitle">Birlikte karar vermeye hazırsın.</AppText>
+          <AppText variant="pageTitle">Birlikte karar vermeye hazÄ±rsÄ±n.</AppText>
           <AppText muted style={styles.copy}>
-            Artık ortak listeleri görebilir, yeni fikirler ekleyebilir ve seçimleri
-            birlikte netleştirebilirsiniz.
+            ArtÄ±k ortak listeleri gÃ¶rebilir, yeni fikirler ekleyebilir ve seÃ§imleri
+            birlikte netleÅŸtirebilirsiniz.
           </AppText>
           <View style={[styles.glassCard, styles.card]}>
-            <AppText variant="cardTitle">Sıradaki adım</AppText>
-            <AppText muted>Alanına git ve ilk ortak listenizi aç.</AppText>
+            <AppText variant="cardTitle">SÄ±radaki adÄ±m</AppText>
+            <AppText muted>AlanÄ±na git ve ilk ortak listenizi aÃ§.</AppText>
           </View>
           <Pressable
             onPress={() => router.replace('/(tabs)')}
@@ -57,7 +57,7 @@ export default function InviteAcceptedScreen() {
 
 const styles: any = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

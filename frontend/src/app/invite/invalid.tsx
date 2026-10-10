@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -27,28 +27,28 @@ export default function InviteInvalidScreen() {
           <View style={styles.mark}>
             <AppText style={styles.markText}>!</AppText>
           </View>
-          <Badge label="Davet bulunamadı" tone="error" />
-          <AppText variant="pageTitle">Bu davet bağlantısı artık geçerli değil.</AppText>
+          <Badge label="Davet bulunamadÄ±" tone="error" />
+          <AppText variant="pageTitle">Bu davet baÄŸlantÄ±sÄ± artÄ±k geÃ§erli deÄŸil.</AppText>
           <AppText muted style={styles.copy}>
-            Bağlantının süresi dolmuş veya davet daha önce iptal edilmiş olabilir.
+            BaÄŸlantÄ±nÄ±n sÃ¼resi dolmuÅŸ veya davet daha Ã¶nce iptal edilmiÅŸ olabilir.
           </AppText>
           <View style={[styles.glassCard, styles.card]}>
             <AppText variant="cardTitle">Ne yapabilirsin?</AppText>
             <AppText muted>
-              Alan sahibinden yeni bir davet bağlantısı istemeyi deneyebilirsin.
+              Alan sahibinden yeni bir davet baÄŸlantÄ±sÄ± istemeyi deneyebilirsin.
             </AppText>
           </View>
           <Pressable
             onPress={() => router.replace('/(tabs)')}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.primaryBtnText}>Ana sayfaya dön</AppText>
+            <AppText style={styles.primaryBtnText}>Ana sayfaya dÃ¶n</AppText>
           </Pressable>
           <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.ghostBtnText}>Geri dön</AppText>
+            <AppText style={styles.ghostBtnText}>Geri dÃ¶n</AppText>
           </Pressable>
         </View>
       </View>
@@ -58,7 +58,7 @@ export default function InviteInvalidScreen() {
 
 const styles: any = StyleSheet.create({
   ambientContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: -1,
   },

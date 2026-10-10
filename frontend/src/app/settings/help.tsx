@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
 import {
   AccountCard,
   AccountScaffold,
+  accountStyles,
 } from '@/features/account/components/AccountScaffold';
 import { mono, spacing } from '@/design-system';
 
@@ -53,7 +55,7 @@ function HelpTopic({ title, text }: { title: string; text: string }) {
 
 export default function HelpScreen() {
   return (
-    <AccountScaffold title="Yardım" subtitle="WeDo’yu birlikte kullanmanın en kısa yolu.">
+    <AccountScaffold title="Yardım & Destek" subtitle="WeDo’yu birlikte kullanmanın en kısa yolu.">
       <AccountCard>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
@@ -67,11 +69,78 @@ export default function HelpScreen() {
           </View>
         </View>
       </AccountCard>
+
       <View style={styles.topics}>
         {topics.map((topic) => (
           <HelpTopic key={topic.title} {...topic} />
         ))}
       </View>
+
+      <AccountCard>
+        <AppText variant="caption" style={accountStyles.label}>
+          İLETİŞİM & DESTEK
+        </AppText>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Destek e-postası gönder"
+          onPress={() => void Linking.openURL('mailto:destek@wedo.app')}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+        >
+          <View style={styles.linkLeft}>
+            <Ionicons name="mail-outline" size={18} color={mono.ink} />
+            <AppText style={styles.linkTitle}>destek@wedo.app</AppText>
+          </View>
+          <Ionicons name="open-outline" size={16} color={mono.muted} />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Uygunsuz içerik veya kullanıcı bildirimi"
+          onPress={() =>
+            void Linking.openURL(
+              'mailto:destek@wedo.app?subject=WeDo%20Uygunsuz%20Icerik%20ve%20Kullanici%20Bildirimi'
+            )
+          }
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+        >
+          <View style={styles.linkLeft}>
+            <Ionicons name="flag-outline" size={18} color={mono.ink} />
+            <AppText style={styles.linkTitle}>İçerik / Kullanıcı Şikayet Et</AppText>
+          </View>
+          <Ionicons name="open-outline" size={16} color={mono.muted} />
+        </Pressable>
+      </AccountCard>
+
+      <AccountCard>
+        <AppText variant="caption" style={accountStyles.label}>
+          YASAL
+        </AppText>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Gizlilik Politikası sayfasını aç"
+          onPress={() => router.push('/legal/privacy' as never)}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+        >
+          <View style={styles.linkLeft}>
+            <Ionicons name="document-text-outline" size={18} color={mono.ink} />
+            <AppText style={styles.linkTitle}>Gizlilik Politikası</AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={mono.muted} />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Kullanım Koşulları ve EULA sayfasını aç"
+          onPress={() => router.push('/legal/terms' as never)}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+        >
+          <View style={styles.linkLeft}>
+            <Ionicons name="shield-outline" size={18} color={mono.ink} />
+            <AppText style={styles.linkTitle}>Kullanım Koşulları ve EULA</AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={mono.muted} />
+        </Pressable>
+      </AccountCard>
     </AccountScaffold>
   );
 }
@@ -106,4 +175,20 @@ const styles = StyleSheet.create({
   topicTitle: { flex: 1, fontWeight: '800' },
   topicText: { fontSize: 13, lineHeight: 19 },
   pressed: { opacity: 0.84 },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  linkLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  linkTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: mono.ink,
+  },
 });

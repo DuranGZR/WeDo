@@ -15,10 +15,12 @@ import { PasswordField } from '@/features/auth/PasswordField';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function DeleteAccountScreen() {
-  const { deleteAccount } = useAuthStore();
+  const { user, deleteAccount } = useAuthStore();
   const { showToast } = useToast();
   const [password, setPassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  const hasPassword = user?.has_password ?? true;
 
   const removeAccount = () =>
     Alert.alert(
@@ -35,7 +37,7 @@ export default function DeleteAccountScreen() {
     );
 
   const submit = async () => {
-    if (!password) {
+    if (hasPassword && !password) {
       showToast({
         title: 'Şifren gerekli',
         message: 'Hesabını silmek için mevcut şifreni gir.',
@@ -45,7 +47,7 @@ export default function DeleteAccountScreen() {
 
     setDeleting(true);
     try {
-      await deleteAccount(password);
+      await deleteAccount(hasPassword ? password : undefined);
       showToast({
         title: 'Hesap devre dışı bırakıldı',
         message: 'Oturumların kapatıldı.',
@@ -77,14 +79,23 @@ export default function DeleteAccountScreen() {
           Hesabın devre dışı bırakılır, bütün açık oturumların kapatılır ve {"WeDo'ya"}{' '}
           tekrar erişemezsin.
         </AppText>
-        <PasswordField
-          label="Mevcut şifre"
-          value={password}
-          onChangeText={setPassword}
-          autoComplete="current-password"
-          textContentType="password"
-          onSubmitEditing={removeAccount}
-        />
+        {hasPassword ? (
+          <PasswordField
+            label="Mevcut şifre"
+            value={password}
+            onChangeText={setPassword}
+            autoComplete="current-password"
+            textContentType="password"
+            onSubmitEditing={removeAccount}
+          />
+        ) : (
+          <View style={styles.appleNotice}>
+            <Ionicons name="logo-apple" size={18} color={mono.ink} />
+            <AppText style={styles.appleNoticeText}>
+              Hesabınız Apple ile korunuyor. Silmek için şifre gerekmez.
+            </AppText>
+          </View>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Hesabı kalıcı olarak sil"
@@ -116,4 +127,19 @@ const styles = StyleSheet.create({
   warningTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dangerText: { color: mono.danger },
   copy: { fontSize: 13, lineHeight: 19 },
+  appleNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: 12,
+    backgroundColor: mono.soft,
+  },
+  appleNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: mono.ink,
+    fontWeight: '600',
+  },
 });
