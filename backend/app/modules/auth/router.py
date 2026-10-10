@@ -3,7 +3,9 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.dependencies import SessionDep
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.auth.schemas import (
+    AppleSignInRequest,
     ChangePasswordRequest,
+    GoogleSignInRequest,
     RefreshRequest,
     SignInRequest,
     SignOutRequest,
@@ -14,7 +16,9 @@ from app.modules.auth.service import (
     AuthError,
     EmailAlreadyRegisteredError,
     PasswordPolicyError,
+    apple_sign_in,
     change_password,
+    google_sign_in,
     refresh,
     sign_in,
     sign_out,
@@ -53,6 +57,26 @@ def sign_up_endpoint(data: SignUpRequest, session: SessionDep) -> UserResponse:
 def sign_in_endpoint(data: SignInRequest, session: SessionDep) -> TokenResponse:
     try:
         return sign_in(session, str(data.email), data.password, data.device_id)
+    except AuthError as error:
+        raise _auth_error(error) from error
+
+
+@router.post("/apple", response_model=TokenResponse)
+def apple_sign_in_endpoint(
+    data: AppleSignInRequest, session: SessionDep
+) -> TokenResponse:
+    try:
+        return apple_sign_in(session, data)
+    except AuthError as error:
+        raise _auth_error(error) from error
+
+
+@router.post("/google", response_model=TokenResponse)
+def google_sign_in_endpoint(
+    data: GoogleSignInRequest, session: SessionDep
+) -> TokenResponse:
+    try:
+        return google_sign_in(session, data)
     except AuthError as error:
         raise _auth_error(error) from error
 

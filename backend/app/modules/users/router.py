@@ -32,10 +32,17 @@ def update_current_user(
 def delete_current_user(
     data: AccountDeleteRequest, current_user: CurrentUserDep, session: SessionDep
 ) -> None:
-    if current_user.password_hash is None or not verify_password(
-        data.current_password, current_user.password_hash
-    ):
-        raise HTTPException(status_code=401, detail="Mevcut şifren doğru değil.")
+    if current_user.password_hash is not None:
+        if not data.current_password or not verify_password(
+            data.current_password, current_user.password_hash
+        ):
+            raise HTTPException(status_code=401, detail="Mevcut şifren doğru değil.")
     current_user.is_active = False
+    current_user.email = f"deleted_{current_user.id}@deleted.wedo.app"
+    current_user.display_name = "Silinmiş Kullanıcı"
     auth_repository.revoke_all_for_user(session, current_user.id)
+    from app.modules.auth.models import AuthIdentity
+    session.query(AuthIdentity).filter_by(user_id=current_user.id).delete()
+    from app.modules.notifications.models import DevicePushToken
+    session.query(DevicePushToken).filter_by(user_id=current_user.id).delete()
     session.commit()

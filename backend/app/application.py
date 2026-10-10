@@ -16,14 +16,15 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 def create_application() -> FastAPI:
+    is_docs_enabled = settings.docs_enabled and settings.environment != "production"
     application = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
         debug=settings.debug,
         lifespan=lifespan,
-        docs_url="/docs" if settings.docs_enabled else None,
-        redoc_url="/redoc" if settings.docs_enabled else None,
-        openapi_url="/openapi.json" if settings.docs_enabled else None,
+        docs_url="/docs" if is_docs_enabled else None,
+        redoc_url="/redoc" if is_docs_enabled else None,
+        openapi_url="/openapi.json" if is_docs_enabled else None,
     )
     register_middlewares(application)
     register_rate_limit(application)
@@ -39,4 +40,8 @@ def create_application() -> FastAPI:
             allow_headers=["*"],
         )
     application.include_router(api_router)
+    from app.modules.invitations.web import web_router
+    application.include_router(web_router)
+    from app.modules.legal.web import legal_router
+    application.include_router(legal_router)
     return application

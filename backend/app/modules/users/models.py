@@ -16,3 +16,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     notify_partner_activity: Mapped[bool] = mapped_column(Boolean, default=True)
     push_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    @property
+    def has_password(self) -> bool:
+        return self.password_hash is not None

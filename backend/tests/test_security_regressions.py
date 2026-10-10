@@ -240,3 +240,113 @@ def test_errors_include_common_request_id_envelope(auth_client: TestClient) -> N
     assert response.headers["X-Request-ID"] == "contract-request-1"
     assert response.json()["error"]["code"] == "HTTP_401"
     assert response.json()["error"]["request_id"] == "contract-request-1"
+
+
+def test_rate_limit_extracts_proxy_ip() -> None:
+    from starlette.requests import Request
+    from app.core.rate_limit import extract_client_ip
+
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "headers": [
+            (b"cf-connecting-ip", b"203.0.113.195"),
+            (b"x-forwarded-for", b"198.51.100.1, 10.0.0.1"),
+        ],
+        "client": ("10.0.0.1", 12345),
+    }
+    req = Request(scope)
+    assert extract_client_ip(req) == "203.0.113.195"
+
+    scope_x_forwarded = {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "headers": [
+            (b"x-forwarded-for", b"198.51.100.55, 10.0.0.1"),
+        ],
+        "client": ("10.0.0.1", 12345),
+    }
+    req2 = Request(scope_x_forwarded)
+    assert extract_client_ip(req2) == "198.51.100.55"
+
+
+def test_production_settings_validation_enforces_safety() -> None:
+    import pytest
+    from app.core.config import Settings
+
+    # Fails if development key is used in production
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY değiştirilmelidir"):
+        Settings(
+            environment="production",
+            jwt_secret_key="development-only-change-me-32chars!",
+        )
+
+    # Fails if key is too short in production
+    with pytest.raises(ValueError, match="en az 32 karakter"):
+        Settings(
+            environment="production",
+            jwt_secret_key="short-key",
+        )
+
+    # Fails if debug is True in production
+    with pytest.raises(ValueError, match="DEBUG=false"):
+        Settings(
+            environment="production",
+            jwt_secret_key="a" * 32,
+            debug=True,
+        )
+
+    # Fails if database_url in production lacks sslmode=require
+    with pytest.raises(ValueError, match="sslmode=require"):
+        Settings(
+            environment="production",
+            jwt_secret_key="a" * 32,
+            debug=False,
+            database_url="postgresql+psycopg://wedo:wedo@db.railway.app:5432/wedo",
+        )
+
+    # Passes when production configuration is fully compliant
+    valid_prod = Settings(
+        environment="production",
+        jwt_secret_key="a" * 32,
+        debug=False,
+        database_url="postgresql+psycopg://wedo:wedo@db.railway.app:5432/wedo?sslmode=require",
+    )
+    assert "sslmode=require" in str(valid_prod.database_url)
+
+
+def test_rate_limit_rejects_spoofed_headers_from_untrusted_direct_clients() -> None:
+    from starlette.requests import Request
+    from app.core.rate_limit import extract_client_ip
+
+    # Direct connection from a public client (not trusted proxy, not private IP)
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/",
+        "headers": [
+            (b"cf-connecting-ip", b"1.1.1.1"),
+            (b"x-forwarded-for", b"8.8.8.8"),
+        ],
+        "client": ("93.184.216.34", 54321),
+    }
+    req = Request(scope)
+    # The untrusted headers must be ignored; the direct socket IP must be used
+    assert extract_client_ip(req) == "93.184.216.34"
+
+
+
+def test_rate_limit_middleware_cleans_stale_buckets() -> None:
+    from app.core.rate_limit import RateLimitMiddleware
+
+    middleware = RateLimitMiddleware(app=None)
+    # Simulate an entry older than 60 seconds
+    middleware.requests["old-ip"].append(100.0)
+    middleware.last_cleanup = 0.0
+
+    middleware._cleanup_stale_buckets(now=200.0)
+    assert "old-ip" not in middleware.requests
+
+

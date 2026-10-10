@@ -78,3 +78,139 @@ def test_sign_up_rejects_password_without_all_required_character_types(
     )
 
     assert response.status_code == 422
+
+
+def test_delete_account_anonymizes_data_and_revokes_access(
+    auth_client: TestClient,
+) -> None:
+    sign_up = auth_client.post(
+        "/api/v1/auth/sign-up",
+        json={
+            "email": "to-delete@example.com",
+            "password": "Correct-horse-battery-staple1",
+            "display_name": "Delete Me",
+        },
+    )
+    assert sign_up.status_code == 201
+
+    sign_in = auth_client.post(
+        "/api/v1/auth/sign-in",
+        json={
+            "email": "to-delete@example.com",
+            "password": "Correct-horse-battery-staple1",
+        },
+    )
+    assert sign_in.status_code == 200
+    token = sign_in.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    delete_resp = auth_client.request(
+        "DELETE",
+        "/api/v1/users/me",
+        headers=headers,
+        json={"current_password": "Correct-horse-battery-staple1"},
+    )
+    assert delete_resp.status_code == 204
+
+    # Access is revoked
+    me = auth_client.get("/api/v1/users/me", headers=headers)
+    assert me.status_code == 401
+
+    # Original email is freed up for re-registration
+    new_sign_up = auth_client.post(
+        "/api/v1/auth/sign-up",
+        json={
+            "email": "to-delete@example.com",
+            "password": "Correct-horse-battery-staple1",
+            "display_name": "New Fresh User",
+        },
+    )
+    assert new_sign_up.status_code == 201
+
+
+def test_apple_sign_in_creates_new_user_and_allows_passwordless_delete(
+    auth_client: TestClient,
+) -> None:
+    import jwt
+
+    apple_user_id = "000123.apple.unique.id"
+    dummy_token = jwt.encode(
+        {
+            "iss": "https://appleid.apple.com",
+            "sub": apple_user_id,
+            "aud": "com.wedo.app",
+            "email": "appleuser@example.com",
+        },
+        key="development-only-test-key-32chars!",
+        algorithm="HS256",
+    )
+
+    resp = auth_client.post(
+        "/api/v1/auth/apple",
+        json={
+            "identity_token": dummy_token,
+            "apple_user_id": apple_user_id,
+            "email": "appleuser@example.com",
+            "display_name": "Apple User",
+            "device_id": "ios-device-1",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["user"]["email"] == "appleuser@example.com"
+    assert data["user"]["display_name"] == "Apple User"
+    assert data["user"]["has_password"] is False
+
+    token = data["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    me_resp = auth_client.get("/api/v1/users/me", headers=headers)
+    assert me_resp.status_code == 200
+    assert me_resp.json()["has_password"] is False
+
+    second_resp = auth_client.post(
+        "/api/v1/auth/apple",
+        json={
+            "identity_token": dummy_token,
+            "apple_user_id": apple_user_id,
+        },
+    )
+    assert second_resp.status_code == 200
+    assert second_resp.json()["user"]["email"] == "appleuser@example.com"
+
+    delete_resp = auth_client.request(
+        "DELETE",
+        "/api/v1/users/me",
+        headers=headers,
+        json={},
+    )
+    assert delete_resp.status_code == 204
+
+    revoked_me = auth_client.get("/api/v1/users/me", headers=headers)
+    assert revoked_me.status_code == 401
+
+
+def test_google_sign_in_creates_new_user_and_authenticates(
+    auth_client: TestClient,
+) -> None:
+    resp = auth_client.post(
+        "/api/v1/auth/google",
+        json={
+            "id_token": "google-dummy-token",
+            "google_user_id": "google-user-123",
+            "email": "googleuser@example.com",
+            "display_name": "Google User",
+            "device_id": "web-browser-1",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["user"]["email"] == "googleuser@example.com"
+    assert data["user"]["display_name"] == "Google User"
+    assert data["user"]["has_password"] is False
+
+

@@ -16,6 +16,7 @@ class UserResponse(BaseModel):
     notify_partner_activity: bool
     push_notifications_enabled: bool
     created_at: datetime
+    has_password: bool = True
 
 
 class UserUpdate(BaseModel):
@@ -25,4 +26,4 @@ class UserUpdate(BaseModel):
 
 
 class AccountDeleteRequest(BaseModel):
-    current_password: str = Field(min_length=8, max_length=128)
+    current_password: str | None = Field(default=None, max_length=128)

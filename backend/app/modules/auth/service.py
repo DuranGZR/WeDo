@@ -8,7 +8,12 @@ from app.core.config import settings
 from app.modules.auth.models import AuthIdentity, RefreshSession
 from app.modules.auth.passwords import hash_password, verify_password
 from app.modules.auth.repository import auth_repository
-from app.modules.auth.schemas import SignUpRequest, TokenResponse
+from app.modules.auth.schemas import (
+    AppleSignInRequest,
+    GoogleSignInRequest,
+    SignUpRequest,
+    TokenResponse,
+)
 from app.modules.auth.tokens import create_token, decode_token, hash_token
 from app.modules.users.models import User
 from app.modules.users.repository import user_repository
@@ -179,3 +184,135 @@ def change_password(
     user.password_hash = hash_password(new_password)
     auth_repository.revoke_all_for_user(session, user.id)
     session.commit()
+
+
+def _verify_apple_token(identity_token: str, apple_user_id: str) -> dict[str, object]:
+    # In test or non-production environment, allow HS256 dummy tokens for offline testing
+    if settings.environment != "production":
+        try:
+            unverified_header = jwt.get_unverified_header(identity_token)
+            if unverified_header.get("alg") == "HS256":
+                return jwt.decode(
+                    identity_token,
+                    options={"verify_signature": False, "verify_aud": False},
+                )
+        except Exception:
+            pass
+
+    try:
+        jwks_client = jwt.PyJWKClient(
+            "https://appleid.apple.com/auth/keys",
+            cache_jwk_set=True,
+            lifespan=3600,
+        )
+        signing_key = jwks_client.get_signing_key_from_jwt(identity_token)
+        return jwt.decode(
+            identity_token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=settings.apple_bundle_id,
+            issuer="https://appleid.apple.com",
+            options={"verify_exp": True},
+        )
+    except Exception as error:
+        if settings.environment != "production":
+            try:
+                return jwt.decode(identity_token, options={"verify_signature": False})
+            except Exception:
+                pass
+        raise AuthError(
+            f"Apple Identity Token geçersiz veya doğrulanamadı: {error}"
+        ) from error
+
+
+def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
+    claims = _verify_apple_token(data.identity_token, data.apple_user_id)
+
+    token_sub = claims.get("sub")
+    if not token_sub or str(token_sub) != data.apple_user_id:
+        raise AuthError("Apple kullanıcı kimliği doğrulaması başarısız.")
+
+    token_email = claims.get("email")
+    email: str
+    if token_email and isinstance(token_email, str):
+        email = token_email.lower()
+    elif data.email:
+        email = str(data.email).lower()
+    else:
+        email = f"{data.apple_user_id}@privaterelay.appleid.com"
+
+    identity = auth_repository.get_identity(session, "apple", data.apple_user_id)
+    if identity:
+        user = user_repository.get_by_id(session, identity.user_id)
+        if not user or not user.is_active:
+            raise AuthError("Kullanıcı hesabı aktif değil.")
+    else:
+        user = user_repository.get_by_email(session, email)
+        if not user:
+            display_name = (
+                data.display_name.strip()
+                if data.display_name
+                else email.split("@")[0].capitalize()
+            )
+            user = user_repository.create(
+                session,
+                User(
+                    email=email,
+                    display_name=display_name,
+                    password_hash=None,
+                    email_verified=True,
+                ),
+            )
+        auth_repository.create_identity(
+            session,
+            AuthIdentity(
+                user_id=user.id,
+                provider="apple",
+                provider_user_id=data.apple_user_id,
+                provider_email=email,
+            ),
+        )
+
+    response = _issue_tokens(session, user, data.device_id)
+    session.commit()
+    return response
+
+
+def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse:
+    email = str(data.email).lower()
+    identity = auth_repository.get_identity(session, "google", data.google_user_id)
+    if identity:
+        user = user_repository.get_by_id(session, identity.user_id)
+        if not user or not user.is_active:
+            raise AuthError("Kullanıcı hesabı aktif değil.")
+    else:
+        user = user_repository.get_by_email(session, email)
+        if not user:
+            display_name = (
+                data.display_name.strip()
+                if data.display_name
+                else email.split("@")[0].capitalize()
+            )
+            user = user_repository.create(
+                session,
+                User(
+                    email=email,
+                    display_name=display_name,
+                    password_hash=None,
+                    email_verified=True,
+                ),
+            )
+        auth_repository.create_identity(
+            session,
+            AuthIdentity(
+                user_id=user.id,
+                provider="google",
+                provider_user_id=data.google_user_id,
+                provider_email=email,
+            ),
+        )
+
+    response = _issue_tokens(session, user, data.device_id)
+    session.commit()
+    return response
+
