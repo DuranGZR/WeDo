@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import jwt
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -278,19 +279,59 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
     return response
 
 
+_google_jwks_client = jwt.PyJWKClient(
+    "https://www.googleapis.com/oauth2/v3/certs", lifespan=3600, timeout=10
+)
+
+
+def _verify_google_token(id_token: str) -> dict[str, object]:
+    if not settings.google_web_client_id:
+        raise AuthError("Google ile giriş henüz yapılandırılmadı.")
+    try:
+        signing_key = _google_jwks_client.get_signing_key_from_jwt(id_token)
+        return jwt.decode(
+            id_token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=settings.google_web_client_id,
+            issuer=["accounts.google.com", "https://accounts.google.com"],
+            options={"require": ["exp", "iat", "iss", "aud", "sub"]},
+        )
+    except (jwt.PyJWTError, ValueError) as error:
+        raise AuthError(
+            "Google kimlik bilgisi doğrulanamadı. Tekrar giriş yap."
+        ) from error
+
+
 def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse:
-    email = str(data.email).lower()
-    identity = auth_repository.get_identity(session, "google", data.google_user_id)
+    claims = _verify_google_token(data.id_token)
+    google_user_id = claims.get("sub")
+    if not isinstance(google_user_id, str) or not google_user_id.strip():
+        raise AuthError("Google kullanıcı kimliği bulunamadı.")
+    if claims.get("email_verified") is not True:
+        raise AuthError("Google e-posta adresi doğrulanmış olmalıdır.")
+    try:
+        email = str(TypeAdapter(EmailStr).validate_python(claims.get("email"))).lower()
+    except ValidationError as error:
+        raise AuthError("Google e-posta adresi geçersiz.") from error
+    identity = auth_repository.get_identity(session, "google", google_user_id)
     if identity:
         user = user_repository.get_by_id(session, identity.user_id)
         if not user or not user.is_active:
             raise AuthError("Kullanıcı hesabı aktif değil.")
     else:
         user = user_repository.get_by_email(session, email)
+        if user and not user.is_active:
+            raise AuthError("Kullanıcı hesabı aktif değil.")
+        # Google is authoritative for Gmail and verified Workspace domains only.
+        # A third-party email's ownership may have changed since Google verified it.
+        if user and not (email.endswith("@gmail.com") or claims.get("hd")):
+            raise AuthError("Bu e-posta ile mevcut hesabına şifrenle giriş yap.")
         if not user:
+            token_name = claims.get("name")
             display_name = (
-                data.display_name.strip()
-                if data.display_name
+                token_name.strip()[:80]
+                if isinstance(token_name, str) and token_name.strip()
                 else email.split("@")[0].capitalize()
             )
             user = user_repository.create(
@@ -307,7 +348,7 @@ def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse
             AuthIdentity(
                 user_id=user.id,
                 provider="google",
-                provider_user_id=data.google_user_id,
+                provider_user_id=google_user_id,
                 provider_email=email,
             ),
         )

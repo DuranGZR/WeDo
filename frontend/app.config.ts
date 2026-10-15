@@ -1,5 +1,22 @@
 import type { ExpoConfig } from 'expo/config';
 
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+if (
+  process.env.EAS_BUILD_PLATFORM === 'ios' &&
+  (!googleIosClientId || !googleWebClientId)
+) {
+  throw new Error('Set Google iOS and Web client IDs in the EAS build environment.');
+}
+const googlePlugins: NonNullable<ExpoConfig['plugins']> = googleIosClientId
+  ? [
+      [
+        '@react-native-google-signin/google-signin',
+        { iosUrlScheme: googleIosClientId.split('.').reverse().join('.') },
+      ],
+    ]
+  : [];
+
 const config: ExpoConfig = {
   name: 'WeDo',
   slug: 'wedo',
@@ -30,6 +47,7 @@ const config: ExpoConfig = {
     ],
     'expo-sqlite',
     'expo-apple-authentication',
+    ...googlePlugins,
     [
       'expo-share-intent',
       {
@@ -70,18 +88,16 @@ const config: ExpoConfig = {
       backgroundColor: '#F7F6F2',
       monochromeImage: './assets/notification-icon.png',
     },
-    permissions: [
-      'RECEIVE_BOOT_COMPLETED',
-      'READ_MEDIA_IMAGES',
-      'POST_NOTIFICATIONS',
-    ],
+    permissions: ['RECEIVE_BOOT_COMPLETED', 'READ_MEDIA_IMAGES', 'POST_NOTIFICATIONS'],
   },
   web: {
     favicon: './assets/TekLogo.png',
   },
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000',
-    eas: { projectId: process.env.EAS_PROJECT_ID ?? '4a68916f-7f20-44ff-ba03-22e50eaa4774' },
+    eas: {
+      projectId: process.env.EAS_PROJECT_ID ?? '4a68916f-7f20-44ff-ba03-22e50eaa4774',
+    },
     privacyPolicyUrl:
       process.env.EXPO_PUBLIC_PRIVACY_URL ??
       'https://wedo-production-3ad2.up.railway.app/legal#privacy',

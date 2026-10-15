@@ -1,5 +1,8 @@
 from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
+import jwt
 import pytest
 from app.api.dependencies import get_session
 from app.core.config import settings
@@ -17,10 +20,46 @@ from app.modules.plans.models import Plan, PlanReminder  # noqa: F401
 from app.modules.reactions.models import ItemReaction  # noqa: F401
 from app.modules.uploads.models import Upload  # noqa: F401
 from app.modules.users.models import User  # noqa: F401
+from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
+
+
+@pytest.fixture
+def google_token(monkeypatch):
+    from app.modules.auth import service
+
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    monkeypatch.setattr(settings, "google_web_client_id", "test-web-client")
+    monkeypatch.setattr(
+        service._google_jwks_client,
+        "get_signing_key_from_jwt",
+        lambda token: SimpleNamespace(key=private_key.public_key()),
+    )
+
+    def create(overrides=None, *, trusted=True):
+        now = datetime.now(UTC)
+        claims = {
+            "iss": "https://accounts.google.com",
+            "aud": "test-web-client",
+            "sub": "google-user-123",
+            "iat": now,
+            "exp": now + timedelta(minutes=5),
+            "email": "googleuser@gmail.com",
+            "email_verified": True,
+            "name": "Google User",
+        }
+        claims.update(overrides or {})
+        key = (
+            private_key
+            if trusted
+            else rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        )
+        return jwt.encode(claims, key, algorithm="RS256", headers={"kid": "test"})
+
+    return create
 
 
 @pytest.fixture

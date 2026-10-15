@@ -11,6 +11,7 @@
       "android": { "buildType": "apk" }
     },
     "production": {
+      "environment": "production",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://wedo-production-3ad2.up.railway.app"

@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     mobile_scheme: str = "wedo"
     apple_bundle_id: str = "com.wedo.app"
+    google_web_client_id: str = ""
     public_invite_base_url: str | None = None
     cors_origins: list[str] = []
     rate_limit_per_minute: int = Field(default=120, ge=1, le=10_000)

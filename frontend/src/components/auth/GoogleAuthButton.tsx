@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Pressable,
+  Platform,
   StyleSheet,
   View,
   type StyleProp,
@@ -12,6 +13,7 @@ import {
 
 import { useToast } from '@/components/feedback/AppToast';
 import { AppText } from '@/components/ui';
+import { getGoogleIdToken } from '@/lib/google-auth';
 import { useAuthStore } from '@/store/auth-store';
 
 type GoogleAuthButtonProps = {
@@ -26,20 +28,18 @@ export function GoogleAuthButton({
   onSuccess,
 }: GoogleAuthButtonProps) {
   const [loading, setLoading] = useState(false);
+  const pending = useRef(false);
   const signInWithGoogle = useAuthStore((state) => state.signInWithGoogle);
   const { showToast } = useToast();
 
   const handleGoogleAuth = async () => {
+    if (pending.current) return;
+    pending.current = true;
     setLoading(true);
     try {
-      // In production or test environment:
-      // Calls backend google auth endpoint
-      await signInWithGoogle(
-        'google-auth-token',
-        'google_user_demo',
-        'google-user@gmail.com',
-        'Google Kullanıcısı',
-      );
+      const idToken = await getGoogleIdToken();
+      if (!idToken) return;
+      await signInWithGoogle(idToken);
 
       if (onSuccess) {
         onSuccess();
@@ -53,9 +53,12 @@ export function GoogleAuthButton({
         message: err.message ?? 'Google ile oturum açılırken bir hata oluştu.',
       });
     } finally {
+      pending.current = false;
       setLoading(false);
     }
   };
+
+  if (Platform.OS !== 'ios') return null;
 
   if (loading) {
     return (
@@ -70,11 +73,7 @@ export function GoogleAuthButton({
       accessibilityRole="button"
       accessibilityLabel="Google ile devam et"
       onPress={() => void handleGoogleAuth()}
-      style={({ pressed }) => [
-        styles.button,
-        style,
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.button, style, pressed && styles.pressed]}
     >
       <Image
         source={require('../../../assets/auth_google.png')}

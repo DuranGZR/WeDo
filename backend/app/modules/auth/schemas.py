@@ -45,10 +45,7 @@ class AppleSignInRequest(BaseModel):
 
 
 class GoogleSignInRequest(BaseModel):
-    id_token: str = Field(min_length=1)
-    google_user_id: str = Field(min_length=1, max_length=255)
-    email: EmailStr
-    display_name: str | None = Field(default=None, max_length=80)
+    id_token: str = Field(min_length=1, max_length=16384)
     device_id: str | None = Field(default=None, max_length=255)
 
 

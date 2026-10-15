@@ -16,12 +16,7 @@ type AuthState = {
     email?: string,
     displayName?: string,
   ) => Promise<void>;
-  signInWithGoogle: (
-    idToken: string,
-    googleUserId: string,
-    email: string,
-    displayName?: string,
-  ) => Promise<void>;
+  signInWithGoogle: (idToken: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   updateProfile: (data: {
     displayName: string;
@@ -78,14 +73,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await secureStorage.setTokens(result.access_token, result.refresh_token);
     set({ user: result.user, accessToken: result.access_token });
   },
-  async signInWithGoogle(idToken, googleUserId, email, displayName) {
+  async signInWithGoogle(idToken) {
     const raw = await apiClient<unknown>('/api/v1/auth/google', {
       method: 'POST',
       body: {
         id_token: idToken,
-        google_user_id: googleUserId,
-        email,
-        ...(displayName ? { display_name: displayName } : {}),
       },
     });
     const result = tokenResponseSchema.parse(raw);

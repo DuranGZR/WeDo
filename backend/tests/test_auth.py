@@ -194,23 +194,35 @@ def test_apple_sign_in_creates_new_user_and_allows_passwordless_delete(
 
 def test_google_sign_in_creates_new_user_and_authenticates(
     auth_client: TestClient,
+    google_token,
 ) -> None:
     resp = auth_client.post(
         "/api/v1/auth/google",
         json={
-            "id_token": "google-dummy-token",
-            "google_user_id": "google-user-123",
-            "email": "googleuser@example.com",
-            "display_name": "Google User",
-            "device_id": "web-browser-1",
+            "id_token": google_token(),
+            "google_user_id": "forged-user",
+            "email": "victim@example.com",
+            "display_name": "Forged Name",
+            "device_id": "iphone-1",
         },
     )
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
     assert "refresh_token" in data
-    assert data["user"]["email"] == "googleuser@example.com"
+    assert data["user"]["email"] == "googleuser@gmail.com"
     assert data["user"]["display_name"] == "Google User"
     assert data["user"]["has_password"] is False
+
+    repeated = auth_client.post(
+        "/api/v1/auth/google", json={"id_token": google_token()}
+    )
+    assert repeated.status_code == 200
+    assert repeated.json()["user"]["id"] == data["user"]["id"]
+    headers = {"Authorization": f"Bearer {data['access_token']}"}
+    assert auth_client.get("/api/v1/users/me", headers=headers).status_code == 200
+    assert auth_client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]}
+    ).status_code == 200
 
 
