@@ -23,7 +23,7 @@ export default function LegalPrivacyScreen() {
           </Pressable>
         </View>
         <AppText muted style={styles.date}>
-          Son Güncelleme: 1 Ocak 2026
+          Son Güncelleme: 15 Ekim 2026
         </AppText>
       </View>
 
@@ -48,11 +48,22 @@ export default function LegalPrivacyScreen() {
           </AppText>
           <AppText style={styles.bullet}>
             • <AppText style={styles.bold}>Hesap Bilgileri:</AppText> E-posta adresi, görünen ad ve
-            şifreli hesaplar için şifre özeti (hash).
+            şifreli hesaplar için şifre özeti (hash). E-posta ile kayıtta adres doğrulaması için
+            süreli kod gönderilir; kodun güvenli özeti ve deneme bilgileri sunucuda tutulur.
           </AppText>
           <AppText style={styles.bullet}>
             • <AppText style={styles.bold}>Apple ile Giriş:</AppText> Apple kimliğiyle oturum açıldığında,
             Apple tarafından sağlanan anonim kullanıcı kimliği ve seçiminize bağlı olarak e-posta/ad bilgisi.
+          </AppText>
+          <AppText style={styles.bullet}>
+            • <AppText style={styles.bold}>Google ile Giriş:</AppText> Google kullanıcı kimliği,
+            doğrulanmış e-posta adresi ve profil adı hesap oluşturma ve oturum doğrulama için
+            kullanılır. Google şifreniz alınmaz; Gmail, Drive veya Takvim erişimi istenmez.
+          </AppText>
+          <AppText style={styles.bullet}>
+            • <AppText style={styles.bold}>Destek ve Silme Talepleri:</AppText> Formda paylaştığınız
+            e-posta ve açıklama destek posta kutusuna iletilir; talebin değerlendirilmesi ve
+            hesap sahipliğinin doğrulanması için kullanılır.
           </AppText>
           <AppText style={styles.bullet}>
             • <AppText style={styles.bold}>Ortak İçerikler:</AppText> Kaydettiğiniz bağlantılar,
@@ -81,8 +92,10 @@ export default function LegalPrivacyScreen() {
           </AppText>
           <AppText style={styles.paragraph}>
             WeDo, kişisel verilerinizi reklam verenlere veya üçüncü taraf veri simsarlarına kesinlikle
-            satmaz veya kiralamaz. Verileriniz yalnızca açıkça davet ettiğiniz ortak alan üyeleriyle
-            paylaşılır.
+            satmaz veya kiralamaz. Ortak içerikleriniz açıkça davet ettiğiniz alan üyeleriyle
+            paylaşılır. Seçtiğiniz giriş yönteminde Google veya Apple kimlik doğrulama hizmetleri
+            kullanılır. Web destek taleplerindeki e-posta ve açıklama, Resend üzerinden Google
+            Workspace destek posta kutusuna iletilir.
           </AppText>
         </View>
 
@@ -104,7 +117,7 @@ export default function LegalPrivacyScreen() {
           </AppText>
           <AppText style={styles.paragraph}>
             Gizlilik politikamızla ilgili soru, talep veya geri bildirimleriniz için bize{' '}
-            <AppText style={styles.bold}>destek@wedo.app</AppText> adresinden ulaşabilirsiniz.
+            <AppText style={styles.bold}>contact@durangezer.com</AppText> adresinden ulaşabilirsiniz.
           </AppText>
         </View>
       </View>

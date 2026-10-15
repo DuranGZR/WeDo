@@ -88,6 +88,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/api/v1/auth/change-password",
             "/api/v1/auth/apple",
             "/api/v1/auth/google",
+            "/api/v1/auth/verify-email",
+            "/api/v1/auth/resend-verification",
+            "/legal/deletion-requests",
         }
         limit = (
             settings.auth_rate_limit_per_minute

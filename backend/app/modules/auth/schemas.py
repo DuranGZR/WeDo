@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, EmailStr, Field
 
 from app.modules.users.schemas import UserResponse
@@ -14,6 +16,21 @@ class SignInRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     device_id: str | None = Field(default=None, max_length=255)
+
+
+class VerificationChallenge(BaseModel):
+    verification_id: UUID
+    email: EmailStr
+    expires_in_seconds: int
+    resend_after_seconds: int
+
+
+class ResendVerificationRequest(BaseModel):
+    verification_id: UUID
+
+
+class VerifyEmailRequest(ResendVerificationRequest):
+    code: str = Field(pattern=r"^[0-9]{6}$")
 
 
 class RefreshRequest(BaseModel):

@@ -47,5 +47,5 @@ Ortak alanlara eklediğiniz bağlantılar ve yüklediğiniz fotoğraflar ("Kulla
 ## 6. İletişim
 
 Kullanım koşullarıyla ilgili sorularınız için bizimle iletişime geçebilirsiniz:
-- **E-posta:** `destek@wedo.app`
+- **E-posta:** `contact@durangezer.com`
 - **Web:** `https://wedo.app`

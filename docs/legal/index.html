@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WeDo - Yasal Belgeler & Hesap Silme Talebi</title>
+  <title>WeDo - Yasal Belgeler & Gizlilik Politikası</title>
   <style>
     :root {
       --bg: #F7F6F2;
@@ -120,6 +120,8 @@
       transition: opacity 0.2s;
     }
     button:hover { opacity: 0.88; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .status-msg.error { background: #FDECEC; color: #9D1F1F; }
     .status-msg {
       display: none;
       margin-top: 14px;
@@ -153,12 +155,16 @@
   <!-- GİZLİLİK POLİTİKASI -->
   <section id="privacy" class="card">
     <h2>Gizlilik Politikası (Privacy Policy)</h2>
-    <p><strong>Son Güncelleme:</strong> 22 Eylül 2026</p>
+    <p><strong>Son Güncelleme:</strong> 15 Ekim 2026</p>
     <p>WeDo, kullanıcılarının kişisel gizliliğine saygı duyar. Bu politika, mobil uygulamamız ve hizmetlerimiz üzerinden toplanan verilerin kapsamını ve korunma yöntemlerini açıklamaktadır.</p>
     
     <h3>1. Toplanan Asgari Veriler</h3>
     <ul>
       <li><strong>Hesap Bilgileri:</strong> E-posta adresi, görünen ad ve parola özeti (salted hash).</li>
+      <li><strong>E-posta Doğrulaması:</strong> E-posta ile kayıtta Resend üzerinden süreli kod gönderilir. Kodun güvenli özeti, geçerlilik ve deneme bilgileri sunucuda tutulur.</li>
+      <li><strong>Google ile Giriş:</strong> Google tarafından sağlanan kullanıcı kimliği, doğrulanmış e-posta ve profil adı, hesap oluşturma ve oturum doğrulama için kullanılır. Google şifreniz alınmaz; Gmail, Drive veya Takvim erişimi istenmez.</li>
+      <li><strong>Apple ile Giriş:</strong> Apple kullanıcı kimliği ve paylaşıldığı ölçüde ad/e-posta bilgisi hesap ve oturum yönetimi için kullanılır. E-postamı Gizle seçeneği desteklenir.</li>
+      <li><strong>Destek ve Silme Talepleri:</strong> Formda verdiğiniz e-posta adresi ve isteğe bağlı açıklama, destek posta kutusuna iletilir ve talebinizi değerlendirmek ile hesap sahipliğini doğrulamak için kullanılır.</li>
       <li><strong>Kullanıcı İçerikleri:</strong> Ortak listelere eklenen bağlantılar, anı fotoğrafları, oylar ve reaksiyonlar.</li>
       <li><strong>Cihaz & Bildirim Belirteci:</strong> Ortak alan aktivitelerinden anlık haberdar olabilmeniz için Expo Push Token.</li>
     </ul>
@@ -166,8 +172,10 @@
     <h3>2. Veri Güvenliği ve Paylaşım</h3>
     <p>Verileriniz asla reklam veya profil çıkarma amacıyla üçüncü taraflarla paylaşılmaz veya satılmaz. Tüm ağ trafiği güvenli HTTPS/TLS şifrelemesi ile iletilir.</p>
 
+    <p>Google ve Apple girişlerinde ilgili kimlik doğrulama hizmetleri kullanılır. Web destek taleplerindeki e-posta ve açıklama Resend üzerinden Google Workspace destek posta kutusuna iletilir.</p>
+
     <h3>3. İletişim</h3>
-    <p>Veri gizliliğiyle ilgili tüm sorularınız için: <a href="mailto:destek@wedo.app">destek@wedo.app</a></p>
+    <p>Veri gizliliğiyle ilgili tüm sorularınız için: <a href="mailto:contact@durangezer.com">contact@durangezer.com</a></p>
   </section>
 
   <!-- KULLANIM KOŞULLARI -->
@@ -181,49 +189,27 @@
     </ul>
   </section>
 
-  <!-- HESAP VE VERİ SİLME TALEBİ FORMU (Apple & Google Play Şartı) -->
+  <!-- HESAP VE VERİ SİLME TALEBİ -->
   <section id="delete-account" class="card">
     <h2>Web Üzerinden Hesap ve Veri Silme Talebi</h2>
-    <p>Google Play Store ve Apple App Store kuralları gereği, WeDo uygulaması cihazınızda yüklü olmasa bile hesabınızın ve tüm kişisel verilerinizin sistemlerimizden kalıcı olarak temizlenmesini talep edebilirsiniz.</p>
-    <p>Formu doldurarak talepte bulunduğunuzda:</p>
+    <p>Uygulama cihazınızda yüklü olmasa bile bu formdan hesap silme talebi gönderebilirsiniz. Talep destek ekibine e-posta ile iletilir; form hesabınızı otomatik silmez.</p>
+    <p>Hesap sahipliği doğrulanıp silme işlemi tamamlandığında:</p>
     <ul>
-      <li>Kayıtlı e-posta adresiniz ve adınız anonimleştirilir (`deleted_user@deleted.wedo.app`).</li>
+      <li>Kayıtlı e-posta adresiniz ve adınız anonimleştirilir.</li>
       <li>Tüm açık oturumlarınız derhal sonlandırılır.</li>
       <li>Cihaz bildirim belirteçleriniz veritabanımızdan kalıcı olarak silinir.</li>
-      <li>Talep en geç 48 saat içerisinde işleme alınır.</li>
+      <li>Ortak alanlarda kalan içerikler hesabınızın anonimleştirilmesiyle ilişkilendirilir; bu form tüm ortak içerikleri otomatik kaldırmaz.</li>
     </ul>
 
-    <form id="deletionForm" onsubmit="handleDeletion(event)">
-      <div class="form-group">
-        <label for="email">Kayıtlı WeDo E-posta Adresiniz *</label>
-        <input type="email" id="email" required placeholder="ornek@email.com">
-      </div>
-      <div class="form-group">
-        <label for="reason">Silme Nedeni (İsteğe Bağlı)</label>
-        <textarea id="reason" rows="3" placeholder="Geri bildiriminiz bizim için değerlidir..."></textarea>
-      </div>
-      <button type="submit">Hesabımı ve Verilerimi Kalıcı Olarak Sil</button>
-      <div id="statusMsg" class="status-msg">
-        Talebiniz başarıyla alındı. Doğrulama e-postası kayıtlı adresinize gönderilecek ve verileriniz 48 saat içinde kalıcı olarak silinecektir.
-      </div>
-    </form>
+    <p><a href="https://wedo-production-3ad2.up.railway.app/legal/delete-account#delete-account">Güvenli hesap silme talep formunu açın</a> veya <a href="mailto:contact@durangezer.com?subject=WeDo%20Hesap%20Silme%20Talebi">contact@durangezer.com</a> adresine e-posta gönderin.</p>
   </section>
 
   <footer>
-    &copy; 2026 WeDo. Tüm hakları saklıdır. &middot; <a href="mailto:destek@wedo.app">destek@wedo.app</a>
+    &copy; 2026 WeDo. Tüm hakları saklıdır. &middot; <a href="mailto:contact@durangezer.com">contact@durangezer.com</a>
   </footer>
 </div>
 
-<script>
-  function handleDeletion(e) {
-    e.preventDefault();
-    var email = document.getElementById('email').value;
-    if (!email) return;
-    document.getElementById('statusMsg').style.display = 'block';
-    document.getElementById('email').value = '';
-    document.getElementById('reason').value = '';
-  }
-</script>
+
 
 </body>
 </html>

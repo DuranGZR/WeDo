@@ -23,9 +23,9 @@ Bu işlem yapıldığında:
 ## 2. Web Üzerinden Hesap ve Veri Silme Talebi
 
 Uygulama cihazınızda yüklü değilse veya erişiminizi kaybettiyseniz:
-1. Web tarayıcınızdan **`https://wedo.app/delete-account`** sayfasına gidin.
-2. Kayıtlı e-posta adresinizi girerek silme talebinde bulunun veya doğrudan **`destek@wedo.app`** adresine *"Hesap Silme Talebi"* başlıklı bir e-posta gönderin.
-3. Talebiniz güvenlik doğrulaması tamamlandıktan sonra en geç 48 saat içerisinde işleme alınır ve tüm kişisel verileriniz sistemlerimizden kalıcı olarak temizlenir.
+1. Web tarayıcınızdan **`https://wedo-production-3ad2.up.railway.app/legal/delete-account`** sayfasına gidin.
+2. Kayıtlı e-posta adresinizi girerek silme talebinde bulunun veya doğrudan **`contact@durangezer.com`** adresine *"Hesap Silme Talebi"* başlıklı bir e-posta gönderin.
+3. Form talebi destek ekibine e-posta ile iletir. Hesabınızı otomatik silmez ve otomatik doğrulama e-postası göndermez. Destek ekibi hesap sahipliğini doğruladıktan sonra talebi değerlendirir. Gönderim başarısızsa form hata gösterir ve bilgileri tekrar denemeniz için korur.
 
 ---
 

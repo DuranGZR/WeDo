@@ -1,8 +1,11 @@
 from fastapi.testclient import TestClient
 
+from tests.helpers import verified_sign_up
+
 
 def _signup(client: TestClient, email: str) -> dict:
-    response = client.post(
+    response = verified_sign_up(
+        client,
         "/api/v1/auth/sign-up",
         json={
             "email": email,
@@ -243,8 +246,8 @@ def test_errors_include_common_request_id_envelope(auth_client: TestClient) -> N
 
 
 def test_rate_limit_extracts_proxy_ip() -> None:
-    from starlette.requests import Request
     from app.core.rate_limit import extract_client_ip
+    from starlette.requests import Request
 
     scope = {
         "type": "http",
@@ -318,8 +321,8 @@ def test_production_settings_validation_enforces_safety() -> None:
 
 
 def test_rate_limit_rejects_spoofed_headers_from_untrusted_direct_clients() -> None:
-    from starlette.requests import Request
     from app.core.rate_limit import extract_client_ip
+    from starlette.requests import Request
 
     # Direct connection from a public client (not trusted proxy, not private IP)
     scope = {
@@ -337,7 +340,6 @@ def test_rate_limit_rejects_spoofed_headers_from_untrusted_direct_clients() -> N
     assert extract_client_ip(req) == "93.184.216.34"
 
 
-
 def test_rate_limit_middleware_cleans_stale_buckets() -> None:
     from app.core.rate_limit import RateLimitMiddleware
 
@@ -348,5 +350,3 @@ def test_rate_limit_middleware_cleans_stale_buckets() -> None:
 
     middleware._cleanup_stale_buckets(now=200.0)
     assert "old-ip" not in middleware.requests
-
-

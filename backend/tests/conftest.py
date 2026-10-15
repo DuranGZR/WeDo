@@ -69,7 +69,13 @@ def client() -> TestClient:
 
 
 @pytest.fixture
-def auth_client() -> Generator[TestClient]:
+def auth_client(monkeypatch) -> Generator[TestClient]:
+    from app.modules.auth import verification
+
+    messages = []
+    monkeypatch.setattr(
+        verification, "send_email", lambda **kwargs: messages.append(kwargs)
+    )
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -92,6 +98,7 @@ def auth_client() -> Generator[TestClient]:
     app.dependency_overrides[get_session] = override_session
     try:
         with TestClient(app) as test_client:
+            test_client.verification_messages = messages
             yield test_client
     finally:
         settings.metadata_enabled = previous_metadata_enabled

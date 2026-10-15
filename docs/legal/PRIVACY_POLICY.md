@@ -1,6 +1,6 @@
 # WeDo Gizlilik Politikası (Privacy Policy)
 
-**Son Güncelleme:** 22 Eylül 2026
+**Son Güncelleme:** 15 Ekim 2026
 
 WeDo ("Uygulama", "biz", "bize" veya "bizim"), gizliliğinize son derece önem verir. Bu Gizlilik Politikası, mobil uygulamamızı ve ilgili hizmetlerimizi kullandığınızda bilgilerinizin nasıl toplandığını, kullanıldığını ve korunduğunu açıklar.
 
@@ -16,6 +16,12 @@ Uygulamanın düzgün çalışabilmesi ve ortak karar/paylaşım özelliklerini 
    - E-posta adresi (hesap oluşturma, giriş ve kimlik doğrulama için).
    - Görünen ad (Display name - ortak alanlarda diğer üyelerin sizi tanıması için).
    - Şifrelenmiş parola özeti (Salted hash - şifreniz asla açık metin olarak saklanmaz).
+
+**E-posta Doğrulaması:** E-posta ile kayıtta Resend üzerinden süreli doğrulama kodu gönderilir; kodun güvenli özeti ve geçerlilik/deneme bilgileri hesap güvenliği için sunucuda tutulur.
+
+**Google ve Apple ile Giriş:** Google kullanıcı kimliği, doğrulanmış e-posta ve profil adı; Apple kullanıcı kimliği ve paylaşılan ad/e-posta hesap ve oturum yönetimi için kullanılır. Sağlayıcıların şifreleri alınmaz. Google girişinde Gmail, Drive veya Takvim izinleri istenmez.
+
+**Destek ve Silme Talepleri:** Formdaki e-posta ve isteğe bağlı açıklama destek posta kutusuna iletilir; talebin değerlendirilmesi ve hesap sahipliğinin doğrulanması için kullanılır.
 
 2. **Kullanıcı İçerikleri ve Ortak Veriler:**
    - Ortak alanlara eklediğiniz bağlantılar (URL), notlar, oylar ve reaksiyonlar.
@@ -42,6 +48,8 @@ Verileriniz **asla reklam hedeflemesi amacıyla üçüncü taraflarla paylaşıl
 
 ---
 
+Google ve Apple girişlerinde ilgili kimlik doğrulama hizmetleri kullanılır. Web destek taleplerindeki e-posta ve açıklama Resend üzerinden Google Workspace destek posta kutusuna iletilir.
+
 ## 3. Veri Güvenliği ve Saklama
 
 - Tüm istemci ve sunucu haberleşmesi TLS/HTTPS protokolü ile şifrelenir.
@@ -54,7 +62,7 @@ Verileriniz **asla reklam hedeflemesi amacıyla üçüncü taraflarla paylaşıl
 
 KVKK, GDPR ve Mağaza Kuralları uyarınca şu haklara sahipsiniz:
 - **Hesabınızı ve Verilerinizi Silme:** Uygulama içinden `Ayarlar -> Güvenlik -> Hesabı Sil` adımlarını takip ederek hesabınızı anında silebilirsiniz.
-- **Web Üzerinden Silme Talebi:** Uygulama yüklü değilse bile `https://wedo.app/delete-account` adresi üzerinden veya `destek@wedo.app` adresine e-posta göndererek tüm verilerinizin kalıcı olarak silinmesini talep edebilirsiniz.
+- **Web Üzerinden Silme Talebi:** Uygulama yüklü değilse bile `https://wedo-production-3ad2.up.railway.app/legal/delete-account` adresi üzerinden veya `contact@durangezer.com` adresine e-posta göndererek hesap silme talebi gönderebilirsiniz. Form hesabı otomatik silmez; destek ekibi hesap sahipliğini doğruladıktan sonra talebi değerlendirir.
 - Hesap silindiğinde kişisel tanımlayıcı verileriniz (e-posta, isim, bildirim belirteçleri) sistemden kalıcı olarak temizlenir/anonimleştirilir.
 
 ---
@@ -62,5 +70,5 @@ KVKK, GDPR ve Mağaza Kuralları uyarınca şu haklara sahipsiniz:
 ## 5. İletişim
 
 Gizlilik politikamızla veya verilerinizle ilgili her türlü soru ve talebiniz için:
-- **E-posta:** `destek@wedo.app`
-- **Web:** `https://wedo.app`
+- **E-posta:** `contact@durangezer.com`
+- **Web:** `https://wedo-production-3ad2.up.railway.app/legal`

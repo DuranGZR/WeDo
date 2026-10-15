@@ -1,8 +1,11 @@
 from fastapi.testclient import TestClient
 
+from tests.helpers import verified_sign_up
+
 
 def test_auth_lifecycle(auth_client: TestClient) -> None:
-    sign_up = auth_client.post(
+    sign_up = verified_sign_up(
+        auth_client,
         "/api/v1/auth/sign-up",
         json={
             "email": "ipek@example.com",
@@ -59,8 +62,11 @@ def test_duplicate_email_is_rejected(auth_client: TestClient) -> None:
         "password": "Correct-horse-battery-staple1",
         "display_name": "Can",
     }
-    assert auth_client.post("/api/v1/auth/sign-up", json=payload).status_code == 201
-    duplicate = auth_client.post("/api/v1/auth/sign-up", json=payload)
+    assert (
+        verified_sign_up(auth_client, "/api/v1/auth/sign-up", json=payload).status_code
+        == 201
+    )
+    duplicate = verified_sign_up(auth_client, "/api/v1/auth/sign-up", json=payload)
 
     assert duplicate.status_code == 409
 
@@ -68,7 +74,8 @@ def test_duplicate_email_is_rejected(auth_client: TestClient) -> None:
 def test_sign_up_rejects_password_without_all_required_character_types(
     auth_client: TestClient,
 ) -> None:
-    response = auth_client.post(
+    response = verified_sign_up(
+        auth_client,
         "/api/v1/auth/sign-up",
         json={
             "email": "weak-password@example.com",
@@ -83,7 +90,8 @@ def test_sign_up_rejects_password_without_all_required_character_types(
 def test_delete_account_anonymizes_data_and_revokes_access(
     auth_client: TestClient,
 ) -> None:
-    sign_up = auth_client.post(
+    sign_up = verified_sign_up(
+        auth_client,
         "/api/v1/auth/sign-up",
         json={
             "email": "to-delete@example.com",
@@ -117,7 +125,8 @@ def test_delete_account_anonymizes_data_and_revokes_access(
     assert me.status_code == 401
 
     # Original email is freed up for re-registration
-    new_sign_up = auth_client.post(
+    new_sign_up = verified_sign_up(
+        auth_client,
         "/api/v1/auth/sign-up",
         json={
             "email": "to-delete@example.com",
@@ -221,8 +230,9 @@ def test_google_sign_in_creates_new_user_and_authenticates(
     assert repeated.json()["user"]["id"] == data["user"]["id"]
     headers = {"Authorization": f"Bearer {data['access_token']}"}
     assert auth_client.get("/api/v1/users/me", headers=headers).status_code == 200
-    assert auth_client.post(
-        "/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]}
-    ).status_code == 200
-
-
+    assert (
+        auth_client.post(
+            "/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]}
+        ).status_code
+        == 200
+    )

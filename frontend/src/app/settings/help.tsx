@@ -83,12 +83,12 @@ export default function HelpScreen() {
         <Pressable
           accessibilityRole="link"
           accessibilityLabel="Destek e-postası gönder"
-          onPress={() => void Linking.openURL('mailto:destek@wedo.app')}
+          onPress={() => void Linking.openURL('mailto:contact@durangezer.com')}
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
         >
           <View style={styles.linkLeft}>
             <Ionicons name="mail-outline" size={18} color={mono.ink} />
-            <AppText style={styles.linkTitle}>destek@wedo.app</AppText>
+            <AppText style={styles.linkTitle}>contact@durangezer.com</AppText>
           </View>
           <Ionicons name="open-outline" size={16} color={mono.muted} />
         </Pressable>
@@ -98,7 +98,7 @@ export default function HelpScreen() {
           accessibilityLabel="Uygunsuz içerik veya kullanıcı bildirimi"
           onPress={() =>
             void Linking.openURL(
-              'mailto:destek@wedo.app?subject=WeDo%20Uygunsuz%20Icerik%20ve%20Kullanici%20Bildirimi'
+              'mailto:contact@durangezer.com?subject=WeDo%20Uygunsuz%20Icerik%20ve%20Kullanici%20Bildirimi'
             )
           }
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}

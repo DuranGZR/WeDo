@@ -5,6 +5,8 @@ import pytest
 from app.core.config import settings
 from app.modules.auth import service
 
+from tests.helpers import verified_sign_up
+
 
 @pytest.mark.parametrize("environment", ["development", "production"])
 def test_google_rejects_demo_tokens(auth_client, monkeypatch, environment):
@@ -76,7 +78,8 @@ def test_google_key_service_failure_returns_auth_error(
 
 
 def test_google_does_not_link_third_party_email(auth_client, google_token):
-    auth_client.post(
+    verified_sign_up(
+        auth_client,
         "/api/v1/auth/sign-up",
         json={
             "email": "existing@example.com",

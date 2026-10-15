@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field, PostgresDsn, model_validator
+from pydantic import EmailStr, Field, PostgresDsn, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     mobile_scheme: str = "wedo"
     apple_bundle_id: str = "com.wedo.app"
     google_web_client_id: str = ""
+    resend_api_key: SecretStr = SecretStr("")
+    support_sender_email: EmailStr = "contact@durangezer.com"
     public_invite_base_url: str | None = None
     cors_origins: list[str] = []
     rate_limit_per_minute: int = Field(default=120, ge=1, le=10_000)

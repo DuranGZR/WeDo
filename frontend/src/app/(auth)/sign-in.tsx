@@ -10,6 +10,7 @@ import { AuthShell, authColors } from '@/components/auth/AuthShell';
 import { AppText, TextField } from '@/components/ui';
 import { spacing } from '@/design-system';
 import { getAuthSubmitError } from '@/features/auth/error-message';
+import { getVerificationChallenge } from '@/features/auth/email-verification';
 import { PasswordField } from '@/features/auth/PasswordField';
 import { useSignInForm } from '@/features/auth/forms';
 import { useAuthStore } from '@/store/auth-store';
@@ -36,6 +37,19 @@ export default function SignInScreen() {
       await signIn(values.email.trim(), values.password);
       router.replace(inviteToken ? `/invite/${inviteToken}` : '/(tabs)');
     } catch (error) {
+      const challenge = getVerificationChallenge(error);
+      if (challenge) {
+        router.replace({
+          pathname: '/(auth)/verify-email',
+          params: {
+            verificationId: challenge.verification_id,
+            email: challenge.email,
+            resendAfter: String(challenge.resend_after_seconds),
+            ...(inviteToken ? { inviteToken } : {}),
+          },
+        });
+        return;
+      }
       setSubmitError(getAuthSubmitError(error, 'sign-in'));
     } finally {
       setLoading(false);

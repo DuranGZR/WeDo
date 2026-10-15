@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 import jwt
 from pydantic import EmailStr, TypeAdapter, ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -16,6 +17,7 @@ from app.modules.auth.schemas import (
     TokenResponse,
 )
 from app.modules.auth.tokens import create_token, decode_token, hash_token
+from app.modules.auth.verification import VerificationRequired, issue_code
 from app.modules.users.models import User
 from app.modules.users.repository import user_repository
 from app.modules.users.schemas import UserResponse
@@ -69,7 +71,7 @@ def _issue_tokens(session: Session, user: User, device_id: str | None) -> TokenR
     )
 
 
-def sign_up(session: Session, data: SignUpRequest) -> UserResponse:
+def sign_up(session: Session, data: SignUpRequest) -> dict:
     email = str(data.email).lower()
     if user_repository.get_by_email(session, email):
         raise EmailAlreadyRegisteredError("Bu e-posta adresiyle zaten bir hesap var.")
@@ -91,14 +93,15 @@ def sign_up(session: Session, data: SignUpRequest) -> UserResponse:
             provider_email=email,
         ),
     )
+    challenge = issue_code(session, user)
     session.commit()
-    return UserResponse.model_validate(user)
+    return challenge
 
 
 def sign_in(
     session: Session, email: str, password: str, device_id: str | None
 ) -> TokenResponse:
-    user = user_repository.get_by_email(session, email.lower())
+    user = session.scalar(select(User).where(User.email == email.lower()).with_for_update())
     if (
         user is None
         or user.password_hash is None
@@ -107,6 +110,10 @@ def sign_in(
         raise AuthError("E-posta veya şifre hatalı.")
     if not user.is_active:
         raise AuthError("Kullanıcı hesabı aktif değil.")
+    if not user.email_verified:
+        challenge = issue_code(session, user)
+        session.commit()
+        raise VerificationRequired(details=challenge)
     response = _issue_tokens(session, user, device_id)
     session.commit()
     return response
@@ -124,6 +131,7 @@ def refresh(session: Session, refresh_token: str) -> TokenResponse:
     if (
         refresh_session is None
         or user is None
+        or not user.email_verified
         or refresh_session.user_id != user.id
         or refresh_session.revoked_at is not None
         or _is_expired(refresh_session.expires_at)
@@ -274,6 +282,7 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
             ),
         )
 
+    user.email_verified = True
     response = _issue_tokens(session, user, data.device_id)
     session.commit()
     return response
@@ -353,6 +362,7 @@ def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse
             ),
         )
 
+    user.email_verified = True
     response = _issue_tokens(session, user, data.device_id)
     session.commit()
     return response

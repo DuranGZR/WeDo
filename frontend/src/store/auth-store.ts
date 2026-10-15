@@ -3,6 +3,10 @@ import { create } from 'zustand';
 import { apiClient } from '@/api/client/api-client';
 import { tokenResponseSchema, type User } from '@/api/schemas';
 import { secureStorage } from '@/lib/secure-storage';
+import {
+  verificationChallengeSchema,
+  type VerificationChallenge,
+} from '@/features/auth/email-verification';
 
 type AuthState = {
   user: User | null;
@@ -17,7 +21,11 @@ type AuthState = {
     displayName?: string,
   ) => Promise<void>;
   signInWithGoogle: (idToken: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    displayName: string,
+  ) => Promise<VerificationChallenge>;
   updateProfile: (data: {
     displayName: string;
     notifyPartnerActivity?: boolean;
@@ -85,10 +93,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: result.user, accessToken: result.access_token });
   },
   async signUp(email, password, displayName) {
-    await apiClient('/api/v1/auth/sign-up', {
+    const result = await apiClient('/api/v1/auth/sign-up', {
       method: 'POST',
       body: { email, password, display_name: displayName },
     });
+    return verificationChallengeSchema.parse(result);
   },
   async updateProfile({ displayName, notifyPartnerActivity, pushNotificationsEnabled }) {
     const token = get().accessToken;

@@ -1,10 +1,13 @@
 from fastapi.testclient import TestClient
 
+from tests.helpers import verified_sign_up
+
 
 def test_device_registration_and_notification_endpoints(
     auth_client: TestClient,
 ) -> None:
-    sign_up = auth_client.post(
+    sign_up = verified_sign_up(
+        auth_client,
         "/api/v1/auth/sign-up",
         json={
             "email": "notifications@example.com",

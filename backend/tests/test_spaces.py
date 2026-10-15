@@ -1,8 +1,11 @@
 from fastapi.testclient import TestClient
 
+from tests.helpers import verified_sign_up
+
 
 def _sign_up(client: TestClient, email: str) -> dict:
-    response = client.post(
+    response = verified_sign_up(
+        client,
         "/api/v1/auth/sign-up",
         json={
             "email": email,

@@ -51,10 +51,15 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       const email = values.email.trim().toLowerCase();
-      await signUp(email, values.password, values.displayName.trim());
+      const challenge = await signUp(email, values.password, values.displayName.trim());
       router.replace({
-        pathname: '/(auth)/sign-in',
-        params: { email, ...(inviteToken ? { inviteToken } : {}) },
+        pathname: '/(auth)/verify-email',
+        params: {
+          email,
+          verificationId: challenge.verification_id,
+          resendAfter: String(challenge.resend_after_seconds),
+          ...(inviteToken ? { inviteToken } : {}),
+        },
       });
     } catch (error) {
       const message = getAuthSubmitError(error, 'sign-up');
@@ -214,8 +219,8 @@ export default function SignUpScreen() {
               onPress={() => router.push('/legal/terms' as never)}
             >
               Kullanım Koşulları
-            </AppText>
-            {' '}ve{' '}
+            </AppText>{' '}
+            ve{' '}
             <AppText
               style={styles.legalLink}
               onPress={() => router.push('/legal/privacy' as never)}

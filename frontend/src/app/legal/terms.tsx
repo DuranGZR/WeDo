@@ -70,7 +70,7 @@ export default function LegalTermsScreen() {
           </AppText>
           <AppText style={styles.paragraph}>
             Herhangi bir uygunsuz içerik veya rahatsız edici kullanıcı davranışı ile karşılaşırsanız,
-            uygulama içindeki Yardım menüsünden veya doğrudan <AppText style={styles.bold}>destek@wedo.app</AppText> adresinden bildirimde bulunabilirsiniz.
+            uygulama içindeki Yardım menüsünden veya doğrudan <AppText style={styles.bold}>contact@durangezer.com</AppText> adresinden bildirimde bulunabilirsiniz.
             Şikayet edilen içerikler en geç 24 saat içinde incelenir, sakıncalı içerikler kaldırılır ve kural ihlali yapan kullanıcıların hesapları askıya alınır veya kalıcı olarak sonlandırılır.
           </AppText>
         </View>
@@ -93,11 +93,11 @@ export default function LegalTermsScreen() {
           </AppText>
           <Pressable
             accessibilityRole="link"
-            onPress={() => void Linking.openURL('mailto:destek@wedo.app?subject=WeDo%20Kullanim%20Kosullari%20ve%20Destek')}
+            onPress={() => void Linking.openURL('mailto:contact@durangezer.com?subject=WeDo%20Kullanim%20Kosullari%20ve%20Destek')}
             style={({ pressed }) => [styles.emailLink, pressed && styles.pressed]}
           >
             <Ionicons name="mail-outline" size={17} color={mono.ink} />
-            <AppText style={styles.emailText}>destek@wedo.app</AppText>
+            <AppText style={styles.emailText}>contact@durangezer.com</AppText>
           </Pressable>
         </View>
       </View>

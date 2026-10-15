@@ -1,7 +1,31 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.modules.legal.service import (
+    DeletionDeliveryError,
+    DeletionRequest,
+    send_deletion_request,
+)
+
 legal_router = APIRouter()
+
+
+@legal_router.post("/legal/deletion-requests", status_code=202)
+def request_account_deletion(data: DeletionRequest) -> dict[str, str]:
+    try:
+        send_deletion_request(data)
+    except DeletionDeliveryError as error:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Talep gönderilemedi. Lütfen tekrar deneyin veya "
+                "contact@durangezer.com adresine e-posta gönderin."
+            ),
+        ) from error
+    return {
+        "message": "Talebiniz destek ekibine iletildi. Hesap sahipliği "
+        "doğrulandıktan sonra silme işlemi değerlendirilecektir."
+    }
 
 LEGAL_HTML = """<!DOCTYPE html>
 <html lang="tr">
@@ -125,6 +149,8 @@ LEGAL_HTML = """<!DOCTYPE html>
       transition: opacity 0.2s;
     }
     button:hover { opacity: 0.88; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .status-msg.error { background: #FDECEC; color: #9D1F1F; }
     .status-msg {
       display: none;
       margin-top: 14px;
@@ -158,21 +184,26 @@ LEGAL_HTML = """<!DOCTYPE html>
   <!-- GİZLİLİK POLİTİKASI -->
   <section id="privacy" class="card">
     <h2>Gizlilik Politikası (Privacy Policy)</h2>
-    <p><strong>Son Güncelleme:</strong> 22 Eylül 2026</p>
+    <p><strong>Son Güncelleme:</strong> 15 Ekim 2026</p>
     <p>WeDo, kullanıcılarının kişisel gizliliğine saygı duyar. Bu politika, mobil uygulamamız ve hizmetlerimiz üzerinden toplanan verilerin kapsamını ve korunma yöntemlerini açıklamaktadır.</p>
     
     <h3>1. Toplanan Asgari Veriler</h3>
     <ul>
       <li><strong>Hesap Bilgileri:</strong> E-posta adresi, görünen ad ve parola özeti (salted hash).</li>
+      <li><strong>E-posta Doğrulaması:</strong> E-posta ile kayıtta Resend üzerinden süreli kod gönderilir. Kodun güvenli özeti, geçerlilik ve deneme bilgileri hesap güvenliği için sunucuda tutulur.</li>
+      <li><strong>Google ile Giriş:</strong> Google tarafından sağlanan kullanıcı kimliği, doğrulanmış e-posta ve profil adı, hesap oluşturma ve oturum doğrulama için kullanılır. Google şifreniz alınmaz; Gmail, Drive veya Takvim erişimi istenmez.</li>
+      <li><strong>Apple ile Giriş:</strong> Apple kullanıcı kimliği ve paylaşıldığı ölçüde ad/e-posta bilgisi hesap ve oturum yönetimi için kullanılır. E-postamı Gizle seçeneği desteklenir.</li>
+      <li><strong>Destek ve Silme Talepleri:</strong> Formda verdiğiniz e-posta adresi ve isteğe bağlı açıklama, destek posta kutusuna iletilir ve talebinizi değerlendirmek ile hesap sahipliğini doğrulamak için kullanılır.</li>
       <li><strong>Kullanıcı İçerikleri:</strong> Ortak listelere eklenen bağlantılar, anı fotoğrafları, oylar ve reaksiyonlar.</li>
       <li><strong>Cihaz & Bildirim Belirteci:</strong> Ortak alan aktivitelerinden anlık haberdar olabilmeniz için Expo Push Token.</li>
     </ul>
 
     <h3>2. Veri Güvenliği ve Paylaşım</h3>
     <p>Verileriniz asla reklam veya profil çıkarma amacıyla üçüncü taraflarla paylaşılmaz veya satılmaz. Tüm ağ trafiği güvenli HTTPS/TLS şifrelemesi ile iletilir.</p>
+    <p>Seçtiğiniz giriş yönteminde Google veya Apple kimlik doğrulama hizmetleri kullanılır. Web destek taleplerindeki e-posta ve açıklama, Resend gönderim hizmeti üzerinden Google Workspace destek posta kutusuna iletilir.</p>
 
     <h3>3. İletişim</h3>
-    <p>Veri gizliliğiyle ilgili tüm sorularınız için: <a href="mailto:destek@wedo.app">destek@wedo.app</a></p>
+    <p>Veri gizliliğiyle ilgili tüm sorularınız için: <a href="mailto:contact@durangezer.com">contact@durangezer.com</a></p>
   </section>
 
   <!-- KULLANIM KOŞULLARI -->
@@ -186,47 +217,74 @@ LEGAL_HTML = """<!DOCTYPE html>
     </ul>
   </section>
 
-  <!-- HESAP VE VERİ SİLME TALEBİ FORMU (Apple & Google Play Şartı) -->
+  <!-- HESAP VE VERİ SİLME TALEBİ -->
   <section id="delete-account" class="card">
     <h2>Web Üzerinden Hesap ve Veri Silme Talebi</h2>
-    <p>Google Play Store ve Apple App Store kuralları gereği, WeDo uygulaması cihazınızda yüklü olmasa bile hesabınızın ve tüm kişisel verilerinizin sistemlerimizden kalıcı olarak temizlenmesini talep edebilirsiniz.</p>
-    <p>Formu doldurarak talepte bulunduğunuzda:</p>
+    <p>Uygulama cihazınızda yüklü olmasa bile bu formdan hesap silme talebi gönderebilirsiniz. Talep destek ekibine e-posta ile iletilir; form hesabınızı otomatik silmez.</p>
+    <p>Hesap sahipliği doğrulanıp silme işlemi tamamlandığında:</p>
     <ul>
-      <li>Kayıtlı e-posta adresiniz ve adınız anonimleştirilir (`deleted_user@deleted.wedo.app`).</li>
+      <li>Kayıtlı e-posta adresiniz ve adınız anonimleştirilir.</li>
       <li>Tüm açık oturumlarınız derhal sonlandırılır.</li>
       <li>Cihaz bildirim belirteçleriniz veritabanımızdan kalıcı olarak silinir.</li>
-      <li>Talep en geç 48 saat içerisinde işleme alınır.</li>
+      <li>Ortak alanlarda kalan içerikler hesabınızın anonimleştirilmesiyle ilişkilendirilir; bu form tüm ortak içerikleri otomatik kaldırmaz.</li>
     </ul>
 
     <form id="deletionForm" onsubmit="handleDeletion(event)">
       <div class="form-group">
         <label for="email">Kayıtlı WeDo E-posta Adresiniz *</label>
-        <input type="email" id="email" required placeholder="ornek@email.com">
+        <input type="email" id="email" name="email" required maxlength="254" autocomplete="email" placeholder="ornek@email.com">
       </div>
       <div class="form-group">
         <label for="reason">Silme Nedeni (İsteğe Bağlı)</label>
-        <textarea id="reason" rows="3" placeholder="Geri bildiriminiz bizim için değerlidir..."></textarea>
+        <textarea id="reason" name="reason" rows="3" maxlength="2000" placeholder="İsteğe bağlı açıklama; şifrenizi paylaşmayın."></textarea>
       </div>
-      <button type="submit">Hesabımı ve Verilerimi Kalıcı Olarak Sil</button>
-      <div id="statusMsg" class="status-msg">
-        Talebiniz başarıyla alındı. Doğrulama e-postası kayıtlı adresinize gönderilecek ve verileriniz 48 saat içinde kalıcı olarak silinecektir.
-      </div>
+      <p>Apple ile E-postamı Gizle kullandıysanız uygulamadaki hesap e-postasını belirtin. Size ulaşabileceğimiz adresi açıklamaya ekleyebilirsiniz.</p>
+      <button type="submit">Hesap Silme Talebi Gönder</button>
+      <div id="statusMsg" class="status-msg" role="status" aria-live="polite"></div>
+      <noscript>Talep göndermek için JavaScript'i etkinleştirin veya contact@durangezer.com adresine e-posta gönderin.</noscript>
     </form>
   </section>
 
   <footer>
-    &copy; 2026 WeDo. Tüm hakları saklıdır. &middot; <a href="mailto:destek@wedo.app">destek@wedo.app</a>
+    &copy; 2026 WeDo. Tüm hakları saklıdır. &middot; <a href="mailto:contact@durangezer.com">contact@durangezer.com</a>
   </footer>
 </div>
 
 <script>
-  function handleDeletion(e) {
+  async function handleDeletion(e) {
     e.preventDefault();
-    var email = document.getElementById('email').value;
-    if (!email) return;
-    document.getElementById('statusMsg').style.display = 'block';
-    document.getElementById('email').value = '';
-    document.getElementById('reason').value = '';
+    var form = e.currentTarget;
+    if (!form.reportValidity()) return;
+    var button = form.querySelector('button[type="submit"]');
+    if (button.disabled) return;
+    var status = document.getElementById('statusMsg');
+    button.disabled = true;
+    status.classList.remove('error');
+    status.textContent = 'Talebiniz gönderiliyor…';
+    status.style.display = 'block';
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 30000);
+    try {
+      var response = await fetch('/legal/deletion-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          reason: document.getElementById('reason').value.trim()
+        })
+      });
+      if (response.status !== 202) throw new Error('delivery-failed');
+      var result = await response.json();
+      status.textContent = result.message;
+      form.reset();
+    } catch (error) {
+      status.classList.add('error');
+      status.textContent = 'Gönderim onaylanamadı. Lütfen tekrar deneyin veya contact@durangezer.com adresine e-posta gönderin. Hesabınız bu form üzerinden silinmedi.';
+    } finally {
+      clearTimeout(timer);
+      button.disabled = false;
+    }
   }
 </script>
 

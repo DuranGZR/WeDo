@@ -7,10 +7,13 @@ from app.modules.auth.schemas import (
     ChangePasswordRequest,
     GoogleSignInRequest,
     RefreshRequest,
+    ResendVerificationRequest,
     SignInRequest,
     SignOutRequest,
     SignUpRequest,
     TokenResponse,
+    VerificationChallenge,
+    VerifyEmailRequest,
 )
 from app.modules.auth.service import (
     AuthError,
@@ -25,7 +28,7 @@ from app.modules.auth.service import (
     sign_out_all,
     sign_up,
 )
-from app.modules.users.schemas import UserResponse
+from app.modules.auth.verification import resend_code, verify_code
 
 router = APIRouter()
 
@@ -35,9 +38,11 @@ def _auth_error(error: AuthError) -> HTTPException:
 
 
 @router.post(
-    "/sign-up", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+    "/sign-up",
+    response_model=VerificationChallenge,
+    status_code=status.HTTP_201_CREATED,
 )
-def sign_up_endpoint(data: SignUpRequest, session: SessionDep) -> UserResponse:
+def sign_up_endpoint(data: SignUpRequest, session: SessionDep) -> dict:
     try:
         return sign_up(session, data)
     except EmailAlreadyRegisteredError as error:
@@ -51,6 +56,18 @@ def sign_up_endpoint(data: SignUpRequest, session: SessionDep) -> UserResponse:
         ) from error
     except AuthError as error:
         raise _auth_error(error) from error
+
+
+@router.post("/verify-email", status_code=204)
+def verify_email_endpoint(data: VerifyEmailRequest, session: SessionDep) -> None:
+    verify_code(session, data.verification_id, data.code)
+
+
+@router.post("/resend-verification", response_model=VerificationChallenge)
+def resend_verification_endpoint(
+    data: ResendVerificationRequest, session: SessionDep
+) -> dict:
+    return resend_code(session, data.verification_id)
 
 
 @router.post("/sign-in", response_model=TokenResponse)

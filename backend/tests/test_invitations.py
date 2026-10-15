@@ -5,9 +5,12 @@ from app.core.config import settings
 from app.modules.invitations.service import _response
 from fastapi.testclient import TestClient
 
+from tests.helpers import verified_sign_up
+
 
 def _sign_up(client: TestClient, email: str) -> dict:
-    response = client.post(
+    response = verified_sign_up(
+        client,
         "/api/v1/auth/sign-up",
         json={
             "email": email,
@@ -130,4 +133,3 @@ def test_web_invite_landing_page(auth_client: TestClient) -> None:
     invalid_landing = auth_client.get("/invite/non-existent-token")
     assert invalid_landing.status_code == 200
     assert "Geçersiz Davet" in invalid_landing.text
-

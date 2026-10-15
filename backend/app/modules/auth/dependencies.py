@@ -37,6 +37,7 @@ def get_current_user(
     if (
         user is None
         or not user.is_active
+        or not user.email_verified
         or refresh_session is None
         or refresh_session.user_id != user.id
         or refresh_session.revoked_at is not None
