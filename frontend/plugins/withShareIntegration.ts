@@ -10,7 +10,7 @@ const withShareIntegration: ConfigPlugin = (config) => {
       (mod.modResults['com.apple.security.application-groups'] as string[] | undefined) ??
       [];
     mod.modResults['com.apple.security.application-groups'] = [
-      ...new Set([...groups, 'group.com.wedo.app']),
+      ...new Set([...groups, `group.${config.ios!.bundleIdentifier}`]),
     ];
     return mod;
   });

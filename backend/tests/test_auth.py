@@ -147,7 +147,7 @@ def test_apple_sign_in_creates_new_user_and_allows_passwordless_delete(
         {
             "iss": "https://appleid.apple.com",
             "sub": apple_user_id,
-            "aud": "com.wedo.app",
+            "aud": "com.durangezer.wedo",
             "email": "appleuser@example.com",
         },
         key="development-only-test-key-32chars!",

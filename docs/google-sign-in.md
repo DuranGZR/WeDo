@@ -1,7 +1,14 @@
 # Google ile giriş (iOS)
 
 Google Cloud'da Web application ve iOS OAuth istemcileri kullanılmalıdır.
-iOS istemcisinin Bundle ID değeri `com.wedo.app` olmalıdır.
+iOS istemcisinin Bundle ID değeri `com.durangezer.wedo` olmalıdır.
+Apple kaydında önceki `com.wedo.app` kimliği kullanılamadığı için iOS kimliği
+değiştirildi. Google Cloud iOS istemcisini bu yeni kimliğe göre oluşturun veya
+güncelleyin. Yeni bir Client ID oluşursa `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+değerini hem yerel `.env` hem kullanılan EAS ortamında değiştirin. Web Client ID
+aynı kalır. Android paket kimliği bu iOS değişikliğinden etkilenmez.
+Railway'de `APPLE_BUNDLE_ID=com.durangezer.wedo` tanımlayın ve güncel backend'i
+deploy edin. Değişken önceden eski değere ayarlıysa kod varsayılanını geçersiz kılar.
 Firebase, client secret ve tarayıcı yönlendirme adresleri bu akışta kullanılmaz.
 
 ## Ortam değişkenleri
@@ -27,9 +34,9 @@ bu nedenle client secret gibi gizli anahtar olarak değerlendirilmez.
 
 1. Railway ortam değişkenini ayarlayın ve güncel backend'i deploy edin.
 2. EAS production ortamında iki frontend değişkenini ayarlayın.
-3. Apple Developer'da `com.wedo.app` App ID ve Sign in with Apple capability'sini
+3. Apple Developer'da `com.durangezer.wedo` App ID ve Sign in with Apple capability'sini
    etkinleştirin; EAS iOS dağıtım sertifikası ve provisioning profile'ını hazırlayın.
-   Paylaşım uzantısı `com.wedo.app.share-extension` için de ayrı provisioning
+   Paylaşım uzantısı `com.durangezer.wedo.share-extension` için de ayrı provisioning
    profile gerekir. İlk kurulumu `eas credentials --platform ios` ile etkileşimli
    olarak, kendi Apple Developer hesabınızla tamamlayın.
 4. `frontend` klasöründe `eas build --platform ios --profile production` çalıştırın.
@@ -40,7 +47,8 @@ bu nedenle client secret gibi gizli anahtar olarak değerlendirilmez.
 
 Google girişinin varsayılan kapsamı temel profil ve e-postadır. Ek Google API
 izinleri istenmez. Expo Go'da bu native SDK çalışmaz; yeni bir iOS build gerekir.
-Android ve web Google girişi bu değişiklikte yapılandırılmamıştır ve buton gizlidir.
+Android Google girişi yapılandırılmamıştır ve buton gizlidir. Web önizlemesinde
+buton görünür; tıklama native giriş için iPhone uygulamasını kullanmayı açıklar.
 
 ## Backend doğrulaması
 

@@ -4,7 +4,7 @@ const withShareIntegration = (config) => {
   config = withInfoPlist(config, (mod) => {
     const groups = mod.modResults['com.apple.security.application-groups'] || [];
     mod.modResults['com.apple.security.application-groups'] = [
-      ...new Set([...groups, 'group.com.wedo.app']),
+      ...new Set([...groups, `group.${config.ios.bundleIdentifier}`]),
     ];
     return mod;
   });

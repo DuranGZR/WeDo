@@ -70,7 +70,7 @@ const config: ExpoConfig = {
   experiments: { typedRoutes: true },
   ios: {
     supportsTablet: false,
-    bundleIdentifier: 'com.wedo.app',
+    bundleIdentifier: 'com.durangezer.wedo',
     buildNumber: '1',
     usesAppleSignIn: true,
     infoPlist: {

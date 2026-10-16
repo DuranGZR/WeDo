@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
     frontend_url: str = "http://localhost:3000"
     mobile_scheme: str = "wedo"
-    apple_bundle_id: str = "com.wedo.app"
+    apple_bundle_id: str = "com.durangezer.wedo"
     google_web_client_id: str = ""
     resend_api_key: SecretStr = SecretStr("")
     support_sender_email: EmailStr = "contact@durangezer.com"

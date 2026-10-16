@@ -13,7 +13,7 @@ final class ShareViewController: SLComposeServiceViewController {
             let payload = SharePayload(sharedText: nil, url: url, imageUri: nil, mimeType: type, sourceApp: nil)
             if let data = try? JSONEncoder().encode(payload),
                let value = String(data: data, encoding: .utf8) {
-                UserDefaults(suiteName: "group.com.wedo.app")?.set(value, forKey: "wedo.share.payload")
+                UserDefaults(suiteName: "group.com.durangezer.wedo")?.set(value, forKey: "wedo.share.payload")
             }
             DispatchQueue.main.async { self.extensionContext?.completeRequest(returningItems: nil) }
         }

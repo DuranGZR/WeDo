@@ -8,14 +8,14 @@ Bu kılavuz, WeDo uygulamasının Apple App Store ve Google Play Console mağaza
 
 ### A. Apple Developer Portal Yapılandırması (`developer.apple.com`)
 1. **Identifiers (App ID):**
-   - Identifier: `com.wedo.app`
+   - Identifier: `com.durangezer.wedo`
    - Capabilities:
      - **Sign in with Apple** (Zorunlu - Aktifleştirin)
      - **Push Notifications** (İşaretleyin)
      - **App Groups** (İşaretleyin)
 2. **App Groups Oluşturma:**
-   - App Groups bölümüne gidin ve `group.com.wedo.app` grubunu oluşturun.
-   - `com.wedo.app` ana App ID'sini bu gruba bağlayın.
+   - App Groups bölümüne gidin ve `group.com.durangezer.wedo` grubunu oluşturun.
+   - `com.durangezer.wedo` ana App ID'sini bu gruba bağlayın.
 3. **Keys (APNs Push Bildirim Anahtarı):**
    - *Keys* bölümünden yeni bir anahtar oluşturun: `Apple Push Notifications service (APNs)`.
    - İndirilen `.p8` dosyasını, Key ID ve Team ID'yi güvenli bir yere kaydedin (EAS credentials veya backend için kullanılır).
@@ -23,7 +23,7 @@ Bu kılavuz, WeDo uygulamasının Apple App Store ve Google Play Console mağaza
 ### B. App Store Connect Bilgileri (`appstoreconnect.apple.com`)
 - **Uygulama Adı:** WeDo
 - **Birincil Dil:** Türkçe
-- **Bundle ID:** `com.wedo.app`
+- **Bundle ID:** `com.durangezer.wedo`
 - **SKU:** `wedo-mobile`
 - **Gizlilik Politikası URL'si (Privacy Policy URL):** `https://wedo-production-3ad2.up.railway.app/legal/privacy` (veya `https://wedo.app/privacy`)
 - **Destek URL'si (Support URL):** `https://wedo-production-3ad2.up.railway.app/legal/terms` (veya `https://wedo.app`)
