@@ -1,14 +1,22 @@
 {
-  "cli": { "version": ">= 16.0.0" },
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
-    "development": { "developmentClient": true, "distribution": "internal" },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://wedo-production-3ad2.up.railway.app"
       },
-      "android": { "buildType": "apk" }
+      "android": {
+        "buildType": "apk"
+      }
     },
     "production": {
       "environment": "production",
@@ -26,7 +34,10 @@
       "android": {
         "track": "internal"
       },
-      "ios": {}
+      "ios": {
+        "ascAppId": "6823755849",
+        "appleTeamId": "D567XW48R3"
+      }
     }
   }
 }

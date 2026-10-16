@@ -2,6 +2,7 @@ import type { ExpoConfig } from 'expo/config';
 
 const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const shareExtensionName = 'WeDoShare';
 if (
   process.env.EAS_BUILD_PLATFORM === 'ios' &&
   (!googleIosClientId || !googleWebClientId)
@@ -53,7 +54,7 @@ const config: ExpoConfig = {
     [
       'expo-share-intent',
       {
-        iosShareExtensionName: 'WeDo',
+        iosShareExtensionName: shareExtensionName,
         iosActivationRules: {
           NSExtensionActivationSupportsText: true,
           NSExtensionActivationSupportsWebURLWithMaxCount: 1,
@@ -65,7 +66,7 @@ const config: ExpoConfig = {
       },
     ],
     './plugins/withShareIntegration',
-    './plugins/withShareLocales',
+    ['./plugins/withShareLocales', { extensionName: shareExtensionName }],
   ],
   experiments: { typedRoutes: true },
   ios: {
