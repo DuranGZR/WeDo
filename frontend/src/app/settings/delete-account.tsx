@@ -50,12 +50,23 @@ export default function DeleteAccountScreen() {
 
     setDeleting(true);
     try {
-      await deleteAccount(hasPassword ? password : undefined);
+      const appleRevocation = await deleteAccount(hasPassword ? password : undefined);
       showToast({
         title: t('settings.accountDeactivated'),
-        message: t('settings.youVeBeenSignedOutOfAllSessions'),
+        message:
+          appleRevocation === 'manual'
+            ? t('settings.appleManualRevocation')
+            : appleRevocation === 'pending'
+              ? t('settings.appleRevocationPending')
+              : t('settings.youVeBeenSignedOutOfAllSessions'),
       });
       router.replace('/(auth)/welcome');
+      if (appleRevocation === 'manual') {
+        Alert.alert(
+          t('settings.appleManualRevocationTitle'),
+          t('settings.appleManualRevocation'),
+        );
+      }
     } catch (error) {
       showToast({
         title: t('settings.couldnTDeleteAccount'),

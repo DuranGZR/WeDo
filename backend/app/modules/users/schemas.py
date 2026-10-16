@@ -19,6 +19,7 @@ class UserResponse(BaseModel):
     push_notifications_enabled: bool
     created_at: datetime
     has_password: bool = True
+    apple_email_forwarding_enabled: bool | None = None
 
 
 class UserUpdate(BaseModel):
@@ -30,3 +31,7 @@ class UserUpdate(BaseModel):
 
 class AccountDeleteRequest(BaseModel):
     current_password: str | None = Field(default=None, max_length=128)
+
+
+class AccountDeletionResponse(BaseModel):
+    apple_revocation: Literal["not_required", "pending", "manual"]

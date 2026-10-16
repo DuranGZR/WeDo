@@ -261,7 +261,7 @@
   "legal.accountInformation": "Account information:",
   "legal.yourEmailAddressDisplayNameAndForPasswordBasedAccounts": "Your email address, display name and, for password-based accounts, a password hash. When you sign up with email, we send a time-limited verification code. A secure digest of the code and attempt information are stored on the server.",
   "legal.signInWithApple": "Sign in with Apple:",
-  "legal.whenYouSignInWithAppleWeReceiveAnOpaque": "When you sign in with Apple, we receive an opaque user identifier and, depending on your choices, your name and email address.",
+  "legal.whenYouSignInWithAppleWeReceiveAnOpaque": "When you sign in with Apple, we receive an opaque user identifier and, depending on your choices, your name and email address. We securely store an encrypted Apple refresh token to manage and revoke this connection. Apple account-change notifications update your sign-in and email forwarding status. If revocation temporarily fails after account deletion, the encrypted token is retained until revocation succeeds.",
   "legal.signInWithGoogle": "Sign in with Google:",
   "legal.yourGoogleUserIdentifierVerifiedEmailAddressAndProfileName": "Your Google user identifier, verified email address and profile name are used to create your account and verify sign-ins. We do not receive your Google password or request access to Gmail, Drive or Calendar.",
   "legal.supportAndDeletionRequests": "Support and deletion requests:",
@@ -606,5 +606,9 @@
   "invitation.description": "{{name}} invited you to share ideas and lists on WeDo.",
   "invitation.someone": "Someone",
   "invitation.join": "Join space",
-  "invitation.signIn": "Sign in to join"
+  "invitation.signIn": "Sign in to join",
+  "settings.appleManualRevocation": "Your WeDo account is deactivated. Also remove WeDo under Sign in with Apple in your Apple Account settings.",
+  "settings.appleRevocationPending": "Your account is deactivated. Your Apple sign-in connection is being removed.",
+  "settings.appleEmailForwardingDisabled": "Apple email forwarding is off. You can enable it for WeDo in your Apple Account settings.",
+  "settings.appleManualRevocationTitle": "Remove the Apple connection"
 }

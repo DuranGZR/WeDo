@@ -33,10 +33,10 @@ Güncelleme: 16 Ekim 2026. Kod ve yerel doğrulama tamamlandı; mağaza yayını
 16 Ekim 2026 yerel sonuçları:
 
 - Frontend TypeScript kontrolü başarılı.
-- 25 frontend testi başarılı: dil çözümleme, kalıcılık, sistem moduna dönüş, saklama hatası, form/kod/davet korunması, API başlığı, çoğul, tarih/sayı, Türkçe karakter araması, web Google düğmesi ve davet ekranı dahil.
-- 116 backend testi başarılı: istekler arasında dil yalıtımı, hesap dili, e-posta, cihaz bazlı push, eski bildirimler, dinamik şema varsayılanları, davet HTML kaçışları ve silme formu dahil.
-- Katalog kontrolü: 608 anahtar ve 736 kaynak çeviri çağrısı. İki dilde eksik/boş anahtar, farklı parametre ve tarama kapsamındaki sabit UI metni bulunmadı. Bu kontrol, insan redaksiyonunun veya cihaz testinin yerine geçmez.
-- ESLint: 0 hata; 38 uyarı var (React ref/animasyon, kullanılmayan değişkenler ve test mock importları dahil).
+- 27 frontend testi başarılı: dil çözümleme, kalıcılık, sistem moduna dönüş, saklama hatası, form/kod/davet korunması, API başlığı, çoğul, tarih/sayı, Türkçe karakter araması, web Google düğmesi ve davet ekranı dahil.
+- 136 backend testi başarılı: istekler arasında dil yalıtımı, hesap dili, e-posta, cihaz bazlı push, eski bildirimler, dinamik şema varsayılanları, davet HTML kaçışları ve silme formu dahil.
+- Katalog kontrolü: 612 anahtar ve 742 kaynak çeviri çağrısı. İki dilde eksik/boş anahtar, farklı parametre ve tarama kapsamındaki sabit UI metni bulunmadı. Bu kontrol, insan redaksiyonunun veya cihaz testinin yerine geçmez.
+- ESLint: 0 hata; 39 uyarı var (React ref/animasyon, kullanılmayan değişkenler ve test mock importları dahil).
 - Migration: izole SQLite veritabanında `0014 → 0015 → 0014 → 0015`; PostgreSQL için çevrimdışı SQL üretimi başarılı. Üretim veritabanına bağlanılmadı.
 - iOS JavaScript/Hermes export başarılı. Bu, imzalanmış `.ipa` veya TestFlight testi değildir.
 - 390 px tarayıcı görünümünde bütün ekran rotalarının İngilizce metinleri kontrol edildi; dolu/boş içerikler ve alt pencereler dahil bulgular [ENGLISH_SCREEN_AUDIT.md](ENGLISH_SCREEN_AUDIT.md) dosyasında. İki dil arasında geçiş, alanların korunması ve açık validasyonun çevrilmesi de doğrulandı. Tüm ekranlara ait gerçek cihaz görsel kabulü henüz yapılmadı.
@@ -78,3 +78,5 @@ Windows ortamında Expo iOS native proje üretimini desteklemediği için native
 - Son dil tercihini çevrimdışıyken değiştirip uygulamaya dönme ve iletişim/bildirim dilinin sunucuya yeniden kaydolması.
 
 Yayın durumu Git geçmişinden ve dağıtım servisinden ayrıca kontrol edilmelidir. Bu belgedeki yerel kontroller, mağaza yayınının tamamlandığı anlamına gelmez.
+
+Apple hesap bildirimleri, şifreli token saklama, iptal kuyruğu ve canlı kurulum sırası: [APPLE_SIGN_IN.md](APPLE_SIGN_IN.md). Bu ekleme gerçek Apple anahtarı ve TestFlight testi bekler.

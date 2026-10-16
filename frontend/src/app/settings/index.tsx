@@ -91,6 +91,9 @@ export default function SettingsScreen() {
             <AppText numberOfLines={1}>{user?.email ?? '—'}</AppText>
           </View>
         </View>
+        {user?.apple_email_forwarding_enabled === false && (
+          <AppText muted>{t('settings.appleEmailForwardingDisabled')}</AppText>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.saveProfileChanges')}

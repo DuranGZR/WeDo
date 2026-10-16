@@ -1,5 +1,6 @@
+import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
@@ -13,7 +14,21 @@ from app.core.rate_limit import register_rate_limit
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    yield
+    from app.modules.auth.apple_jobs import revocation_loop
+
+    task = None
+    if (
+        settings.apple_private_key.get_secret_value()
+        and settings.apple_token_encryption_key.get_secret_value()
+    ):
+        task = asyncio.create_task(revocation_loop())
+    try:
+        yield
+    finally:
+        if task is not None:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
 
 
 def create_application() -> FastAPI:

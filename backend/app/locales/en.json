@@ -113,7 +113,7 @@
   "web.signInWithGoogle": "Sign in with Google:",
   "web.googleProvidesYourUserIdentifierVerifiedEmailAddress": "Google provides your user identifier, verified email address and profile name for account creation and sign-in verification. We do not receive your Google password or request access to Gmail, Drive or Calendar.",
   "web.signInWithApple": "Sign in with Apple:",
-  "web.yourAppleUserIdentifierAndTheNameAnd": "Your Apple user identifier and the name and email you choose to share are used to manage your account and sessions. Hide My Email is supported.",
+  "web.yourAppleUserIdentifierAndTheNameAnd": "Your Apple user identifier and the name and email you choose to share are used to manage your account and sessions. Hide My Email is supported. We securely store an encrypted Apple refresh token to manage and revoke this connection. Apple account-change notifications update your sign-in and email forwarding status. If revocation temporarily fails after account deletion, the encrypted token is retained until revocation succeeds.",
   "web.supportAndDeletionRequests": "Support and deletion requests:",
   "web.theEmailAddressAndOptionalDescriptionYouProvide": "The email address and optional description you provide are sent to our support inbox to assess your request and verify account ownership.",
   "web.userContent": "User content:",
@@ -165,5 +165,7 @@
   "invite.metaTitle": "WeDo — You’re invited to {{space}}",
   "invite.metaDescription": "{{name}} invited you to save ideas together on WeDo.",
   "invite.footer": "Save it together. Pick it together. Do it together.",
-  "web.language": "Language"
+  "web.language": "Language",
+  "apple.serviceUnavailable": "Apple sign-in is temporarily unavailable. Please try again shortly.",
+  "apple.reauthorizeRequired": "Please sign in with Apple again using the latest version of WeDo."
 }

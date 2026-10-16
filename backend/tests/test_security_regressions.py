@@ -177,7 +177,8 @@ def test_account_deletion_requires_current_password(auth_client: TestClient) -> 
         headers=headers,
         json={"current_password": "Correct-horse-battery-staple1"},
     )
-    assert deleted.status_code == 204
+    assert deleted.status_code == 200
+    assert deleted.json()["apple_revocation"] == "not_required"
     assert auth_client.get("/api/v1/users/me", headers=headers).status_code == 401
 
 

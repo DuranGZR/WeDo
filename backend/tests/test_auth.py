@@ -118,7 +118,7 @@ def test_delete_account_anonymizes_data_and_revokes_access(
         headers=headers,
         json={"current_password": "Correct-horse-battery-staple1"},
     )
-    assert delete_resp.status_code == 204
+    assert delete_resp.status_code == 200
 
     # Access is revoked
     me = auth_client.get("/api/v1/users/me", headers=headers)
@@ -139,8 +139,21 @@ def test_delete_account_anonymizes_data_and_revokes_access(
 
 def test_apple_sign_in_creates_new_user_and_allows_passwordless_delete(
     auth_client: TestClient,
+    monkeypatch,
 ) -> None:
     import jwt
+    from app.modules.auth import service
+
+    monkeypatch.setattr(
+        service,
+        "_verify_apple_token",
+        lambda token, user_id: {
+            "sub": user_id,
+            "email": "appleuser@example.com",
+            "email_verified": True,
+            "iat": 1,
+        },
+    )
 
     apple_user_id = "000123.apple.unique.id"
     dummy_token = jwt.encode(
@@ -195,7 +208,8 @@ def test_apple_sign_in_creates_new_user_and_allows_passwordless_delete(
         headers=headers,
         json={},
     )
-    assert delete_resp.status_code == 204
+    assert delete_resp.status_code == 200
+    assert delete_resp.json()["apple_revocation"] == "manual"
 
     revoked_me = auth_client.get("/api/v1/users/me", headers=headers)
     assert revoked_me.status_code == 401

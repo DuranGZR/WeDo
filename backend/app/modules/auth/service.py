@@ -204,61 +204,50 @@ def change_password(
 
 
 def _verify_apple_token(identity_token: str, apple_user_id: str) -> dict[str, object]:
-    # In test or non-production environment, allow HS256 dummy tokens for offline testing
-    if settings.environment != "production":
-        try:
-            unverified_header = jwt.get_unverified_header(identity_token)
-            if unverified_header.get("alg") == "HS256":
-                return jwt.decode(
-                    identity_token,
-                    options={"verify_signature": False, "verify_aud": False},
-                )
-        except Exception:
-            pass
+    from app.modules.auth.apple import verify_token
 
-    try:
-        jwks_client = jwt.PyJWKClient(
-            "https://appleid.apple.com/auth/keys",
-            cache_jwk_set=True,
-            lifespan=3600,
-        )
-        signing_key = jwks_client.get_signing_key_from_jwt(identity_token)
-        return jwt.decode(
-            identity_token,
-            signing_key.key,
-            algorithms=["RS256"],
-            audience=settings.apple_bundle_id,
-            issuer="https://appleid.apple.com",
-            options={"verify_exp": True},
-        )
-    except Exception as error:
-        if settings.environment != "production":
-            try:
-                return jwt.decode(identity_token, options={"verify_signature": False})
-            except Exception:
-                pass
-        raise AuthError(
-            message("message.weCouldnTVerifyYourAppleSignInPlease")
-        ) from error
+    return verify_token(identity_token)
 
 
 def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
+    from app.modules.auth.apple import AppleInvalidToken, exchange_code
+
     claims = _verify_apple_token(data.identity_token, data.apple_user_id)
 
     token_sub = claims.get("sub")
     if not token_sub or str(token_sub) != data.apple_user_id:
         raise AuthError(message("message.weCouldnTVerifyYourAppleAccount"))
 
+    identity = auth_repository.get_identity(session, "apple", data.apple_user_id)
+    authorized_at = claims.get("auth_time", claims.get("iat", 0))
+    if not isinstance(authorized_at, int) or isinstance(authorized_at, bool):
+        raise AppleInvalidToken()
+    if (
+        identity
+        and identity.apple_revoked_at is not None
+        and authorized_at <= identity.apple_revoked_at
+    ):
+        raise AppleInvalidToken()
+    if settings.environment == "production" and not data.authorization_code:
+        raise AuthError(message("apple.reauthorizeRequired"))
+    encrypted_grant = (
+        exchange_code(data.authorization_code, data.apple_user_id)
+        if data.authorization_code
+        else None
+    )
     token_email = claims.get("email")
     email: str
-    if token_email and isinstance(token_email, str):
+    if (
+        token_email
+        and isinstance(token_email, str)
+        and claims.get("email_verified") in (True, "true")
+    ):
         email = token_email.lower()
-    elif data.email:
-        email = str(data.email).lower()
+    elif identity:
+        email = identity.provider_email or ""
     else:
-        email = f"{data.apple_user_id}@privaterelay.appleid.com"
+        raise AppleInvalidToken()
 
-    identity = auth_repository.get_identity(session, "apple", data.apple_user_id)
     if identity:
         user = user_repository.get_by_id(session, identity.user_id)
         if not user or not user.is_active:
@@ -281,7 +270,7 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
                     email_verified=True,
                 ),
             )
-        auth_repository.create_identity(
+        identity = auth_repository.create_identity(
             session,
             AuthIdentity(
                 user_id=user.id,
@@ -291,6 +280,9 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
             ),
         )
 
+    identity.apple_authorized_at = max(authorized_at, identity.apple_authorized_at or 0)
+    if encrypted_grant:
+        identity.apple_refresh_token = encrypted_grant
     user.email_verified = True
     response = _issue_tokens(session, user, data.device_id)
     session.commit()

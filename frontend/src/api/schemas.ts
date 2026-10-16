@@ -10,6 +10,7 @@ export const userSchema = z.object({
   notify_partner_activity: z.boolean().default(true),
   push_notifications_enabled: z.boolean().default(true),
   has_password: z.boolean().default(true),
+  apple_email_forwarding_enabled: z.boolean().nullable().optional(),
   preferred_language: z.enum(['tr', 'en']).default('tr'),
   created_at: z.string(),
 });

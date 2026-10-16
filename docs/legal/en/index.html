@@ -161,7 +161,7 @@
 <li><strong> Account information: </strong> Your email address, display name and a salted password hash for password-based accounts. </li>
 <li><strong> Email verification: </strong> When you sign up with email, we send a time-limited code through Resend. A secure digest, expiry and attempt information are stored on the server to protect your account. </li>
 <li><strong> Sign in with Google: </strong> Google provides your user identifier, verified email address and profile name for account creation and sign-in verification. We do not receive your Google password or request access to Gmail, Drive or Calendar. </li>
-<li><strong> Sign in with Apple: </strong> Your Apple user identifier and the name and email you choose to share are used to manage your account and sessions. Hide My Email is supported. </li>
+<li><strong> Sign in with Apple: </strong> Your Apple user identifier and the name and email you choose to share are used to manage your account and sessions. Hide My Email is supported. We securely store an encrypted Apple refresh token to manage and revoke this connection. Apple account-change notifications update your sign-in and email forwarding status. If revocation temporarily fails after account deletion, the encrypted token is retained until revocation succeeds. </li>
 <li><strong> Support and deletion requests: </strong> The email address and optional description you provide are sent to our support inbox to assess your request and verify account ownership. </li>
 <li><strong> User content: </strong> Links, memory photos, votes and reactions added to shared lists. </li>
 <li><strong> Device and notification data: </strong> Expo push notification tokens used to notify you of activity in shared spaces. </li>

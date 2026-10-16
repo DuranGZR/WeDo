@@ -54,7 +54,8 @@ class ChangePasswordRequest(BaseModel):
 
 
 class AppleSignInRequest(BaseModel):
-    identity_token: str = Field(min_length=1)
+    identity_token: str = Field(min_length=1, max_length=16384)
+    authorization_code: str | None = Field(default=None, min_length=1, max_length=4096)
     apple_user_id: str = Field(min_length=1, max_length=255)
     email: EmailStr | None = None
     display_name: str | None = Field(default=None, max_length=80)
@@ -66,3 +67,5 @@ class GoogleSignInRequest(BaseModel):
     device_id: str | None = Field(default=None, max_length=255)
 
 
+class AppleNotificationRequest(BaseModel):
+    payload: str = Field(min_length=1, max_length=32768)

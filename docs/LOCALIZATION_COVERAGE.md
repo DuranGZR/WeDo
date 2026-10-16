@@ -42,9 +42,9 @@
 | `src/app/memories/create.tsx` | 10 |
 | `src/app/memories/index.tsx` | 6 |
 | `src/app/notifications.tsx` | 10 |
-| `src/app/settings/delete-account.tsx` | 18 |
+| `src/app/settings/delete-account.tsx` | 22 |
 | `src/app/settings/help.tsx` | 22 |
-| `src/app/settings/index.tsx` | 29 |
+| `src/app/settings/index.tsx` | 30 |
 | `src/app/settings/password.tsx` | 20 |
 | `src/app/settings/privacy.tsx` | 17 |
 | `src/app/settings/security.tsx` | 14 |

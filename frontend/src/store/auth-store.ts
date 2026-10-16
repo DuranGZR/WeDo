@@ -9,6 +9,8 @@ import {
   type VerificationChallenge,
 } from '@/features/auth/email-verification';
 
+type AppleRevocationStatus = 'not_required' | 'pending' | 'manual';
+
 type AuthState = {
   user: User | null;
   accessToken: string | null;
@@ -20,6 +22,7 @@ type AuthState = {
     appleUserId: string,
     email?: string,
     displayName?: string,
+    authorizationCode?: string,
   ) => Promise<void>;
   signInWithGoogle: (idToken: string) => Promise<void>;
   signUp: (
@@ -33,7 +36,7 @@ type AuthState = {
     pushNotificationsEnabled?: boolean;
   }) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  deleteAccount: (currentPassword?: string) => Promise<void>;
+  deleteAccount: (currentPassword?: string) => Promise<AppleRevocationStatus>;
   signOut: () => Promise<void>;
   refresh: () => Promise<boolean>;
 };
@@ -68,12 +71,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await secureStorage.setTokens(result.access_token, result.refresh_token);
     set({ user: result.user, accessToken: result.access_token });
   },
-  async signInWithApple(identityToken, appleUserId, email, displayName) {
+  async signInWithApple(
+    identityToken,
+    appleUserId,
+    email,
+    displayName,
+    authorizationCode,
+  ) {
     const raw = await apiClient<unknown>('/api/v1/auth/apple', {
       method: 'POST',
       body: {
         identity_token: identityToken,
         apple_user_id: appleUserId,
+        ...(authorizationCode ? { authorization_code: authorizationCode } : {}),
         ...(email ? { email } : {}),
         ...(displayName ? { display_name: displayName } : {}),
       },
@@ -131,15 +141,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   async deleteAccount(currentPassword) {
     const token = get().accessToken;
+    let appleRevocation: AppleRevocationStatus = 'not_required';
     if (token) {
-      await apiClient<void>('/api/v1/users/me', {
-        method: 'DELETE',
-        accessToken: token,
-        body: currentPassword ? { current_password: currentPassword } : {},
-      });
+      const result = await apiClient<{ apple_revocation: AppleRevocationStatus }>(
+        '/api/v1/users/me',
+        {
+          method: 'DELETE',
+          accessToken: token,
+          body: currentPassword ? { current_password: currentPassword } : {},
+        },
+      );
+      appleRevocation = result?.apple_revocation ?? 'not_required';
     }
     await secureStorage.clear();
     set({ user: null, accessToken: null });
+    return appleRevocation;
   },
   async signOut() {
     const token = get().accessToken;

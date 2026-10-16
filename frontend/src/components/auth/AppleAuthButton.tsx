@@ -2,7 +2,7 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -35,6 +35,7 @@ export function AppleAuthButton({
   useTranslation();
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
+  const pending = useRef(false);
   const signInWithApple = useAuthStore((state) => state.signInWithApple);
   const { showToast } = useToast();
 
@@ -47,6 +48,8 @@ export function AppleAuthButton({
   }, []);
 
   const handleAppleAuth = async () => {
+    if (pending.current) return;
+    pending.current = true;
     setLoading(true);
     try {
       if (Platform.OS !== 'ios' || !isAvailable) {
@@ -67,6 +70,9 @@ export function AppleAuthButton({
       if (!credential.identityToken) {
         throw new Error(t('auth.weCouldnTGetYourAppleIdentityToken'));
       }
+      if (!credential.authorizationCode) {
+        throw new Error(t('auth.somethingWentWrongSigningInWithApple'));
+      }
 
       const fullName = credential.fullName;
       const displayName = [fullName?.givenName, fullName?.familyName]
@@ -79,6 +85,7 @@ export function AppleAuthButton({
         credential.user,
         credential.email ?? undefined,
         displayName.length > 0 ? displayName : undefined,
+        credential.authorizationCode ?? undefined,
       );
 
       if (onSuccess) {
@@ -96,6 +103,7 @@ export function AppleAuthButton({
         message: err.message ?? t('auth.somethingWentWrongSigningInWithApple'),
       });
     } finally {
+      pending.current = false;
       setLoading(false);
     }
   };

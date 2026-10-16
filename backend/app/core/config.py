@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     mobile_scheme: str = "wedo"
     apple_bundle_id: str = "com.durangezer.wedo"
+    apple_team_id: str = ""
+    apple_key_id: str = ""
+    apple_private_key: SecretStr = SecretStr("")
+    apple_token_encryption_key: SecretStr = SecretStr("")
     google_web_client_id: str = ""
     resend_api_key: SecretStr = SecretStr("")
     support_sender_email: EmailStr = "contact@durangezer.com"

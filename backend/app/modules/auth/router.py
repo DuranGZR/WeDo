@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.dependencies import SessionDep
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.auth.schemas import (
+    AppleNotificationRequest,
     AppleSignInRequest,
     ChangePasswordRequest,
     GoogleSignInRequest,
@@ -31,6 +32,16 @@ from app.modules.auth.service import (
 from app.modules.auth.verification import resend_code, verify_code
 
 router = APIRouter()
+
+
+@router.post("/apple/notifications", status_code=200)
+def apple_notification_endpoint(
+    data: AppleNotificationRequest, session: SessionDep
+) -> dict:
+    from app.modules.auth.apple_lifecycle import process_notification
+
+    process_notification(session, data.payload)
+    return {"status": "ok"}
 
 
 def _auth_error(error: AuthError) -> HTTPException:

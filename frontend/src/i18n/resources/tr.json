@@ -261,7 +261,7 @@
   "legal.accountInformation": "Hesap Bilgileri:",
   "legal.yourEmailAddressDisplayNameAndForPasswordBasedAccounts": "E-posta adresi, görünen ad ve şifreli hesaplar için şifre özeti (hash). E-posta ile kayıtta adres doğrulaması için süreli kod gönderilir; kodun güvenli özeti ve deneme bilgileri sunucuda tutulur.",
   "legal.signInWithApple": "Apple ile Giriş:",
-  "legal.whenYouSignInWithAppleWeReceiveAnOpaque": "Apple kimliğiyle oturum açıldığında, Apple tarafından sağlanan anonim kullanıcı kimliği ve seçiminize bağlı olarak e-posta/ad bilgisi.",
+  "legal.whenYouSignInWithAppleWeReceiveAnOpaque": "Apple kimliğiyle oturum açıldığında, Apple tarafından sağlanan anonim kullanıcı kimliği ve seçiminize bağlı olarak e-posta/ad bilgisi. Bu bağlantıyı yönetmek ve iptal etmek için Apple yenileme token’ını şifreli olarak saklarız. Apple hesap değişikliği bildirimleri, giriş ve e-posta yönlendirme durumunu günceller. Hesap silindikten sonra yetki iptali geçici olarak başarısız olursa şifreli token, iptal başarıyla tamamlanana kadar saklanır.",
   "legal.signInWithGoogle": "Google ile Giriş:",
   "legal.yourGoogleUserIdentifierVerifiedEmailAddressAndProfileName": "Google kullanıcı kimliği, doğrulanmış e-posta adresi ve profil adı hesap oluşturma ve oturum doğrulama için kullanılır. Google şifreniz alınmaz; Gmail, Drive veya Takvim erişimi istenmez.",
   "legal.supportAndDeletionRequests": "Destek ve Silme Talepleri:",
@@ -606,5 +606,9 @@
   "invitation.description": "{{name}}, seni WeDo’da fikirleri ve listeleri paylaşmaya davet etti.",
   "invitation.someone": "Birisi",
   "invitation.join": "Alana katıl",
-  "invitation.signIn": "Katılmak için giriş yap"
+  "invitation.signIn": "Katılmak için giriş yap",
+  "settings.appleManualRevocation": "WeDo hesabın devre dışı bırakıldı. Apple Hesabı ayarlarındaki Apple ile Giriş bölümünden WeDo bağlantısını da kaldır.",
+  "settings.appleRevocationPending": "Hesabın devre dışı bırakıldı. Apple giriş bağlantın kaldırılıyor.",
+  "settings.appleEmailForwardingDisabled": "Apple e-posta yönlendirmesi kapalı. Apple Hesabı ayarlarından WeDo için tekrar açabilirsin.",
+  "settings.appleManualRevocationTitle": "Apple bağlantısını kaldır"
 }

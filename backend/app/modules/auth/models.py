@@ -2,6 +2,8 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Integer,
@@ -35,6 +37,34 @@ class AuthIdentity(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     provider: Mapped[str] = mapped_column(String(20))
     provider_user_id: Mapped[str] = mapped_column(String(255))
     provider_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    apple_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    apple_email_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    apple_email_event_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    apple_revoked_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    apple_authorized_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+
+class AppleNotification(Base):
+    __tablename__ = "apple_notifications"
+    # Store a digest of jti; never store the raw signed payload or user token.
+    event_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class AppleRevocation(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "apple_revocations"
+    # Survives local identity/account deletion until Apple's revocation succeeds.
+    client_id: Mapped[str] = mapped_column(String(255))
+    encrypted_token: Mapped[str] = mapped_column(Text)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class RefreshSession(UUIDPrimaryKeyMixin, Base):

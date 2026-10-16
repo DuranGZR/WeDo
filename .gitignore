@@ -35,6 +35,7 @@ frontend/ios/
 *.pfx
 *.pem
 *.key
+*.p8
 
 # Editors and operating systems
 .DS_Store

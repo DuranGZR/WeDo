@@ -113,7 +113,7 @@
   "web.signInWithGoogle": "Google ile Giriş:",
   "web.googleProvidesYourUserIdentifierVerifiedEmailAddress": "Google tarafından sağlanan kullanıcı kimliği, doğrulanmış e-posta ve profil adı, hesap oluşturma ve oturum doğrulama için kullanılır. Google şifreniz alınmaz; Gmail, Drive veya Takvim erişimi istenmez.",
   "web.signInWithApple": "Apple ile Giriş:",
-  "web.yourAppleUserIdentifierAndTheNameAnd": "Apple kullanıcı kimliği ve paylaşıldığı ölçüde ad/e-posta bilgisi hesap ve oturum yönetimi için kullanılır. E-postamı Gizle seçeneği desteklenir.",
+  "web.yourAppleUserIdentifierAndTheNameAnd": "Apple kullanıcı kimliği ve paylaşıldığı ölçüde ad/e-posta bilgisi hesap ve oturum yönetimi için kullanılır. E-postamı Gizle seçeneği desteklenir. Bu bağlantıyı yönetmek ve iptal etmek için Apple yenileme token’ını şifreli olarak saklarız. Apple hesap değişikliği bildirimleri, giriş ve e-posta yönlendirme durumunu günceller. Hesap silindikten sonra yetki iptali geçici olarak başarısız olursa şifreli token, iptal başarıyla tamamlanana kadar saklanır.",
   "web.supportAndDeletionRequests": "Destek ve Silme Talepleri:",
   "web.theEmailAddressAndOptionalDescriptionYouProvide": "Formda verdiğiniz e-posta adresi ve isteğe bağlı açıklama, destek posta kutusuna iletilir ve talebinizi değerlendirmek ile hesap sahipliğini doğrulamak için kullanılır.",
   "web.userContent": "Kullanıcı İçerikleri:",
@@ -165,5 +165,7 @@
   "invite.metaTitle": "WeDo — {{space}} alanına davet edildiniz",
   "invite.metaDescription": "{{name}} seni WeDo’da birlikte kaydetmeye davet etti.",
   "invite.footer": "Birlikte kaydet, birlikte seç, birlikte yap.",
-  "web.language": "Dil"
+  "web.language": "Dil",
+  "apple.serviceUnavailable": "Apple girişi şu anda kullanılamıyor. Lütfen kısa bir süre sonra tekrar dene.",
+  "apple.reauthorizeRequired": "Lütfen WeDo’nun güncel sürümünden Apple ile tekrar giriş yap."
 }
