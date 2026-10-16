@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -23,6 +25,7 @@ function MenuRow({
   onPress: () => void;
   tone?: MenuTone;
 }) {
+  useTranslation();
   const danger = tone === 'danger';
   return (
     <Pressable
@@ -52,18 +55,19 @@ function MenuRow({
 }
 
 export default function ProfileScreen() {
+  useTranslation();
   const { user, signOut } = useAuthStore();
   const spaces = useSpaces();
   const activeSpaceCount = spaces.data?.data.length ?? 0;
 
   const confirmSignOut = () =>
     Alert.alert(
-      'Çıkış yapılsın mı?',
-      'Bu cihaz dahil tüm açık WeDo oturumların kapatılacak.',
+      t('home.signOut'),
+      t('home.thisWillSignYouOutOfEveryWedoSessionIncluding'),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Çıkış yap',
+          text: t('home.signOut_8d1ab'),
           style: 'destructive',
           onPress: () => void signOut().then(() => router.replace('/(auth)/sign-in')),
         },
@@ -78,30 +82,32 @@ export default function ProfileScreen() {
         <View style={styles.content}>
           <View style={styles.pageHeader}>
             <AppText variant="pageTitle" style={styles.title}>
-              Profil
+              {t('common.profile')}
             </AppText>
             <AppText muted style={styles.subtitle}>
-              Hesabını ve WeDo deneyimini yönet.
+              {t('home.manageYourAccountAndYourWedoExperience')}
             </AppText>
           </View>
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Profil bilgilerini düzenle"
+            accessibilityLabel={t('home.editProfile')}
             onPress={() => router.push('/settings')}
             style={({ pressed }) => [styles.profileCard, pressed && styles.pressed]}
           >
             <Avatar name={user?.display_name} size={66} />
             <View style={styles.identity}>
               <AppText variant="sectionTitle">
-                {user?.display_name ?? 'WeDo kullanıcısı'}
+                {user?.display_name ?? t('home.wedoUser')}
               </AppText>
               <AppText muted numberOfLines={1}>
                 {user?.email}
               </AppText>
               <View style={styles.profileStatus}>
                 <Ionicons name="person-outline" size={13} color={mono.ink} />
-                <AppText style={styles.profileStatusText}>Baş harf avatarı</AppText>
+                <AppText style={styles.profileStatusText}>
+                  {t('home.initialAvatar')}
+                </AppText>
               </View>
             </View>
             <View style={styles.editIcon}>
@@ -111,27 +117,27 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <AppText variant="caption" style={styles.sectionLabel}>
-              HESAP
+              {t('home.account')}
             </AppText>
             <View style={styles.menuCard}>
               <MenuRow
                 icon="person-outline"
-                label="Profil bilgileri"
-                description="Görünen adın ve e-posta adresin"
+                label={t('home.profileDetails')}
+                description={t('home.yourDisplayNameAndEmailAddress')}
                 onPress={() => router.push('/settings')}
               />
               <View style={styles.divider} />
               <MenuRow
                 icon="lock-closed-outline"
-                label="Güvenlik"
-                description="Şifre değiştir ve oturumlarını yönet"
+                label={t('home.security')}
+                description={t('home.changeYourPasswordAndManageSessions')}
                 onPress={() => router.push('/settings/security' as never)}
               />
               <View style={styles.divider} />
               <MenuRow
                 icon="notifications-outline"
-                label="Bildirimler"
-                description="Telefon ve partner bildirimleri"
+                label={t('common.notifications')}
+                description={t('home.phoneAndPartnerNotifications')}
                 onPress={() => router.push('/notifications')}
               />
             </View>
@@ -139,13 +145,13 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <AppText variant="caption" style={styles.sectionLabel}>
-              WE DO
+              {t('home.weDo')}
             </AppText>
             <View style={styles.menuCard}>
               <MenuRow
                 icon="layers-outline"
-                label="Alanlarımı yönet"
-                description={`${activeSpaceCount} aktif alan`}
+                label={t('home.manageMySpaces')}
+                description={t('spaces.activeCount', { count: activeSpaceCount })}
                 onPress={() => router.push('/space/manage')}
               />
             </View>
@@ -153,20 +159,20 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <AppText variant="caption" style={styles.sectionLabel}>
-              BİLGİ VE DESTEK
+              {t('home.helpInformation')}
             </AppText>
             <View style={styles.menuCard}>
               <MenuRow
                 icon="shield-checkmark-outline"
-                label="Gizlilik"
-                description="Verilerin ve alanların nasıl korunuyor"
+                label={t('common.privacy')}
+                description={t('home.howYourDataAndSpacesAreProtected')}
                 onPress={() => router.push('/settings/privacy' as never)}
               />
               <View style={styles.divider} />
               <MenuRow
                 icon="help-circle-outline"
-                label="Yardım ve kullanım"
-                description="WeDo’yu birlikte kullanma rehberi"
+                label={t('home.helpGettingStarted')}
+                description={t('home.yourGuideToUsingWedoTogether')}
                 onPress={() => router.push('/settings/help' as never)}
               />
             </View>
@@ -175,7 +181,7 @@ export default function ProfileScreen() {
           <View style={styles.menuCard}>
             <MenuRow
               icon="log-out-outline"
-              label="Tüm cihazlardan çıkış yap"
+              label={t('home.signOutOfAllDevices')}
               onPress={confirmSignOut}
               tone="danger"
             />

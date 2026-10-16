@@ -28,7 +28,9 @@ export function ScreenMotion({ children }: { children: React.ReactNode }) {
     transform: [{ translateY: (1 - progress.value) * 8 }],
   }));
 
-  return <Animated.View style={[styles.container, animatedStyle]}>{children}</Animated.View>;
+  return (
+    <Animated.View style={[styles.container, animatedStyle]}>{children}</Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({

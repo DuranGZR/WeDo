@@ -1,4 +1,6 @@
-﻿import { router } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,17 +8,66 @@ import { AppText, Card, Screen } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
 
 const options = [
-  { label: 'Gidilecek Yerler', emoji: '📍' },
-  { label: 'İzlenecekler', emoji: '🎬' },
-  { label: 'Alınacaklar', emoji: '🛒' },
-  { label: 'Yapılacaklar', emoji: '✅' },
-  { label: 'Tarifler', emoji: '🍳' },
-  { label: 'Seyahat', emoji: '✈️' },
-  { label: 'Etkinlikler', emoji: '🎟️' },
-  { label: 'Okunacaklar', emoji: '📚' },
+  {
+    id: 'option-1',
+    get label() {
+      return t('onboarding.placesToVisit');
+    },
+    emoji: '📍',
+  },
+  {
+    id: 'option-2',
+    get label() {
+      return t('common.watchlist');
+    },
+    emoji: '🎬',
+  },
+  {
+    id: 'option-3',
+    get label() {
+      return t('common.shopping');
+    },
+    emoji: '🛒',
+  },
+  {
+    id: 'option-4',
+    get label() {
+      return t('onboarding.toDo');
+    },
+    emoji: '✅',
+  },
+  {
+    id: 'option-5',
+    get label() {
+      return t('onboarding.recipes');
+    },
+    emoji: '🍳',
+  },
+  {
+    id: 'option-6',
+    get label() {
+      return t('onboarding.travel');
+    },
+    emoji: '✈️',
+  },
+  {
+    id: 'option-7',
+    get label() {
+      return t('onboarding.events');
+    },
+    emoji: '🎟️',
+  },
+  {
+    id: 'option-8',
+    get label() {
+      return t('onboarding.readingList');
+    },
+    emoji: '📚',
+  },
 ];
 
 export default function ListTemplatesScreen() {
+  useTranslation();
   const [selected, setSelected] = useState<string[]>([]);
 
   function toggle(value: string) {
@@ -51,21 +102,21 @@ export default function ListTemplatesScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="pageTitle" style={styles.title}>
-            En çok neleri birlikte kaydediyorsunuz?
+            {t('onboarding.whatWouldYouLikeToSaveTogether')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            En fazla dört seçenek seçebilirsin.
+            {t('onboarding.chooseUpToFourOptions')}
           </AppText>
         </View>
 
         {/* Choice Grid */}
         <View style={styles.grid}>
           {options.map((option) => {
-            const active = selected.includes(option.label);
+            const active = selected.includes(option.id);
             return (
               <Pressable
-                key={option.label}
-                onPress={() => toggle(option.label)}
+                key={option.id}
+                onPress={() => toggle(option.id)}
                 style={styles.pressableCard}
               >
                 <Card style={[styles.optionCard, active && styles.selectedCard]}>
@@ -98,7 +149,7 @@ export default function ListTemplatesScreen() {
             (!selected.length || pressed) && styles.btnDisabled,
           ]}
         >
-          <AppText style={styles.primaryBtnText}>Alanımı oluştur</AppText>
+          <AppText style={styles.primaryBtnText}>{t('onboarding.createMySpace')}</AppText>
           <Ionicons name="arrow-forward" size={18} color={colors.surface} />
         </Pressable>
       </View>

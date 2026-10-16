@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.localization import message
 from app.modules.spaces.enums import SpaceRole
 from app.modules.spaces.models import Space, SpaceMember
 from app.modules.spaces.repository import space_member_repository, space_repository
@@ -46,7 +47,8 @@ def get_space(session: Session, space_id: UUID) -> SpaceResponse:
         from fastapi import HTTPException, status
 
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Alan bulunamadı."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=message("message.spaceNotFound"),
         )
     return _to_response(session, space)
 
@@ -57,7 +59,8 @@ def update_space(session: Session, space_id: UUID, data: SpaceUpdate) -> SpaceRe
         from fastapi import HTTPException, status
 
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Alan bulunamadı."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=message("message.spaceNotFound"),
         )
     if data.name is not None:
         space.name = data.name.strip()
@@ -73,7 +76,7 @@ def delete_space(session: Session, space_id: UUID) -> None:
     if space is None:
         from fastapi import HTTPException
 
-        raise HTTPException(status_code=404, detail="Alan bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.spaceNotFound"))
     from datetime import UTC, datetime
 
     space.deleted_at = datetime.now(UTC)

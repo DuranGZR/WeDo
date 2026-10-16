@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -15,6 +17,7 @@ import { PasswordField } from '@/features/auth/PasswordField';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function DeleteAccountScreen() {
+  useTranslation();
   const { user, deleteAccount } = useAuthStore();
   const { showToast } = useToast();
   const [password, setPassword] = useState('');
@@ -24,12 +27,12 @@ export default function DeleteAccountScreen() {
 
   const removeAccount = () =>
     Alert.alert(
-      'Hesabı kalıcı olarak sil?',
-      'Bu işlem geri alınamaz. Giriş yapamayacak ve hesabına erişemeyeceksin.',
+      t('settings.permanentlyDeleteYourAccount'),
+      t('settings.thisCanTBeUndoneYouWonTBeAble'),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Hesabı sil',
+          text: t('settings.deleteAccount'),
           style: 'destructive',
           onPress: () => void submit(),
         },
@@ -39,8 +42,8 @@ export default function DeleteAccountScreen() {
   const submit = async () => {
     if (hasPassword && !password) {
       showToast({
-        title: 'Şifren gerekli',
-        message: 'Hesabını silmek için mevcut şifreni gir.',
+        title: t('settings.passwordRequired'),
+        message: t('settings.enterYourCurrentPasswordToDeleteYourAccount'),
       });
       return;
     }
@@ -49,14 +52,14 @@ export default function DeleteAccountScreen() {
     try {
       await deleteAccount(hasPassword ? password : undefined);
       showToast({
-        title: 'Hesap devre dışı bırakıldı',
-        message: 'Oturumların kapatıldı.',
+        title: t('settings.accountDeactivated'),
+        message: t('settings.youVeBeenSignedOutOfAllSessions'),
       });
       router.replace('/(auth)/welcome');
     } catch (error) {
       showToast({
-        title: 'Hesap silinemedi',
-        message: error instanceof Error ? error.message : 'Tekrar dene.',
+        title: t('settings.couldnTDeleteAccount'),
+        message: error instanceof Error ? error.message : t('common.tryAgainShort'),
       });
     } finally {
       setDeleting(false);
@@ -65,23 +68,22 @@ export default function DeleteAccountScreen() {
 
   return (
     <AccountScaffold
-      title="Hesabı sil"
-      subtitle="Bu işlem geri alınamaz; devam etmeden önce dikkatlice oku."
+      title={t('settings.deleteAccount')}
+      subtitle={t('settings.thisCanTBeUndonePleaseReadCarefullyBeforeContinuing')}
     >
       <AccountCard danger>
         <View style={styles.warningTitle}>
           <Ionicons name="warning-outline" size={23} color={mono.danger} />
           <AppText variant="sectionTitle" style={styles.dangerText}>
-            Kalıcı işlem
+            {t('settings.permanentAction')}
           </AppText>
         </View>
         <AppText muted style={styles.copy}>
-          Hesabın devre dışı bırakılır, bütün açık oturumların kapatılır ve {"WeDo'ya"}{' '}
-          tekrar erişemezsin.
+          {t('settings.accountDeletionExplanation')}
         </AppText>
         {hasPassword ? (
           <PasswordField
-            label="Mevcut şifre"
+            label={t('settings.currentPassword')}
             value={password}
             onChangeText={setPassword}
             autoComplete="current-password"
@@ -92,13 +94,13 @@ export default function DeleteAccountScreen() {
           <View style={styles.appleNotice}>
             <Ionicons name="logo-apple" size={18} color={mono.ink} />
             <AppText style={styles.appleNoticeText}>
-              Hesabınız Apple ile korunuyor. Silmek için şifre gerekmez.
+              {t('settings.thisAccountUsesGoogleOrAppleSignInNoPassword')}
             </AppText>
           </View>
         )}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Hesabı kalıcı olarak sil"
+          accessibilityLabel={t('settings.permanentlyDeleteAccount')}
           disabled={deleting}
           onPress={removeAccount}
           style={({ pressed }) => [
@@ -115,7 +117,7 @@ export default function DeleteAccountScreen() {
           <AppText
             style={[accountStyles.secondaryButtonText, accountStyles.dangerButtonText]}
           >
-            Hesabı kalıcı olarak sil
+            {t('settings.permanentlyDeleteAccount')}
           </AppText>
         </Pressable>
       </AccountCard>

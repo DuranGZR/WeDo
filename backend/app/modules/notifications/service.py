@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.localization import current_language, message
 from app.modules.notifications.models import DevicePushToken, Notification
 from app.modules.notifications.push import send_expo_push
 from app.modules.notifications.repository import notification_repository
@@ -15,6 +16,44 @@ from app.modules.notifications.schemas import (
 )
 from app.modules.spaces.models import SpaceMember
 from app.modules.users.models import User
+
+LEGACY_MESSAGES = {
+    "comment_created": (
+        "message.newComment",
+        "message.aNewCommentWasAddedToASavedItem",
+    ),
+    "invitation_accepted": (
+        "message.invitationAccepted",
+        "message.yourPartnerJoinedYourSharedSpace",
+    ),
+    "item_created": (
+        "message.newItemSaved",
+        "message.aNewItemWasAddedToYourSharedSpace",
+    ),
+    "item_reacted": (
+        "message.newReaction",
+        "message.someoneReactedToASavedItemInYourShared",
+    ),
+    "plan_reminder": ("message.planReminder", "message.youHaveAnUpcomingPlan"),
+}
+
+
+def notification_text(notification: Notification, field: str, language: str) -> str:
+    key = getattr(notification, field + "_key")
+    if key:
+        return message(
+            key, language=language, **(notification.message_params or {}).get(field, {})
+        )
+    # Legacy rows do not contain language-neutral parameters. Do not translate user text.
+    if language == "tr":
+        return getattr(notification, field)
+    legacy_keys = LEGACY_MESSAGES.get(notification.type)
+    if legacy_keys:
+        return message(legacy_keys[0 if field == "title" else 1], language=language)
+    return message(
+        "notification.genericTitle" if field == "title" else "notification.genericBody",
+        language=language,
+    )
 
 
 def create_notification(
@@ -37,6 +76,12 @@ def create_notification(
             type=notification_type,
             title=title,
             body=body,
+            title_key=getattr(title, "key", None),
+            body_key=getattr(body, "key", None),
+            message_params={
+                "title": getattr(title, "params", {}),
+                "body": getattr(body, "params", {}),
+            },
             data=data or {},
         ),
     )
@@ -77,7 +122,12 @@ def notify_space_members(
 
 def list_notifications(session: Session, user_id: UUID) -> list[NotificationResponse]:
     return [
-        NotificationResponse.model_validate(item, from_attributes=True)
+        NotificationResponse.model_validate(item, from_attributes=True).model_copy(
+            update={
+                "title": notification_text(item, "title", current_language()),
+                "body": notification_text(item, "body", current_language()),
+            }
+        )
         for item in notification_repository.list_for_user(session, user_id)
     ]
 
@@ -105,8 +155,8 @@ def dispatch_pending_pushes(session: Session, limit: int = 100) -> int:
             messages.append(
                 {
                     "to": token.push_token,
-                    "title": notification.title,
-                    "body": notification.body,
+                    "title": notification_text(notification, "title", token.language),
+                    "body": notification_text(notification, "body", token.language),
                     "data": notification.data,
                 }
             )
@@ -127,7 +177,9 @@ def unread_count(session: Session, user_id: UUID) -> int:
 def mark_read(session: Session, user_id: UUID, notification_id: UUID) -> None:
     notification = notification_repository.get(session, notification_id)
     if notification is None or notification.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Bildirim bulunamadı.")
+        raise HTTPException(
+            status_code=404, detail=message("message.notificationNotFound")
+        )
     notification.read_at = datetime.now(UTC)
     session.commit()
 
@@ -148,11 +200,13 @@ def register_device(
             user_id=user_id,
             device_id=data.device_id,
             platform=data.platform,
+            language=data.language,
             push_token=data.push_token,
         )
         session.add(device)
     else:
         device.platform = data.platform
+        device.language = data.language
         device.push_token = data.push_token
         device.is_active = True
         device.last_seen_at = datetime.now(UTC)

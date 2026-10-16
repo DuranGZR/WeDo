@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -13,35 +15,47 @@ import { mono, spacing } from '@/design-system';
 const principles = [
   {
     icon: 'people-outline' as const,
-    title: 'Alanların davetlidir',
-    text: 'Bir alanı yalnızca sahibi ve açıkça davet edilen üyeler görebilir.',
+    get title() {
+      return t('settings.yourSpacesAreInviteOnly');
+    },
+    get text() {
+      return t('settings.onlyTheOwnerAndInvitedMembersCanViewASpace');
+    },
   },
   {
     icon: 'link-outline' as const,
-    title: 'Kayıtların korunur',
-    text: 'Eklediğin bağlantılar, notlar ve tamamlanma durumu herkese açık değildir.',
+    get title() {
+      return t('settings.yourSavedItemsArePrivate');
+    },
+    get text() {
+      return t('settings.yourLinksNotesAndCompletionStatusArenTPublic');
+    },
   },
   {
     icon: 'key-outline' as const,
-    title: 'Erişimini sen yönetirsin',
-    text: 'Şifreni değiştirebilir veya tek işlemle tüm cihazlardaki oturumlarını kapatabilirsin.',
+    get title() {
+      return t('settings.youReInControlOfAccess');
+    },
+    get text() {
+      return t('settings.changeYourPasswordOrSignOutOfEveryDeviceIn');
+    },
   },
 ];
 
 export default function PrivacyScreen() {
+  useTranslation();
   return (
     <AccountScaffold
-      title="Gizlilik"
-      subtitle="WeDo’daki ortak kararların senin kontrolünde kalır."
+      title={t('common.privacy')}
+      subtitle={t('settings.youReInControlOfYourSharedDecisionsOnWedo')}
     >
       <AccountCard>
         <View style={styles.heroIcon}>
           <Ionicons name="shield-checkmark" size={27} color={mono.paper} />
         </View>
-        <AppText variant="sectionTitle">Varsayılan olarak özel</AppText>
+        <AppText variant="sectionTitle">{t('settings.privateByDefault')}</AppText>
         <AppText muted style={styles.intro}>
-          WeDo bir açık sosyal ağ değildir. Alanların, listelerin ve kayıtların yalnızca
-          seçtiğin kişilerle paylaşılır.
+          {t('settings.wedoIsnTAPublicSocialNetworkYourSpacesLists')}
         </AppText>
       </AccountCard>
 
@@ -63,40 +77,41 @@ export default function PrivacyScreen() {
 
       <AccountCard>
         <AppText variant="caption" style={accountStyles.label}>
-          VERİLERİN
+          {t('settings.yourData')}
         </AppText>
         <AppText muted style={accountStyles.note}>
-          Profilinde yalnızca görünen adın ve e-posta adresin tutulur. Profil görseli
-          yerine uygulama genelinde baş harfin kullanılır.
+          {t('settings.yourProfileStoresYourDisplayNameAndEmailAddressThe')}
         </AppText>
       </AccountCard>
 
       <AccountCard>
         <AppText variant="caption" style={accountStyles.label}>
-          YASAL BELGELER
+          {t('settings.legalDocuments')}
         </AppText>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Gizlilik Politikası sayfasını aç"
+          accessibilityLabel={t('settings.openThePrivacyPolicy')}
           onPress={() => router.push('/legal/privacy' as never)}
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
         >
           <View style={styles.linkLeft}>
             <Ionicons name="document-text-outline" size={18} color={mono.ink} />
-            <AppText style={styles.linkTitle}>Gizlilik Politikası</AppText>
+            <AppText style={styles.linkTitle}>{t('common.privacyPolicy')}</AppText>
           </View>
           <Ionicons name="chevron-forward" size={16} color={mono.muted} />
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Kullanım Koşulları sayfasını aç"
+          accessibilityLabel={t('settings.openTheTermsOfService')}
           onPress={() => router.push('/legal/terms' as never)}
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
         >
           <View style={styles.linkLeft}>
             <Ionicons name="shield-outline" size={18} color={mono.ink} />
-            <AppText style={styles.linkTitle}>Kullanım Koşulları ve EULA</AppText>
+            <AppText style={styles.linkTitle}>
+              {t('common.termsOfServiceAndEula')}
+            </AppText>
           </View>
           <Ionicons name="chevron-forward" size={16} color={mono.muted} />
         </Pressable>

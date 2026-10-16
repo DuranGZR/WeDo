@@ -27,6 +27,9 @@ class Notification(UUIDPrimaryKeyMixin, Base):
     type: Mapped[str] = mapped_column(String(40))
     title: Mapped[str] = mapped_column(String(160))
     body: Mapped[str] = mapped_column(Text)
+    title_key: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    body_key: Mapped[str | None] = mapped_column(String(180), nullable=True)
+    message_params: Mapped[dict] = mapped_column(JSON, default=dict)
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -46,6 +49,7 @@ class DevicePushToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     device_id: Mapped[str] = mapped_column(String(255))
     platform: Mapped[str] = mapped_column(String(20))
+    language: Mapped[str] = mapped_column(String(2), default="tr")
     push_token: Mapped[str] = mapped_column(String(512), unique=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_seen_at: Mapped[datetime] = mapped_column(

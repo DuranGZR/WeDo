@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.localization import message
 from app.modules.invitations.models import Invitation
 from app.modules.invitations.repository import invitation_repository
 from app.modules.invitations.schemas import (
@@ -32,11 +33,12 @@ def _validate(invitation: Invitation) -> None:
     if invitation.revoked_at is not None or expires_at <= datetime.now(UTC):
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
-            detail="Davet geçersiz veya süresi dolmuş.",
+            detail=message("message.thisInvitationIsInvalidOrHasExpired"),
         )
     if invitation.use_count >= invitation.max_uses:
         raise HTTPException(
-            status_code=status.HTTP_410_GONE, detail="Davet kullanım limitine ulaştı."
+            status_code=status.HTTP_410_GONE,
+            detail=message("message.thisInvitationHasReachedItsUsageLimit"),
         )
 
 
@@ -94,7 +96,8 @@ def revoke_invitation(session: Session, invitation_id: UUID) -> None:
     invitation = invitation_repository.get_by_id(session, invitation_id)
     if invitation is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Davet bulunamadı."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=message("message.invitationNotFound"),
         )
     invitation.revoked_at = datetime.now(UTC)
     session.commit()
@@ -106,7 +109,8 @@ def preview_invitation(session: Session, token: str) -> InvitationPreview:
     )
     if invitation is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Davet bulunamadı."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=message("message.invitationNotFound"),
         )
     _validate(invitation)
     space = space_repository.get_by_id(session, invitation.space_id)
@@ -117,7 +121,7 @@ def preview_invitation(session: Session, token: str) -> InvitationPreview:
         expires_at=invitation.expires_at,
         remaining_uses=invitation.max_uses - invitation.use_count,
         space_name=space.name if space else "Ortak alan",
-        inviter_name=inviter.display_name if inviter else "Bir WeDo kullanıcısı",
+        inviter_name=inviter.display_name if inviter else message("message.aWedoUser"),
     )
 
 
@@ -127,7 +131,8 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
     )
     if invitation is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Davet bulunamadı."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=message("message.invitationNotFound"),
         )
     _validate(invitation)
     existing = space_member_repository.get_by_space_and_user(
@@ -136,7 +141,7 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Bu alanın zaten üyesisin.",
+            detail=message("message.youReAlreadyAMemberOfThisSpace"),
         )
     space_member_repository.create(
         session, SpaceMember(space_id=invitation.space_id, user_id=user_id)
@@ -145,8 +150,8 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
         session,
         user_id=invitation.created_by,
         notification_type="invitation_accepted",
-        title="Davet kabul edildi",
-        body="Partnerin ortak alana katıldı.",
+        title=message("message.invitationAccepted"),
+        body=message("message.yourPartnerJoinedYourSharedSpace"),
         space_id=invitation.space_id,
         actor_id=user_id,
         data={"space_id": str(invitation.space_id)},
@@ -162,5 +167,5 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
         expires_at=invitation.expires_at,
         remaining_uses=invitation.max_uses - invitation.use_count,
         space_name=space.name if space else "Ortak alan",
-        inviter_name=inviter.display_name if inviter else "Bir WeDo kullanıcısı",
+        inviter_name=inviter.display_name if inviter else message("message.aWedoUser"),
     )

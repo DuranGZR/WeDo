@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 
 from app.api.dependencies import SessionDep
 from app.core.config import settings
+from app.core.localization import message
 from app.core.pagination import PageResponse, PaginationDep, paginate
 from app.modules.activities.schemas import ActivityResponse
 from app.modules.activities.service import list_item_activities
@@ -52,7 +53,7 @@ def _check_list_access(session, list_id: UUID, user_id: UUID):
     if target_list is None:
         from fastapi import HTTPException
 
-        raise HTTPException(status_code=404, detail="Liste bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.listNotFound"))
     get_space_member(session, target_list.space_id, user_id)
     return target_list
 
@@ -92,7 +93,8 @@ def list_items_endpoint(
         legacy_items = [
             item
             for item in item_repository.list_for_list(session, list_id)
-            if _needs_legacy_short_link_refresh(item) or _needs_expiring_cdn_refresh(item)
+            if _needs_legacy_short_link_refresh(item)
+            or _needs_expiring_cdn_refresh(item)
         ]
         if legacy_items:
             for item in legacy_items:
@@ -135,7 +137,10 @@ def move_item_endpoint(
     if list_repository.get_by_id(session, data.list_id).space_id != item.space_id:
         from fastapi import HTTPException
 
-        raise HTTPException(status_code=400, detail="Hedef liste aynı alanda olmalı.")
+        raise HTTPException(
+            status_code=400,
+            detail=message("message.theDestinationListMustBelongToTheSameSpace"),
+        )
     return move_item(session, item_id, data)
 
 
@@ -168,9 +173,7 @@ def list_item_activity_endpoint(
 
 
 @router.get("/items/{item_id}/preview")
-def get_item_preview_endpoint(
-    item_id: UUID, session: SessionDep
-) -> Response:
+def get_item_preview_endpoint(item_id: UUID, session: SessionDep) -> Response:
     from app.modules.items.models import ItemPreviewImage
 
     preview = session.get(ItemPreviewImage, item_id)
@@ -183,7 +186,15 @@ def get_item_preview_endpoint(
 
     # Fallback: check if the item exists and has an external URL
     item = item_repository.get_by_id(session, item_id)
-    if item is not None and item.preview_image_url and not item.preview_image_url.endswith("/preview"):
-        return RedirectResponse(item.preview_image_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    if (
+        item is not None
+        and item.preview_image_url
+        and not item.preview_image_url.endswith("/preview")
+    ):
+        return RedirectResponse(
+            item.preview_image_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT
+        )
 
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Görsel bulunamadı.")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail=message("message.imageNotFound")
+    )

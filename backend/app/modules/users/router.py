@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import SessionDep
+from app.core.localization import message
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.auth.passwords import verify_password
 from app.modules.auth.repository import auth_repository
@@ -18,6 +19,8 @@ def get_current_user(current_user: CurrentUserDep) -> UserResponse:
 def update_current_user(
     data: UserUpdate, current_user: CurrentUserDep, session: SessionDep
 ) -> UserResponse:
+    if data.preferred_language is not None:
+        current_user.preferred_language = data.preferred_language
     if data.display_name is not None:
         current_user.display_name = data.display_name.strip()
     if data.notify_partner_activity is not None:
@@ -36,13 +39,18 @@ def delete_current_user(
         if not data.current_password or not verify_password(
             data.current_password, current_user.password_hash
         ):
-            raise HTTPException(status_code=401, detail="Mevcut şifren doğru değil.")
+            raise HTTPException(
+                status_code=401,
+                detail=message("message.yourCurrentPasswordIsIncorrect"),
+            )
     current_user.is_active = False
     current_user.email = f"deleted_{current_user.id}@deleted.wedo.app"
-    current_user.display_name = "Silinmiş Kullanıcı"
+    current_user.display_name = message("message.deletedUser")
     auth_repository.revoke_all_for_user(session, current_user.id)
     from app.modules.auth.models import AuthIdentity
+
     session.query(AuthIdentity).filter_by(user_id=current_user.id).delete()
     from app.modules.notifications.models import DevicePushToken
+
     session.query(DevicePushToken).filter_by(user_id=current_user.id).delete()
     session.commit()

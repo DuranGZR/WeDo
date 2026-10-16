@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -30,6 +32,7 @@ export function AppleAuthButton({
   style,
   onSuccess,
 }: AppleAuthButtonProps) {
+  useTranslation();
   const [isAvailable, setIsAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const signInWithApple = useAuthStore((state) => state.signInWithApple);
@@ -48,8 +51,8 @@ export function AppleAuthButton({
     try {
       if (Platform.OS !== 'ios' || !isAvailable) {
         showToast({
-          title: 'Apple ile Giriş',
-          message: 'Apple ile giriş iOS cihazlarda yerel Face ID / Touch ID ile çalışır.',
+          title: t('auth.signInWithApple'),
+          message: t('auth.signInWithAppleIsAvailableOnSupportedIosDevices'),
         });
         return;
       }
@@ -62,7 +65,7 @@ export function AppleAuthButton({
       });
 
       if (!credential.identityToken) {
-        throw new Error('Apple kimlik belirteci alınamadı.');
+        throw new Error(t('auth.weCouldnTGetYourAppleIdentityToken'));
       }
 
       const fullName = credential.fullName;
@@ -89,8 +92,8 @@ export function AppleAuthButton({
         return;
       }
       showToast({
-        title: 'Giriş Başarısız',
-        message: err.message ?? 'Apple ile oturum açılırken bir hata oluştu.',
+        title: t('auth.signInFailed'),
+        message: err.message ?? t('auth.somethingWentWrongSigningInWithApple'),
       });
     } finally {
       setLoading(false);
@@ -122,20 +125,18 @@ export function AppleAuthButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Apple ile devam et"
+      accessibilityLabel={t('auth.continueWithApple')}
       onPress={() => void handleAppleAuth()}
-      style={({ pressed }) => [
-        styles.customButton,
-        style,
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.customButton, style, pressed && styles.pressed]}
     >
       <Image
         source={require('../../../assets/auth_apple.png')}
         style={styles.iconImage}
         resizeMode="contain"
       />
-      <AppText style={styles.customButtonText}>Apple ile Devam Et</AppText>
+      <AppText style={styles.customButtonText}>
+        {t('auth.continueWithApple_e9e92')}
+      </AppText>
     </Pressable>
   );
 }

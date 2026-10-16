@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { type ReactNode } from 'react';
@@ -21,6 +23,7 @@ type AuthShellProps = {
 };
 
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
+  useTranslation();
   return (
     <Screen
       scroll={true}
@@ -34,7 +37,7 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
         <View style={styles.headerRow}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Geri dön"
+            accessibilityLabel={t('common.goBack_e0c40')}
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
             style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           >

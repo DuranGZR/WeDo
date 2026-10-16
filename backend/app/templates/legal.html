@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html lang="__LANG__">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title> {{web.wedoLegalInformationPrivacyPolicy}} </title>
+<style>
+    :root {
+      --bg: #F7F6F2;
+      --card-bg: #FFFFFF;
+      --ink: #090909;
+      --muted: #5F5F5D;
+      --border: #E0E0DC;
+      --accent: #2B2B28;
+      --danger: #9D1F1F;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+      padding: 20px 0;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .tagline {
+      color: var(--muted);
+      font-size: 15px;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    nav a {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--ink);
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    nav a:hover {
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    h2 {
+      font-size: 22px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    h3 {
+      font-size: 16px;
+      margin: 18px 0 8px;
+    }
+    p, li {
+      font-size: 14px;
+      color: #2F2F2D;
+      margin-bottom: 10px;
+    }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    input[type="email"], textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    input[type="email"]:focus, textarea:focus {
+      outline: none;
+      border-color: var(--ink);
+    }
+    button {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.88; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .status-msg.error { background: #FDECEC; color: #9D1F1F; }
+    .status-msg {
+      display: none;
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+<header>
+<div class="logo">WeDo.</div>
+<div class="tagline"> {{web.saveItTogetherPickItTogetherDoIt}} </div>
+<nav>
+<a href="#privacy"> {{web.privacyPolicy}} </a>
+<a href="#terms"> {{web.termsOfService}} </a>
+<a href="#delete-account"> {{web.accountDataDeletionRequest}} </a>
+<div class="language-switch"><a href="?lang=tr">Türkçe</a><a href="?lang=en">English</a></div></nav>
+</header>
+<!-- GİZLİLİK POLİTİKASI -->
+<section class="card" id="privacy">
+<h2> {{web.privacyPolicyLegal}} </h2>
+<p><strong> {{web.lastUpdated}} </strong> {{web.15October2026}} </p>
+<p> {{web.wedoRespectsYourPrivacyThisPolicyExplainsThe}} </p>
+<h3> {{web.1InformationWeCollect}} </h3>
+<ul>
+<li><strong> {{web.accountInformation}} </strong> {{web.yourEmailAddressDisplayNameAndASalted}} </li>
+<li><strong> {{web.emailVerification}} </strong> {{web.whenYouSignUpWithEmailWeSend}} </li>
+<li><strong> {{web.signInWithGoogle}} </strong> {{web.googleProvidesYourUserIdentifierVerifiedEmailAddress}} </li>
+<li><strong> {{web.signInWithApple}} </strong> {{web.yourAppleUserIdentifierAndTheNameAnd}} </li>
+<li><strong> {{web.supportAndDeletionRequests}} </strong> {{web.theEmailAddressAndOptionalDescriptionYouProvide}} </li>
+<li><strong> {{web.userContent}} </strong> {{web.linksMemoryPhotosVotesAndReactionsAddedTo}} </li>
+<li><strong> {{web.deviceAndNotificationData}} </strong> {{web.expoPushNotificationTokensUsedToNotifyYou}} </li>
+</ul>
+<h3> {{web.2SecurityAndSharing}} </h3>
+<p> {{web.yourInformationIsNotSoldOrSharedFor}} </p>
+<p> {{web.googleOrAppleProvidesAuthenticationWhenYouChoose}} </p>
+<h3> {{web.3Contact}} </h3>
+<p> {{web.forQuestionsAboutYourPrivacyContact}} <a href="mailto:contact@durangezer.com">contact@durangezer.com</a></p>
+</section>
+<!-- KULLANIM KOŞULLARI -->
+<section class="card" id="terms">
+<h2> {{web.termsOfServiceLegal}} </h2>
+<p> {{web.byDownloadingOrUsingTheWedoAppYou}} </p>
+<ul>
+<li> {{web.youMustNotUseTheAppForUnlawful}} </li>
+<li> {{web.youAreResponsibleForTheLinksAndImages}} </li>
+<li> {{web.wedoMayUpdateTheseTermsOrSuspendAccounts}} </li>
+</ul>
+</section>
+<!-- HESAP VE VERİ SİLME TALEBİ -->
+<section class="card" id="delete-account">
+<h2> {{web.requestAccountAndDataDeletion}} </h2>
+<p> {{web.useThisFormToRequestAccountDeletionEven}} </p>
+<p> {{web.onceOwnershipIsVerifiedAndDeletionIsCompleted}} </p>
+<ul>
+<li> {{web.yourRegisteredEmailAddressAndNameAreAnonymised}} </li>
+<li> {{web.allActiveSessionsAreRevoked}} </li>
+<li> {{web.devicePushNotificationTokensAreDeletedFromOur}} </li>
+<li> {{web.contentRemainingInSharedSpacesIsAttributedTo}} </li>
+</ul>
+<form id="deletionForm" onsubmit="handleDeletion(event)">
+<div class="form-group">
+<label for="email"> {{web.yourRegisteredWedoEmailAddress}} </label>
+<input autocomplete="email" id="email" maxlength="254" name="email" placeholder="{{web.youExampleCom}}" required="" type="email"/>
+</div>
+<div class="form-group">
+<label for="reason"> {{web.reasonForDeletionOptional}} </label>
+<textarea id="reason" maxlength="2000" name="reason" placeholder="{{web.optionalDescriptionDoNotIncludeYourPassword}}" rows="3"></textarea>
+</div>
+<p> {{web.ifYouUsedAppleSHideMyEmail}} </p>
+<button type="submit"> {{web.sendDeletionRequest}} </button>
+<div aria-live="polite" class="status-msg" id="statusMsg" role="status"></div>
+<noscript> {{web.enableJavascriptToSendARequestOrEmail}} </noscript>
+</form>
+</section>
+<footer> {{web.2026WedoAllRightsReserved}} <a href="mailto:contact@durangezer.com">contact@durangezer.com</a>
+</footer>
+</div>
+<script>
+  async function handleDeletion(e) {
+    e.preventDefault();
+    var form = e.currentTarget;
+    if (!form.reportValidity()) return;
+    var button = form.querySelector('button[type="submit"]');
+    if (button.disabled) return;
+    var status = document.getElementById('statusMsg');
+    button.disabled = true;
+    status.classList.remove('error');
+    status.textContent = __FORM_PENDING__;
+    status.style.display = 'block';
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 30000);
+    try {
+      var response = await fetch('/legal/deletion-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept-Language': document.documentElement.lang },
+        signal: controller.signal,
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          reason: document.getElementById('reason').value.trim()
+        })
+      });
+      if (response.status !== 202) throw new Error('delivery-failed');
+      var result = await response.json();
+      status.textContent = result.message;
+      form.reset();
+    } catch (error) {
+      status.classList.add('error');
+      status.textContent = __FORM_FAILED__;
+    } finally {
+      clearTimeout(timer);
+      button.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

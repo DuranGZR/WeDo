@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -13,24 +15,41 @@ import { mono, spacing } from '@/design-system';
 
 const topics = [
   {
-    title: 'WeDo ne işe yarar?',
-    text: 'Gördüğün bir bağlantıyı ortak alanına kaydedersin. Sonra birlikte karar verir, tamamlandığında işaretlersiniz.',
+    get title() {
+      return t('settings.whatIsWedoFor');
+    },
+    get text() {
+      return t('settings.saveALinkToYourSharedSpaceDecideTogetherAnd');
+    },
   },
   {
-    title: 'Birini nasıl davet ederim?',
-    text: 'Ana sayfadaki “Partnerini davet et” kartından davet bağlantısını paylaş. Bağlantıyı açan kişi hesap açtıktan sonra alana katılır.',
+    get title() {
+      return t('settings.howDoIInviteSomeone');
+    },
+    get text() {
+      return t('settings.shareAnInviteLinkFromTheInviteYourPartnerCard');
+    },
   },
   {
-    title: 'Bağlantı nasıl eklenir?',
-    text: 'İstediğin uygulamada Paylaş’a basıp WeDo’yu seçebilirsin. İstersen bir listenin içinden “Bağlantı Ekle” ile de ekleyebilirsin.',
+    get title() {
+      return t('settings.howDoIAddALink');
+    },
+    get text() {
+      return t('settings.tapShareInAnyAppAndChooseWedoYouCan');
+    },
   },
   {
-    title: 'Bir kaydı tamamlandı olarak nasıl işaretlerim?',
-    text: 'Liste içindeki kayda dokun ve tamamlandı durumunu seç. Böylece ortak listenizde neyi gerçekten yaptığınızı takip edersiniz.',
+    get title() {
+      return t('settings.howDoIMarkAnItemAsDone');
+    },
+    get text() {
+      return t('settings.openAnItemInAListAndMarkItAs');
+    },
   },
 ];
 
 function HelpTopic({ title, text }: { title: string; text: string }) {
+  useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <Pressable
@@ -54,17 +73,21 @@ function HelpTopic({ title, text }: { title: string; text: string }) {
 }
 
 export default function HelpScreen() {
+  useTranslation();
   return (
-    <AccountScaffold title="Yardım & Destek" subtitle="WeDo’yu birlikte kullanmanın en kısa yolu.">
+    <AccountScaffold
+      title={t('settings.helpSupport')}
+      subtitle={t('settings.aQuickGuideToUsingWedoTogether')}
+    >
       <AccountCard>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
             <Ionicons name="sparkles" size={25} color={mono.paper} />
           </View>
           <View style={styles.heroCopy}>
-            <AppText variant="sectionTitle">Birlikte karar verin</AppText>
+            <AppText variant="sectionTitle">{t('settings.decideTogether')}</AppText>
             <AppText muted style={styles.heroText}>
-              Kaydet, paylaş, seç ve tamamla.
+              {t('settings.saveShareChooseAndMakeItHappen')}
             </AppText>
           </View>
         </View>
@@ -78,11 +101,11 @@ export default function HelpScreen() {
 
       <AccountCard>
         <AppText variant="caption" style={accountStyles.label}>
-          İLETİŞİM & DESTEK
+          {t('settings.contactSupport')}
         </AppText>
         <Pressable
           accessibilityRole="link"
-          accessibilityLabel="Destek e-postası gönder"
+          accessibilityLabel={t('settings.emailSupport')}
           onPress={() => void Linking.openURL('mailto:contact@durangezer.com')}
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
         >
@@ -95,17 +118,17 @@ export default function HelpScreen() {
 
         <Pressable
           accessibilityRole="link"
-          accessibilityLabel="Uygunsuz içerik veya kullanıcı bildirimi"
+          accessibilityLabel={t('settings.reportInappropriateContentOrAUser')}
           onPress={() =>
             void Linking.openURL(
-              'mailto:contact@durangezer.com?subject=WeDo%20Uygunsuz%20Icerik%20ve%20Kullanici%20Bildirimi'
+              `mailto:contact@durangezer.com?subject=${encodeURIComponent(t('settings.reportSubject'))}`,
             )
           }
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
         >
           <View style={styles.linkLeft}>
             <Ionicons name="flag-outline" size={18} color={mono.ink} />
-            <AppText style={styles.linkTitle}>İçerik / Kullanıcı Şikayet Et</AppText>
+            <AppText style={styles.linkTitle}>{t('settings.reportContentUser')}</AppText>
           </View>
           <Ionicons name="open-outline" size={16} color={mono.muted} />
         </Pressable>
@@ -113,30 +136,32 @@ export default function HelpScreen() {
 
       <AccountCard>
         <AppText variant="caption" style={accountStyles.label}>
-          YASAL
+          {t('settings.legal')}
         </AppText>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Gizlilik Politikası sayfasını aç"
+          accessibilityLabel={t('settings.openThePrivacyPolicy')}
           onPress={() => router.push('/legal/privacy' as never)}
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
         >
           <View style={styles.linkLeft}>
             <Ionicons name="document-text-outline" size={18} color={mono.ink} />
-            <AppText style={styles.linkTitle}>Gizlilik Politikası</AppText>
+            <AppText style={styles.linkTitle}>{t('common.privacyPolicy')}</AppText>
           </View>
           <Ionicons name="chevron-forward" size={16} color={mono.muted} />
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Kullanım Koşulları ve EULA sayfasını aç"
+          accessibilityLabel={t('settings.openTheTermsOfServiceAndEula')}
           onPress={() => router.push('/legal/terms' as never)}
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
         >
           <View style={styles.linkLeft}>
             <Ionicons name="shield-outline" size={18} color={mono.ink} />
-            <AppText style={styles.linkTitle}>Kullanım Koşulları ve EULA</AppText>
+            <AppText style={styles.linkTitle}>
+              {t('common.termsOfServiceAndEula')}
+            </AppText>
           </View>
           <Ionicons name="chevron-forward" size={16} color={mono.muted} />
         </Pressable>

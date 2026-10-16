@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation, Trans } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -17,26 +19,42 @@ const previewCards = [
   {
     source: 'instagram.com',
     title: 'Nomo Ramen 🍜',
-    detail: 'Can ekledi · 2 sa önce',
+    get detail() {
+      return t('auth.canAddedThis2hAgo');
+    },
     image:
       'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=500&auto=format&fit=crop',
-    tag: 'İkiniz de istiyorsunuz',
+    get tag() {
+      return t('auth.youBothWantThis');
+    },
   },
   {
     source: 'trendyol.com',
-    title: 'Nike ayakkabı',
-    detail: 'İpek ekledi · bugün',
+    get title() {
+      return t('auth.nikeShoes');
+    },
+    get detail() {
+      return t('auth.pekAddedThisToday');
+    },
     image:
       'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=500&auto=format&fit=crop',
-    tag: 'Alınacaklar',
+    get tag() {
+      return t('common.shopping');
+    },
   },
   {
     source: 'instagram.com',
-    title: 'Bu filmi izleyelim mi?',
-    detail: 'Can ekledi · dün',
+    get title() {
+      return t('auth.shallWeWatchThisMovie');
+    },
+    get detail() {
+      return t('auth.canAddedThisYesterday');
+    },
     image:
       'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop',
-    tag: 'İzlenecekler',
+    get tag() {
+      return t('common.watchlist');
+    },
   },
 ] as const;
 
@@ -50,12 +68,15 @@ type CardPose = {
 
 function cardPose(index: number, activeIndex: number): CardPose {
   const position = (index - activeIndex + previewCards.length) % previewCards.length;
-  if (position === 0) return { opacity: 1, rotate: -2, scale: 1, translateY: 10, zIndex: 3 };
-  if (position === 1) return { opacity: 0.84, rotate: 6, scale: 0.95, translateY: -7, zIndex: 2 };
+  if (position === 0)
+    return { opacity: 1, rotate: -2, scale: 1, translateY: 10, zIndex: 3 };
+  if (position === 1)
+    return { opacity: 0.84, rotate: 6, scale: 0.95, translateY: -7, zIndex: 2 };
   return { opacity: 0.55, rotate: -9, scale: 0.88, translateY: -28, zIndex: 1 };
 }
 
 export default function WelcomeScreen() {
+  useTranslation();
   const [deck, setDeck] = useState({ from: 0, to: 0 });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeIndexRef = useRef(0);
@@ -94,7 +115,10 @@ export default function WelcomeScreen() {
     const from = cardPose(index, deck.from);
     const to = cardPose(index, deck.to);
     return {
-      opacity: cardProgress.interpolate({ inputRange: [0, 1], outputRange: [from.opacity, to.opacity] }),
+      opacity: cardProgress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [from.opacity, to.opacity],
+      }),
       transform: [
         {
           rotate: cardProgress.interpolate({
@@ -108,7 +132,12 @@ export default function WelcomeScreen() {
             outputRange: [from.translateY, to.translateY],
           }),
         },
-        { scale: cardProgress.interpolate({ inputRange: [0, 1], outputRange: [from.scale, to.scale] }) },
+        {
+          scale: cardProgress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [from.scale, to.scale],
+          }),
+        },
       ],
       zIndex: to.zIndex,
     };
@@ -135,7 +164,7 @@ export default function WelcomeScreen() {
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Sonraki içerik kartını göster"
+          accessibilityLabel={t('auth.showTheNextSavedItem')}
           onPress={() => {
             showNextCard();
             startTimer();
@@ -143,7 +172,10 @@ export default function WelcomeScreen() {
           style={styles.previewStage}
         >
           {previewCards.map((card, index) => (
-            <Animated.View key={card.title} style={[styles.previewCard, getCardStyle(index)]}>
+            <Animated.View
+              key={card.title}
+              style={[styles.previewCard, getCardStyle(index)]}
+            >
               <Image
                 source={{ uri: card.image }}
                 style={styles.cardImage}
@@ -181,46 +213,50 @@ export default function WelcomeScreen() {
         </Pressable>
 
         <View style={styles.copy}>
-          <AppText style={styles.title}>Birlikte karar verin.</AppText>
+          <AppText style={styles.title}>{t('auth.decideTogether')}</AppText>
           <AppText style={styles.subtitle}>
-            Gördüğünüz her şeyi kaydedin, birlikte seçin ve planlayın.
+            {t('auth.saveWhatCatchesYourEyeChooseTogetherMakeAPlan')}
           </AppText>
         </View>
 
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Hesap oluştur"
+            accessibilityLabel={t('auth.createAccount')}
             onPress={() => router.push('/(auth)/sign-up')}
             style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
           >
-            <AppText style={styles.primaryButtonText}>Başlayalım</AppText>
+            <AppText style={styles.primaryButtonText}>{t('auth.getStarted')}</AppText>
             <Ionicons name="arrow-forward" size={18} color={onboardingColors.paper} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Giriş yap"
+            accessibilityLabel={t('common.signIn')}
             onPress={() => router.push('/(auth)/sign-in')}
             style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
           >
-            <AppText style={styles.secondaryButtonText}>Zaten bir hesabım var</AppText>
+            <AppText style={styles.secondaryButtonText}>
+              {t('auth.iAlreadyHaveAnAccount')}
+            </AppText>
           </Pressable>
           <AppText style={styles.legal}>
-            Devam ederek{' '}
-            <AppText
-              style={styles.legalLink}
-              onPress={() => router.push('/legal/terms' as never)}
-            >
-              Kullanım Koşulları
-            </AppText>
-            {' '}ve{' '}
-            <AppText
-              style={styles.legalLink}
-              onPress={() => router.push('/legal/privacy' as never)}
-            >
-              Gizlilik Politikası
-            </AppText>
-            &apos;nı kabul etmiş olursunuz.
+            <Trans
+              i18nKey="auth.continuingAgreement"
+              components={{
+                terms: (
+                  <AppText
+                    style={styles.legalLink}
+                    onPress={() => router.push('/legal/terms' as never)}
+                  />
+                ),
+                privacy: (
+                  <AppText
+                    style={styles.legalLink}
+                    onPress={() => router.push('/legal/privacy' as never)}
+                  />
+                ),
+              }}
+            />
           </AppText>
         </View>
       </View>

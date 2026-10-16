@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.localization import message
 from app.modules.activities.service import record_activity
 from app.modules.comments.models import Comment
 from app.modules.comments.repository import comment_repository
@@ -32,8 +33,8 @@ def create_comment(
         space_id=item.space_id,
         actor_id=user_id,
         notification_type="comment_created",
-        title="Yeni yorum",
-        body="Bir içeriğe yeni yorum eklendi.",
+        title=message("message.newComment"),
+        body=message("message.aNewCommentWasAddedToASavedItem"),
         data={"item_id": str(item.id), "comment_id": str(comment.id)},
     )
     session.commit()
@@ -52,10 +53,11 @@ def update_comment(
 ) -> CommentResponse:
     comment = comment_repository.get_by_id(session, comment_id)
     if comment is None:
-        raise HTTPException(status_code=404, detail="Yorum bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.commentNotFound"))
     if comment.user_id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Bu yorumu düzenleyemezsiniz."
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=message("message.youCanTEditThisComment"),
         )
     comment.body = data.body.strip()
     session.commit()
@@ -65,10 +67,11 @@ def update_comment(
 def delete_comment(session: Session, comment_id: UUID, user_id: UUID) -> None:
     comment = comment_repository.get_by_id(session, comment_id)
     if comment is None:
-        raise HTTPException(status_code=404, detail="Yorum bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.commentNotFound"))
     if comment.user_id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Bu yorumu silemezsiniz."
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=message("message.youCanTDeleteThisComment"),
         )
     comment.deleted_at = datetime.now(UTC)
     session.commit()

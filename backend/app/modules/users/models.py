@@ -12,6 +12,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    preferred_language: Mapped[str] = mapped_column(String(2), default="tr")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     notify_partner_activity: Mapped[bool] = mapped_column(Boolean, default=True)

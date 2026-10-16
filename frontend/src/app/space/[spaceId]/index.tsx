@@ -1,4 +1,6 @@
-﻿import { router, useLocalSearchParams } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, View, Platform } from 'react-native';
 import { AppText, EmptyState, Screen } from '@/components/ui';
 import { useLists } from '@/features/lists/hooks';
@@ -7,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from '@/design-system';
 
 export default function SpaceDetailScreen() {
+  useTranslation();
   const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
   const spaces = useSpaces();
   const lists = useLists(spaceId);
@@ -23,8 +26,8 @@ export default function SpaceDetailScreen() {
     return (
       <Screen>
         <EmptyState
-          title="Alan bulunamadı"
-          description="Bu alan silinmiş veya erişim iznin yok."
+          title={t('onboarding.spaceNotFound')}
+          description={t('spaces.thisSpaceWasDeletedOrYouDonTHaveAccess')}
         />
       </Screen>
     );
@@ -41,7 +44,7 @@ export default function SpaceDetailScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
@@ -54,14 +57,14 @@ export default function SpaceDetailScreen() {
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           onPress={() => router.push(`/(onboarding)/invite-member?spaceId=${spaceId}`)}
         >
-          <AppText style={styles.primaryBtnText}>Üye davet et</AppText>
+          <AppText style={styles.primaryBtnText}>{t('spaces.inviteAMember')}</AppText>
         </Pressable>
 
         {(lists.data?.data ?? []).length === 0 ? (
           <EmptyState
-            title="Henüz liste yok"
-            description="Bu alana bir liste ekleyerek başla."
-            action="Liste oluştur"
+            title={t('spaces.noListsYet')}
+            description={t('spaces.startByAddingAListToThisSpace')}
+            action={t('spaces.createList')}
             onAction={() => router.push(`/list/create?spaceId=${spaceId}`)}
           />
         ) : (
@@ -73,7 +76,9 @@ export default function SpaceDetailScreen() {
             >
               <View style={[styles.glassCard, { marginTop: 12 }]}>
                 <AppText variant="cardTitle">{list.name}</AppText>
-                <AppText muted>{list.is_default ? 'Varsayılan' : 'Ortak liste'}</AppText>
+                <AppText muted>
+                  {list.is_default ? t('spaces.default') : t('lists.sharedList')}
+                </AppText>
               </View>
             </Pressable>
           ))

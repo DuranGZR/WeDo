@@ -1,4 +1,6 @@
-﻿import { router } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,15 +8,52 @@ import { AppText, Card, Screen } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
 
 const options = [
-  { label: 'Sevgilimle', emoji: '🧡' },
-  { label: 'Arkadaşlarımla', emoji: '👥' },
-  { label: 'Ev arkadaşımla', emoji: '🏠' },
-  { label: 'Ailemle', emoji: '👨‍👩‍👧‍👦' },
-  { label: 'Bir grupla', emoji: '🎒' },
-  { label: 'Tek başıma', emoji: '🦊' },
+  {
+    id: 'option-1',
+    get label() {
+      return t('onboarding.withMyPartner');
+    },
+    emoji: '🧡',
+  },
+  {
+    id: 'option-2',
+    get label() {
+      return t('onboarding.withFriends');
+    },
+    emoji: '👥',
+  },
+  {
+    id: 'option-3',
+    get label() {
+      return t('onboarding.withAHousemate');
+    },
+    emoji: '🏠',
+  },
+  {
+    id: 'option-4',
+    get label() {
+      return t('onboarding.withFamily');
+    },
+    emoji: '👨‍👩‍👧‍👦',
+  },
+  {
+    id: 'option-5',
+    get label() {
+      return t('onboarding.withAGroup');
+    },
+    emoji: '🎒',
+  },
+  {
+    id: 'option-6',
+    get label() {
+      return t('onboarding.onMyOwn');
+    },
+    emoji: '🦊',
+  },
 ];
 
 export default function UsageTypeScreen() {
+  useTranslation();
   const [selected, setSelected] = useState('');
 
   return (
@@ -39,21 +78,21 @@ export default function UsageTypeScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="pageTitle" style={styles.title}>
-            WeDo’yu kiminle kullanacaksın?
+            {t('onboarding.whoWillYouUseWedoWith')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Buna göre sana uygun başlangıç listeleri hazırlayacağız.
+            {t('onboarding.weLlSuggestSomeListsToHelpYouGetStarted')}
           </AppText>
         </View>
 
         {/* Choice Grid */}
         <View style={styles.grid}>
           {options.map((option) => {
-            const isSelected = selected === option.label;
+            const isSelected = selected === option.id;
             return (
               <Pressable
-                key={option.label}
-                onPress={() => setSelected(option.label)}
+                key={option.id}
+                onPress={() => setSelected(option.id)}
                 style={styles.pressableCard}
               >
                 <Card style={[styles.optionCard, isSelected && styles.selectedCard]}>
@@ -86,7 +125,7 @@ export default function UsageTypeScreen() {
             (!selected || pressed) && styles.btnDisabled,
           ]}
         >
-          <AppText style={styles.primaryBtnText}>Devam et</AppText>
+          <AppText style={styles.primaryBtnText}>{t('onboarding.continue')}</AppText>
           <Ionicons name="arrow-forward" size={18} color={colors.surface} />
         </Pressable>
       </View>

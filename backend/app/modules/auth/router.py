@@ -34,7 +34,10 @@ router = APIRouter()
 
 
 def _auth_error(error: AuthError) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error))
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=error.args[0] if error.args else str(error),
+    )
 
 
 @router.post(

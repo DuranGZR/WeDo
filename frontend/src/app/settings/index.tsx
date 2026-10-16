@@ -1,3 +1,5 @@
+import { t, formatLocale } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -13,8 +15,10 @@ import {
 } from '@/features/account/components/AccountScaffold';
 import { mono, spacing } from '@/design-system';
 import { useAuthStore } from '@/store/auth-store';
+import { LanguagePicker } from '@/components/ui/LanguagePicker';
 
 export default function SettingsScreen() {
+  useTranslation();
   const { user, updateProfile } = useAuthStore();
   const { showToast } = useToast();
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
@@ -26,19 +30,22 @@ export default function SettingsScreen() {
   const saveProfile = async () => {
     if (displayName.trim().length < 2) {
       showToast({
-        title: 'Adını kontrol et',
-        message: 'Görünen ad en az 2 karakter olmalı.',
+        title: t('settings.checkYourName'),
+        message: t('settings.yourDisplayNameMustBeAtLeast2Characters'),
       });
       return;
     }
     setSaving(true);
     try {
       await updateProfile({ displayName });
-      showToast({ title: 'Profil güncellendi', message: 'Görünen adın kaydedildi.' });
+      showToast({
+        title: t('settings.profileUpdated'),
+        message: t('settings.yourDisplayNameHasBeenSaved'),
+      });
     } catch (error) {
       showToast({
-        title: 'Kaydedilemedi',
-        message: error instanceof Error ? error.message : 'Lütfen tekrar dene.',
+        title: t('settings.couldnTSave'),
+        message: error instanceof Error ? error.message : t('settings.pleaseTryAgain'),
       });
     } finally {
       setSaving(false);
@@ -47,44 +54,46 @@ export default function SettingsScreen() {
 
   return (
     <AccountScaffold
-      title="Hesap ayarları"
-      subtitle="Kimliğini, güvenliğini ve tercihlerini yönet."
+      title={t('settings.accountSettings')}
+      subtitle={t('settings.manageYourProfileSecurityAndPreferences')}
     >
       <AccountCard>
+        <LanguagePicker />
         <View style={styles.identityHeader}>
           <View style={styles.initialAvatar}>
             <AppText style={styles.initialText}>
-              {user?.display_name?.trim().charAt(0).toUpperCase() ?? 'W'}
+              {user?.display_name?.trim().charAt(0).toLocaleUpperCase(formatLocale()) ??
+                'W'}
             </AppText>
           </View>
           <View style={styles.identityCopy}>
-            <AppText variant="sectionTitle">Profilin</AppText>
+            <AppText variant="sectionTitle">{t('settings.yourProfile')}</AppText>
             <AppText muted style={styles.identityHint}>
-              WeDo’da yalnızca baş harfin görünür.
+              {t('settings.wedoShowsYourInitialInsteadOfAProfilePhoto')}
             </AppText>
           </View>
         </View>
         <TextField
-          label="Görünen ad"
+          label={t('settings.displayName')}
           value={displayName}
           onChangeText={setDisplayName}
           autoCapitalize="words"
           maxLength={80}
-          placeholder="Adın"
+          placeholder={t('auth.yourName')}
           returnKeyType="done"
         />
         <View style={styles.emailBox}>
           <Ionicons name="mail-outline" size={18} color={mono.ink} />
           <View style={styles.emailCopy}>
             <AppText variant="caption" muted>
-              E-posta adresi
+              {t('settings.emailAddress')}
             </AppText>
             <AppText numberOfLines={1}>{user?.email ?? '—'}</AppText>
           </View>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Profil değişikliklerini kaydet"
+          accessibilityLabel={t('settings.saveProfileChanges')}
           disabled={!isDirty || saving}
           onPress={() => void saveProfile()}
           style={({ pressed }) => [
@@ -99,27 +108,27 @@ export default function SettingsScreen() {
             <Ionicons name="checkmark" size={19} color={mono.paper} />
           )}
           <AppText style={accountStyles.primaryButtonText}>
-            {isDirty ? 'Değişiklikleri kaydet' : 'Değişiklikler kaydedildi'}
+            {isDirty ? t('settings.saveChanges') : t('settings.changesSaved')}
           </AppText>
         </Pressable>
       </AccountCard>
 
       <View style={styles.sectionGroup}>
         <AppText variant="caption" style={accountStyles.label}>
-          HESAP VE GÜVENLİK
+          {t('settings.accountSecurity')}
         </AppText>
         <AccountCard>
           <AccountRow
             icon="lock-closed-outline"
-            title="Şifre ve oturumlar"
-            description="Şifreni değiştir veya tüm cihazlardan çıkış yap"
+            title={t('settings.passwordSessions')}
+            description={t('settings.changeYourPasswordOrSignOutOfAllDevices')}
             onPress={() => router.push('/settings/security' as never)}
           />
           <View style={accountStyles.divider} />
           <AccountRow
             icon="notifications-outline"
-            title="Bildirimler"
-            description="Partner ve telefon bildirimlerini yönet"
+            title={t('common.notifications')}
+            description={t('settings.managePartnerAndPhoneNotifications')}
             onPress={() => router.push('/notifications')}
           />
         </AccountCard>
@@ -127,20 +136,20 @@ export default function SettingsScreen() {
 
       <View style={styles.sectionGroup}>
         <AppText variant="caption" style={accountStyles.label}>
-          BİLGİ VE DESTEK
+          {t('home.helpInformation')}
         </AppText>
         <AccountCard>
           <AccountRow
             icon="shield-checkmark-outline"
-            title="Gizlilik"
-            description="Verilerin ve ortak alanların nasıl korunduğu"
+            title={t('common.privacy')}
+            description={t('settings.howYourDataAndSharedSpacesAreProtected')}
             onPress={() => router.push('/settings/privacy' as never)}
           />
           <View style={accountStyles.divider} />
           <AccountRow
             icon="help-circle-outline"
-            title="Yardım ve kullanım"
-            description="WeDo’yu birlikte kullanma rehberi"
+            title={t('home.helpGettingStarted')}
+            description={t('home.yourGuideToUsingWedoTogether')}
             onPress={() => router.push('/settings/help' as never)}
           />
         </AccountCard>
@@ -148,13 +157,13 @@ export default function SettingsScreen() {
 
       <View style={styles.sectionGroup}>
         <AppText variant="caption" style={accountStyles.label}>
-          HESAP İŞLEMLERİ
+          {t('settings.accountActions')}
         </AppText>
         <AccountCard danger>
           <AccountRow
             icon="trash-outline"
-            title="Hesabı sil"
-            description="Hesabını ve verilerini kalıcı olarak sil"
+            title={t('settings.deleteAccount')}
+            description={t('settings.permanentlyDeleteYourAccountAndPersonalData')}
             onPress={() => router.push('/settings/delete-account' as never)}
             danger
           />

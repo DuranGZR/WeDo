@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -18,6 +20,7 @@ import { collaborationApi } from '@/features/collaboration/api';
 import { useSpaceStore } from '@/store/space-store';
 
 export default function InviteMemberScreen() {
+  useTranslation();
   const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
   const [sending, setSending] = useState(false);
   const [createdInvite, setCreatedInvite] = useState<{ invite_url: string } | null>(null);
@@ -31,7 +34,10 @@ export default function InviteMemberScreen() {
 
   async function shareInvitation() {
     if (!spaceId) {
-      Alert.alert('Alan bulunamadı', 'Davet oluşturmak için önce bir alan seç.');
+      Alert.alert(
+        t('onboarding.spaceNotFound'),
+        t('onboarding.chooseASpaceBeforeCreatingAnInvitation'),
+      );
       return;
     }
     setSending(true);
@@ -39,11 +45,12 @@ export default function InviteMemberScreen() {
       let inviteUrl = createdInvite?.invite_url;
       if (!inviteUrl) {
         const invitation = await collaborationApi.invite(spaceId);
-        if (!invitation.invite_url) throw new Error('Davet bağlantısı oluşturulamadı.');
+        if (!invitation.invite_url)
+          throw new Error(t('onboarding.weCouldnTCreateAnInviteLink'));
         inviteUrl = invitation.invite_url;
         setCreatedInvite({ invite_url: inviteUrl });
       }
-      const message = `WeDo'da birlikte kaydedelim. Daveti kabul et: ${inviteUrl}`;
+      const message = t('sharing.inviteMessage', { value0: inviteUrl });
       await Share.share(
         Platform.OS === 'ios'
           ? {
@@ -56,7 +63,10 @@ export default function InviteMemberScreen() {
       );
       goToHome();
     } catch {
-      Alert.alert('Davet paylaşılamadı', 'Bağlantıyı kontrol edip tekrar dene.');
+      Alert.alert(
+        t('onboarding.couldnTShareInvitation'),
+        t('common.checkTheLinkAndTryAgain'),
+      );
     } finally {
       setSending(false);
     }
@@ -70,7 +80,7 @@ export default function InviteMemberScreen() {
         onPress={goToHome}
         style={styles.backButton}
         accessibilityRole="button"
-        accessibilityLabel="Ana ekrana git"
+        accessibilityLabel={t('onboarding.goToHome')}
       >
         <Ionicons name="close" size={24} color={mono.ink} />
       </Pressable>
@@ -82,20 +92,19 @@ export default function InviteMemberScreen() {
             resizeMode="contain"
           />
           <AppText variant="pageTitle" style={styles.title}>
-            Partnerini davet et
+            {t('onboarding.inviteYourPartner')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Davet bağlantısını seçtiğin uygulamadan paylaş. Partnerin kabul edince bu alan
-            ortak olur.
+            {t('onboarding.shareTheInviteLinkUsingAnyAppOnceYourPartner')}
           </AppText>
         </View>
         <Card style={styles.card}>
           <View style={styles.icon}>
             <Ionicons name="people-outline" size={26} color={mono.ink} />
           </View>
-          <AppText variant="cardTitle">Tek kullanımlık davet</AppText>
+          <AppText variant="cardTitle">{t('onboarding.singleUseInvitation')}</AppText>
           <AppText muted style={styles.cardCopy}>
-            Bağlantı 7 gün geçerli olur ve yalnızca bir kişi katılabilir.
+            {t('onboarding.theLinkIsValidFor7DaysAndCanBe')}
           </AppText>
           <Pressable
             onPress={() => void shareInvitation()}
@@ -106,16 +115,15 @@ export default function InviteMemberScreen() {
               <ActivityIndicator color={mono.paper} />
             ) : (
               <>
-                <AppText style={styles.primaryText}>Davet bağlantısını paylaş</AppText>
+                <AppText style={styles.primaryText}>
+                  {t('onboarding.shareInviteLink')}
+                </AppText>
                 <Ionicons name="share-outline" size={18} color={mono.paper} />
               </>
             )}
           </Pressable>
-          <Pressable
-            onPress={goToHome}
-            style={styles.secondaryButton}
-          >
-            <AppText style={styles.secondaryText}>Şimdilik geç</AppText>
+          <Pressable onPress={goToHome} style={styles.secondaryButton}>
+            <AppText style={styles.secondaryText}>{t('onboarding.skipForNow')}</AppText>
           </Pressable>
         </Card>
       </View>

@@ -1,6 +1,7 @@
+import { t } from '@/i18n';
 export type PasswordStrength = {
   score: number;
-  label: 'Zayıf' | 'Orta' | 'Güçlü' | 'Çok güçlü';
+  label: string;
   checks: {
     length: boolean;
     uppercase: boolean;
@@ -18,7 +19,13 @@ export function getPasswordStrength(password: string): PasswordStrength {
   };
   const score = Object.values(checks).filter(Boolean).length;
   const label =
-    score <= 1 ? 'Zayıf' : score <= 2 ? 'Orta' : score === 3 ? 'Güçlü' : 'Çok güçlü';
+    score <= 1
+      ? t('auth.weak')
+      : score <= 2
+        ? t('auth.fair')
+        : score === 3
+          ? t('auth.strong')
+          : t('auth.veryStrong');
   return { score, label, checks };
 }
 

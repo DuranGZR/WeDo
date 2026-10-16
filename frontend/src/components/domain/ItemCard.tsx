@@ -1,3 +1,5 @@
+import { formatDate, t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, Image, Platform } from 'react-native';
 import { colors, mono, spacing, radius } from '@/design-system';
@@ -108,7 +110,8 @@ export function getItemSourceLabel(item: Item): string {
   if (domain.includes('trendyol') || domain === 'ty.gl' || domain.endsWith('.ty.gl')) {
     return 'Trendyol';
   }
-  if (domain.includes('amazon') || domain.includes('hepsiburada')) return 'Alışveriş';
+  if (domain.includes('amazon') || domain.includes('hepsiburada'))
+    return t('common.shopping_8436b');
   if (domain.includes('google') || domain.includes('maps')) return 'Mekan';
   return item.source_domain ?? 'Link';
 }
@@ -122,9 +125,11 @@ export function ItemCard({
   grid?: boolean;
   onPress: () => void;
 }) {
+  useTranslation();
   const [imageError, setImageError] = useState(false);
   const completed = item.status === 'completed';
-  const defaultFallback = 'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=300&auto=format&fit=crop&q=80';
+  const defaultFallback =
+    'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=300&auto=format&fit=crop&q=80';
   const imageUrl = imageError ? defaultFallback : getItemPreviewImage(item);
 
   const handlePress = () => {
@@ -136,7 +141,7 @@ export function ItemCard({
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={item.title ?? item.original_url ?? 'Kaydedilen içerik'}
+        accessibilityLabel={item.title ?? item.original_url ?? t('common.savedItem')}
         onPress={handlePress}
         style={({ pressed }) => [
           styles.gridCardPressable,
@@ -153,7 +158,7 @@ export function ItemCard({
           <View style={styles.gridDetails}>
             <View style={styles.gridMeta}>
               <Badge
-                label={completed ? 'Yapıldı' : 'Açık'}
+                label={completed ? t('lists.done') : t('common.open')}
                 tone={completed ? 'success' : 'neutral'}
               />
               <Badge label={getItemSourceLabel(item)} tone="accent" />
@@ -170,17 +175,17 @@ export function ItemCard({
             </View>
             <View style={{ gap: 2 }}>
               <AppText variant="cardTitle" style={styles.gridTitleText} numberOfLines={1}>
-                {item.title ?? 'Kaydedilen içerik'}
+                {item.title ?? t('common.savedItem')}
               </AppText>
               <AppText muted numberOfLines={1} style={styles.gridDescText}>
-                {item.description ?? item.original_url ?? 'Bağlantı yok'}
+                {item.description ?? item.original_url ?? t('common.noLink')}
               </AppText>
               <AppText variant="caption" muted numberOfLines={1}>
-                Ekleyen: {item.created_by_name}
+                {t('items.addedBy')} {item.created_by_name}
               </AppText>
             </View>
             <AppText variant="caption" muted style={styles.gridDateText}>
-              {new Date(item.created_at).toLocaleDateString('tr-TR')}
+              {formatDate(item.created_at)}
             </AppText>
           </View>
         </Card>
@@ -192,7 +197,7 @@ export function ItemCard({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={item.title ?? item.original_url ?? 'Kaydedilen içerik'}
+      accessibilityLabel={item.title ?? item.original_url ?? t('common.savedItem')}
       onPress={handlePress}
       style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
     >
@@ -209,7 +214,7 @@ export function ItemCard({
           <View style={styles.details}>
             <View style={styles.meta}>
               <Badge
-                label={completed ? 'Yapıldı' : 'Açık'}
+                label={completed ? t('lists.done') : t('common.open')}
                 tone={completed ? 'success' : 'neutral'}
               />
               <Badge label={getItemSourceLabel(item)} tone="accent" />
@@ -225,16 +230,16 @@ export function ItemCard({
               ) : null}
             </View>
             <AppText variant="cardTitle" style={styles.titleText} numberOfLines={1}>
-              {item.title ?? 'Kaydedilen içerik'}
+              {item.title ?? t('common.savedItem')}
             </AppText>
             <AppText muted numberOfLines={1} style={styles.descText}>
-              {item.description ?? item.original_url ?? 'Bağlantı yok'}
+              {item.description ?? item.original_url ?? t('common.noLink')}
             </AppText>
             <AppText variant="caption" muted numberOfLines={1}>
-              Ekleyen: {item.created_by_name}
+              {t('items.addedBy')} {item.created_by_name}
             </AppText>
             <AppText variant="caption" muted style={styles.dateText}>
-              {new Date(item.created_at).toLocaleDateString('tr-TR')}
+              {formatDate(item.created_at)}
             </AppText>
           </View>
         </View>

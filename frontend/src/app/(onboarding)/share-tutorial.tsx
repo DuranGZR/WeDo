@@ -1,4 +1,6 @@
-﻿import { router } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import { StyleSheet, View, Image, Platform, Pressable, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, Card, Screen } from '@/components/ui';
@@ -7,6 +9,7 @@ import { colors, spacing, radius } from '@/design-system';
 const { width } = Dimensions.get('window');
 
 export default function ShareTutorialScreen() {
+  useTranslation();
   return (
     <Screen scroll={true}>
       {/* Ambient Glow Background Blobs */}
@@ -21,7 +24,7 @@ export default function ShareTutorialScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
@@ -31,11 +34,10 @@ export default function ShareTutorialScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="largeTitle" style={styles.title}>
-            Gördüğün her şeyi WeDo’ya kaydet
+            {t('onboarding.saveWhatYouDiscoverToWedo')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            İnternette dolaşırken beğendiğin her şeyi 3 basit adımda ortak alanına
-            aktarabilirsin.
+            {t('onboarding.bringAnythingYouFindOnlineIntoYourSharedSpaceIn')}
           </AppText>
         </View>
 
@@ -46,16 +48,15 @@ export default function ShareTutorialScreen() {
             <View style={styles.cardHeaderRow}>
               <View style={styles.stepBadge}>
                 <AppText variant="caption" style={styles.stepBadgeText}>
-                  ADIM 1
+                  {t('onboarding.step1')}
                 </AppText>
               </View>
               <AppText variant="cardTitle" style={styles.stepTitle}>
-                Paylaş’a dokun
+                {t('onboarding.tapShare')}
               </AppText>
             </View>
             <AppText muted style={styles.stepDescription}>
-              Instagram, TikTok veya tarayıcında gezinirken beğendiğin içeriğin altındaki
-              paylaşım menüsünü aç.
+              {t('onboarding.findSomethingYouLikeOnInstagramTiktokOrTheWeb')}
             </AppText>
 
             {/* Mock Visual: Social Badges */}
@@ -98,15 +99,15 @@ export default function ShareTutorialScreen() {
             <View style={styles.cardHeaderRow}>
               <View style={styles.stepBadge}>
                 <AppText variant="caption" style={styles.stepBadgeText}>
-                  ADIM 2
+                  {t('onboarding.step2')}
                 </AppText>
               </View>
               <AppText variant="cardTitle" style={styles.stepTitle}>
-                WeDo’yu seç
+                {t('onboarding.chooseWedo')}
               </AppText>
             </View>
             <AppText muted style={styles.stepDescription}>
-              Açılan paylaşım listesinden WeDo’yu bul ve dokun.
+              {t('onboarding.findWedoInTheShareSheetAndTapIt')}
             </AppText>
 
             {/* Mock Visual: Share Sheet */}
@@ -120,7 +121,7 @@ export default function ShareTutorialScreen() {
                   />
                 </View>
                 <AppText variant="caption" muted style={styles.mockAppName}>
-                  Mesajlar
+                  {t('onboarding.messages')}
                 </AppText>
               </View>
               <View style={[styles.shareSheetItem, styles.activeShareItem]}>
@@ -141,7 +142,7 @@ export default function ShareTutorialScreen() {
                   <Ionicons name="mail-outline" size={18} color={colors.secondaryText} />
                 </View>
                 <AppText variant="caption" muted style={styles.mockAppName}>
-                  Posta
+                  {t('onboarding.mail')}
                 </AppText>
               </View>
               <View style={styles.shareSheetItem}>
@@ -153,7 +154,7 @@ export default function ShareTutorialScreen() {
                   />
                 </View>
                 <AppText variant="caption" muted style={styles.mockAppName}>
-                  Daha Fazla
+                  {t('onboarding.more')}
                 </AppText>
               </View>
             </View>
@@ -164,15 +165,15 @@ export default function ShareTutorialScreen() {
             <View style={styles.cardHeaderRow}>
               <View style={styles.stepBadge}>
                 <AppText variant="caption" style={styles.stepBadgeText}>
-                  ADIM 3
+                  {t('onboarding.step3')}
                 </AppText>
               </View>
               <AppText variant="cardTitle" style={styles.stepTitle}>
-                Listeyi belirle
+                {t('onboarding.chooseAList')}
               </AppText>
             </View>
             <AppText muted style={styles.stepDescription}>
-              İçeriğin kaydedileceği ortak listeyi seç, hepsi bu kadar!
+              {t('onboarding.pickTheSharedListToSaveItToThatS')}
             </AppText>
 
             {/* Mock Visual: Destination List */}
@@ -182,7 +183,7 @@ export default function ShareTutorialScreen() {
                   <AppText style={styles.emojiIcon}>🍽️</AppText>
                 </View>
                 <AppText variant="secondary" style={styles.mockListText}>
-                  Akşam Yemeği
+                  {t('onboarding.dinner')}
                 </AppText>
                 <Ionicons
                   name="chevron-forward"
@@ -193,13 +194,13 @@ export default function ShareTutorialScreen() {
               </View>
               <View style={[styles.mockListItem, styles.mockListItemSelected]}>
                 <View style={styles.mockListIcon}>
-                  <AppText style={styles.emojiIcon}>âœˆï¸</AppText>
+                  <AppText style={styles.emojiIcon}>✈️</AppText>
                 </View>
                 <AppText
                   variant="secondary"
                   style={[styles.mockListText, { fontWeight: '600' }]}
                 >
-                  Haftasonu Kaçamağı
+                  {t('onboarding.weekendGetaway')}
                 </AppText>
                 <View style={styles.mockCheck}>
                   <Ionicons name="checkmark" size={12} color={colors.surface} />
@@ -210,7 +211,7 @@ export default function ShareTutorialScreen() {
                   <AppText style={styles.emojiIcon}>🎬</AppText>
                 </View>
                 <AppText variant="secondary" style={styles.mockListText}>
-                  Filmler
+                  {t('onboarding.movies')}
                 </AppText>
                 <Ionicons
                   name="chevron-forward"
@@ -229,9 +230,9 @@ export default function ShareTutorialScreen() {
             onPress={() => router.replace('/(tabs)')}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
             accessibilityRole="button"
-            accessibilityLabel="Nasıl çalıştığını gördüm"
+            accessibilityLabel={t('onboarding.gotIt')}
           >
-            <AppText style={styles.primaryBtnText}>Nasıl çalıştığını gördüm</AppText>
+            <AppText style={styles.primaryBtnText}>{t('onboarding.gotIt')}</AppText>
             <Ionicons
               name="arrow-forward"
               size={18}
@@ -244,9 +245,9 @@ export default function ShareTutorialScreen() {
             onPress={() => router.replace('/(tabs)')}
             style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
             accessibilityRole="button"
-            accessibilityLabel="Daha sonra"
+            accessibilityLabel={t('onboarding.later')}
           >
-            <AppText style={styles.secondaryBtnText}>Daha sonra</AppText>
+            <AppText style={styles.secondaryBtnText}>{t('onboarding.later')}</AppText>
           </Pressable>
         </View>
       </View>

@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.localization import message
 from app.modules.lists.models import SpaceList
 from app.modules.lists.repository import list_repository
 from app.modules.lists.schemas import (
@@ -29,7 +30,7 @@ def create_list(
     if list_repository.get_by_space_and_name(session, space_id, normalized_name):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Bu isimde bir liste zaten var.",
+            detail=message("message.aListWithThisNameAlreadyExists"),
         )
     item = list_repository.create(
         session,
@@ -56,7 +57,8 @@ def get_list(session: Session, list_id: UUID) -> SpaceList:
     item = list_repository.get_by_id(session, list_id)
     if item is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Liste bulunamadı."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=message("message.listNotFound"),
         )
     return item
 
@@ -71,7 +73,7 @@ def update_list(session: Session, list_id: UUID, data: ListUpdate) -> ListRespon
         if duplicate and duplicate.id != item.id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Bu isimde bir liste zaten var.",
+                detail=message("message.aListWithThisNameAlreadyExists"),
             )
         item.name = data.name.strip()
         item.normalized_name = normalized_name
@@ -97,7 +99,7 @@ def reorder_lists(
     if set(by_id) != set(data.list_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Liste sıralaması alanla eşleşmiyor.",
+            detail=message("message.theListOrderDoesnTMatchThisSpace"),
         )
     for position, list_id in enumerate(data.list_ids, start=1):
         by_id[list_id].position = position * 100

@@ -1,4 +1,6 @@
-﻿import { router, useLocalSearchParams } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   View,
@@ -16,8 +18,8 @@ import { AppText, Screen, TextField } from '@/components/ui';
 import { collaborationApi } from '@/features/collaboration/api';
 import { colors, radius, spacing } from '@/design-system';
 
-
 export default function CreateMemoryScreen() {
+  useTranslation();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const [note, setNote] = useState('');
   const [rating, setRating] = useState('');
@@ -28,7 +30,10 @@ export default function CreateMemoryScreen() {
     if (Platform.OS !== 'web') {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionResult.granted === false) {
-        Alert.alert('İzin Gerekli', 'Fotoğraflarınıza erişim izni vermeniz gerekmektedir.');
+        Alert.alert(
+          t('memories.permissionNeeded'),
+          t('memories.pleaseAllowAccessToYourPhotos'),
+        );
         return;
       }
     }
@@ -76,27 +81,27 @@ export default function CreateMemoryScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
       </View>
 
       <View style={styles.content}>
-        <AppText variant="pageTitle">Anı ekle</AppText>
+        <AppText variant="pageTitle">{t('memories.addAMemory')}</AppText>
 
         <View style={styles.glassCard}>
           <TextField
             value={note}
             onChangeText={setNote}
-            placeholder="Bu içerikle ilgili notun"
+            placeholder={t('memories.yourNoteAboutThisItem')}
             multiline
           />
           <View style={{ height: spacing.md }} />
           <TextField
             value={rating}
             onChangeText={setRating}
-            placeholder="Puan (1-5)"
+            placeholder={t('memories.rating15')}
             keyboardType="number-pad"
           />
 
@@ -104,7 +109,7 @@ export default function CreateMemoryScreen() {
 
           {/* Memory Photo Picker */}
           <AppText variant="caption" muted style={styles.photoSectionLabel}>
-            ANI FOTOĞRAFI
+            {t('memories.memoryPhoto')}
           </AppText>
           {imageUri ? (
             <View style={styles.imagePreviewContainer}>
@@ -125,10 +130,12 @@ export default function CreateMemoryScreen() {
                 pressed && styles.btnPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Fotoğraf ekle"
+              accessibilityLabel={t('memories.addPhoto')}
             >
               <Ionicons name="camera-outline" size={24} color={colors.accent} />
-              <AppText style={styles.photoPickerText}>Fotoğraf Ekle</AppText>
+              <AppText style={styles.photoPickerText}>
+                {t('memories.addPhoto_683a3')}
+              </AppText>
             </Pressable>
           )}
         </View>
@@ -149,7 +156,7 @@ export default function CreateMemoryScreen() {
           {saving ? (
             <ActivityIndicator color={colors.surface} />
           ) : (
-            <AppText style={styles.primaryBtnText}>Anıyı kaydet</AppText>
+            <AppText style={styles.primaryBtnText}>{t('memories.saveMemory')}</AppText>
           )}
         </Pressable>
       </View>

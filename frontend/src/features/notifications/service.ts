@@ -1,3 +1,4 @@
+import { t, currentLanguage } from '@/i18n';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,14 +10,15 @@ export async function registerForPushNotifications(accessToken: string) {
   if (Platform.OS === 'web') return false;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('wedo-updates', {
-      name: 'WeDo güncellemeleri',
+      name: t('notifications.wedoUpdates'),
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
   const existing = await Notifications.getPermissionsAsync();
-  const permission = existing.status === Notifications.PermissionStatus.GRANTED
-    ? existing
-    : await Notifications.requestPermissionsAsync();
+  const permission =
+    existing.status === Notifications.PermissionStatus.GRANTED
+      ? existing
+      : await Notifications.requestPermissionsAsync();
   if (permission.status !== Notifications.PermissionStatus.GRANTED) return false;
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
@@ -34,6 +36,7 @@ export async function registerForPushNotifications(accessToken: string) {
       device_id: deviceId,
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
       push_token: token.data,
+      language: currentLanguage(),
     },
   });
   return true;

@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
@@ -27,12 +29,21 @@ export function GoogleAuthButton({
   style,
   onSuccess,
 }: GoogleAuthButtonProps) {
+  useTranslation();
   const [loading, setLoading] = useState(false);
   const pending = useRef(false);
   const signInWithGoogle = useAuthStore((state) => state.signInWithGoogle);
   const { showToast } = useToast();
 
   const handleGoogleAuth = async () => {
+    if (Platform.OS === 'web') {
+      showToast({
+        title: t('auth.continueWithGoogle'),
+        message: t('auth.socialSignInInIphoneApp'),
+        type: 'info',
+      });
+      return;
+    }
     if (pending.current) return;
     pending.current = true;
     setLoading(true);
@@ -49,8 +60,8 @@ export function GoogleAuthButton({
     } catch (error: unknown) {
       const err = error as { message?: string };
       showToast({
-        title: 'Giriş Başarısız',
-        message: err.message ?? 'Google ile oturum açılırken bir hata oluştu.',
+        title: t('auth.signInFailed'),
+        message: err.message ?? t('auth.somethingWentWrongSigningInWithGoogle'),
       });
     } finally {
       pending.current = false;
@@ -58,7 +69,7 @@ export function GoogleAuthButton({
     }
   };
 
-  if (Platform.OS !== 'ios') return null;
+  if (Platform.OS !== 'ios' && Platform.OS !== 'web') return null;
 
   if (loading) {
     return (
@@ -71,7 +82,7 @@ export function GoogleAuthButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Google ile devam et"
+      accessibilityLabel={t('auth.continueWithGoogle')}
       onPress={() => void handleGoogleAuth()}
       style={({ pressed }) => [styles.button, style, pressed && styles.pressed]}
     >
@@ -80,7 +91,7 @@ export function GoogleAuthButton({
         style={styles.iconImage}
         resizeMode="contain"
       />
-      <AppText style={styles.buttonText}>Google ile Devam Et</AppText>
+      <AppText style={styles.buttonText}>{t('auth.continueWithGoogle_99694')}</AppText>
     </Pressable>
   );
 }

@@ -2,6 +2,7 @@ import ipaddress
 import socket
 from urllib.parse import urlsplit
 
+from app.core.localization import message
 from app.modules.metadata.exceptions import MetadataError
 
 
@@ -28,28 +29,28 @@ def validate_and_resolve_url(url: str) -> tuple[str, int, str]:
     """
     parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise MetadataError("Yalnızca http ve https bağlantıları desteklenir.")
+        raise MetadataError(message("message.onlyHttpAndHttpsLinksAreSupported"))
 
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
 
     try:
-        results = socket.getaddrinfo(
-            parsed.hostname, port, type=socket.SOCK_STREAM
-        )
+        results = socket.getaddrinfo(parsed.hostname, port, type=socket.SOCK_STREAM)
         addresses = [result[4][0] for result in results]
     except socket.gaierror as error:
-        raise MetadataError("Bağlantı adresi çözümlenemedi.") from error
+        raise MetadataError(
+            message("message.weCouldnTResolveThisLinkSAddress")
+        ) from error
 
     if not addresses or not all(_is_public_ip(address) for address in addresses):
-        raise MetadataError("Özel veya yerel ağ adreslerine erişilemez.")
+        raise MetadataError(
+            message("message.linksToPrivateOrLocalNetworksArenTAllowed")
+        )
 
     if port not in {80, 443, 8080, 8443}:
-        raise MetadataError("Yalnızca standart web portları desteklenir.")
-
+        raise MetadataError(message("message.onlyStandardWebPortsAreSupported"))
 
     return parsed.hostname, port, addresses[0]
 
 
 def validate_url(url: str) -> None:
     validate_and_resolve_url(url)
-

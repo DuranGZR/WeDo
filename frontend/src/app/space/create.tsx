@@ -1,4 +1,6 @@
-﻿import { router } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
@@ -16,9 +18,14 @@ import { useCreateSpace } from '@/features/spaces/hooks';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth-store';
 
-const suggestions = ['Bizim Alanımız', 'Hafta Sonu Planları', 'Birlikte Yapacaklarımız'];
+const suggestions = () => [
+  t('spaces.ourSpace'),
+  t('spaces.weekendPlans'),
+  t('spaces.thingsToDoTogether'),
+];
 
 export default function CreateSpaceScreen() {
+  useTranslation();
   const [name, setName] = useState('');
   const create = useCreateSpace();
 
@@ -34,7 +41,7 @@ export default function CreateSpaceScreen() {
 
   async function submit() {
     if (name.trim().length < 2) {
-      Alert.alert('Alan adı gerekli', 'En az iki karakter kullan.');
+      Alert.alert(t('spaces.spaceNameRequired'), t('validation.minTwo'));
       return;
     }
     try {
@@ -42,7 +49,10 @@ export default function CreateSpaceScreen() {
       // Redirect to invite screen for this newly created space
       router.replace(`/(onboarding)/invite-member?spaceId=${space.id}`);
     } catch {
-      Alert.alert('Alan oluşturulamadı', 'Bağlantını kontrol edip tekrar dene.');
+      Alert.alert(
+        t('spaces.couldnTCreateSpace'),
+        t('lists.checkYourConnectionAndTryAgain'),
+      );
     }
   }
 
@@ -61,12 +71,11 @@ export default function CreateSpaceScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
       </View>
-
 
       <View style={styles.content}>
         {/* Logo and Title */}
@@ -77,10 +86,10 @@ export default function CreateSpaceScreen() {
             resizeMode="contain"
           />
           <AppText variant="pageTitle" style={styles.title}>
-            Ortak alanına bir isim ver
+            {t('spaces.giveYourSharedSpaceAName')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Bu isim yalnızca alan üyeleri tarafından görülür.
+            {t('spaces.onlyMembersOfThisSpaceCanSeeItsName')}
           </AppText>
         </View>
 
@@ -89,8 +98,8 @@ export default function CreateSpaceScreen() {
           <View style={styles.form}>
             <TextField
               autoFocus
-              label="Alan Adı"
-              placeholder="Örn. İpek & Can"
+              label={t('spaces.spaceName')}
+              placeholder={t('spaces.eGPekCan')}
               value={name}
               onChangeText={setName}
             />
@@ -98,10 +107,10 @@ export default function CreateSpaceScreen() {
             {/* Interactive Suggestions Chips */}
             <View style={styles.suggestionsContainer}>
               <AppText variant="caption" muted style={styles.suggestionsLabel}>
-                Öneriler:
+                {t('spaces.suggestions')}
               </AppText>
               <View style={styles.chipsWrapper}>
-                {suggestions.map((suggestion) => (
+                {suggestions().map((suggestion) => (
                   <Pressable
                     key={suggestion}
                     onPress={() => setName(suggestion)}
@@ -136,7 +145,9 @@ export default function CreateSpaceScreen() {
                 <ActivityIndicator color={colors.surface} />
               ) : (
                 <>
-                  <AppText style={styles.primaryBtnText}>Alanı oluştur</AppText>
+                  <AppText style={styles.primaryBtnText}>
+                    {t('spaces.createSpace')}
+                  </AppText>
                   <Ionicons name="arrow-forward" size={18} color={colors.surface} />
                 </>
               )}

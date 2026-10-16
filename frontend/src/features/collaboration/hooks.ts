@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { haptic } from '@/lib/haptics';
+import { useLanguageStore } from '@/store/language-store';
 import { collaborationApi } from './api';
 
 export function useSpaceMembers(spaceId: string) {
@@ -11,10 +12,20 @@ export function useSpaceMembers(spaceId: string) {
 }
 
 export function useSpaceActivities(spaceId: string) {
+  const language = useLanguageStore((state) => state.language);
   return useQuery({
-    queryKey: ['spaces', spaceId, 'activities'],
+    queryKey: ['spaces', spaceId, 'activities', language],
     queryFn: () => collaborationApi.activities(spaceId),
     enabled: Boolean(spaceId),
+  });
+}
+
+export function useItemActivities(itemId: string) {
+  const language = useLanguageStore((state) => state.language);
+  return useQuery({
+    queryKey: ['items', itemId, 'activities', language],
+    queryFn: () => collaborationApi.activitiesForItem(itemId),
+    enabled: Boolean(itemId),
   });
 }
 
@@ -54,8 +65,9 @@ export function useSpaceMemories(spaceId: string) {
 }
 
 export function useNotifications() {
+  const language = useLanguageStore((state) => state.language);
   return useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', language],
     queryFn: () => collaborationApi.notifications(),
   });
 }

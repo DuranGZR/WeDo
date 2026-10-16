@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, status
 
 from app.api.dependencies import SessionDep
+from app.core.localization import message
 from app.core.pagination import PageResponse, PaginationDep, paginate
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.lists.repository import list_repository
@@ -62,7 +63,7 @@ def reorder_lists_endpoint(
     if item is None:
         from fastapi import HTTPException
 
-        raise HTTPException(status_code=404, detail="Liste bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.listNotFound"))
     get_space_member(session, item.space_id, current_user.id)
     return reorder_lists(session, item.space_id, data)
 

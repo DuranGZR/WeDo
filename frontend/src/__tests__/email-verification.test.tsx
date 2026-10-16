@@ -1,8 +1,9 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
 import VerifyEmailScreen from '@/app/(auth)/verify-email';
 import { resendVerification, verifyEmail } from '@/features/auth/email-verification';
+import { i18n } from '@/i18n';
 
 jest.mock('expo-router', () => ({
   router: { replace: jest.fn() },
@@ -38,7 +39,28 @@ jest.mock('@/components/ui', () => {
 });
 
 describe('Email verification screen', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await i18n.changeLanguage('tr');
+  });
+
+  it('keeps the verification code and invitation when switching to English', async () => {
+    jest.mocked(verifyEmail).mockResolvedValue(undefined);
+    const screen = render(<VerifyEmailScreen />);
+    fireEvent.changeText(screen.getByLabelText('Doğrulama kodu'), '123456');
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+    expect(screen.getByLabelText('Verification code').props.value).toBe('123456');
+    fireEvent.press(screen.getByRole('button', { name: 'Verify email' }));
+    await waitFor(() => expect(screen.getByText('Email verified')).toBeTruthy());
+    fireEvent.press(screen.getByText('Sign in'));
+    expect(verifyEmail).toHaveBeenCalledWith('challenge-id', '123456');
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/(auth)/sign-in',
+      params: { email: 'test@example.com', inviteToken: 'test-invite' },
+    });
+  });
 
   it('requires six digits, verifies and preserves the invitation at login', async () => {
     jest.mocked(verifyEmail).mockResolvedValue(undefined);

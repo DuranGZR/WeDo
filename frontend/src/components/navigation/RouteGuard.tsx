@@ -40,7 +40,11 @@ export function RouteGuard() {
       />
       <Stack.Screen
         name="(tabs)"
-        options={{ animation: 'fade', animationDuration: 180, animationTypeForReplace: 'push' }}
+        options={{
+          animation: 'fade',
+          animationDuration: 180,
+          animationTypeForReplace: 'push',
+        }}
       />
       <Stack.Screen name="(onboarding)" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen

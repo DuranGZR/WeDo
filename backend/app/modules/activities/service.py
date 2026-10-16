@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.localization import CATALOGS, message
 from app.modules.activities.models import Activity
 from app.modules.activities.repository import activity_repository
 from app.modules.activities.schemas import ActivityResponse
@@ -32,13 +33,29 @@ def record_activity(
 
 def list_activities(session: Session, space_id: UUID) -> list[ActivityResponse]:
     return [
-        ActivityResponse.model_validate(item, from_attributes=True)
+        ActivityResponse.model_validate(item, from_attributes=True).model_copy(
+            update={
+                "action": message(
+                    "activity." + item.type
+                    if "activity." + item.type in CATALOGS["en"]
+                    else "activity.generic"
+                )
+            }
+        )
         for item in activity_repository.list_for_space(session, space_id)
     ]
 
 
 def list_item_activities(session: Session, item_id: UUID) -> list[ActivityResponse]:
     return [
-        ActivityResponse.model_validate(item, from_attributes=True)
+        ActivityResponse.model_validate(item, from_attributes=True).model_copy(
+            update={
+                "action": message(
+                    "activity." + item.type
+                    if "activity." + item.type in CATALOGS["en"]
+                    else "activity.generic"
+                )
+            }
+        )
         for item in activity_repository.list_for_entity(session, "item", item_id)
     ]

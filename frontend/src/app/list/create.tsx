@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -18,13 +20,17 @@ import { mono, spacing } from '@/design-system';
 const { width } = Dimensions.get('window');
 
 export default function CreateListScreen() {
+  useTranslation();
   const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
   const [name, setName] = useState('');
   const create = useCreateList(spaceId ?? '');
 
   async function submit() {
     if (!spaceId || name.trim().length < 2) {
-      Alert.alert('Hata', 'Lütfen en az 2 karakter uzunluğunda bir liste adı girin.');
+      Alert.alert(
+        t('items.error'),
+        t('lists.pleaseEnterAListNameWithAtLeast2Characters'),
+      );
       return;
     }
     try {
@@ -32,7 +38,7 @@ export default function CreateListScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace(`/list/${list.id}`);
     } catch {
-      Alert.alert('Liste oluşturulamadı', 'Bağlantıyı kontrol edip tekrar dene.');
+      Alert.alert(t('home.couldnTCreateList'), t('common.checkTheLinkAndTryAgain'));
     }
   }
 
@@ -50,21 +56,20 @@ export default function CreateListScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={mono.ink} />
         </Pressable>
       </View>
 
-
       <View style={styles.content}>
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="largeTitle" style={styles.title}>
-            Yeni Liste
+            {t('lists.newList')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Birlikte kaydetmek istediğiniz içerikler için yeni bir ortak liste oluşturun.
+            {t('lists.createASharedListForTheThingsYouWantTo')}
           </AppText>
         </View>
 
@@ -80,11 +85,11 @@ export default function CreateListScreen() {
 
             {/* List Name Input */}
             <TextField
-              label="Liste Adı"
+              label={t('lists.listName')}
               autoFocus
               value={name}
               onChangeText={setName}
-              placeholder="Örn. Gidilecek yerler, Filmler, Yemekler..."
+              placeholder={t('lists.eGPlacesMoviesFood')}
             />
 
             {/* Action Button */}
@@ -96,13 +101,13 @@ export default function CreateListScreen() {
                 (pressed || isBtnDisabled) && styles.btnDisabled,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Listeyi oluştur"
+              accessibilityLabel={t('lists.createList')}
             >
               {create.isPending ? (
                 <ActivityIndicator color={mono.paper} />
               ) : (
                 <>
-                  <AppText style={styles.primaryBtnText}>Listeyi oluştur</AppText>
+                  <AppText style={styles.primaryBtnText}>{t('lists.createList')}</AppText>
                   <Ionicons
                     name="arrow-forward"
                     size={18}

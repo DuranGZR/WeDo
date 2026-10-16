@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.localization import message
 from app.modules.activities.service import record_activity
 from app.modules.items.enums import ItemStatus
 from app.modules.items.service import get_item
@@ -22,7 +23,9 @@ def _response(plan: Plan) -> PlanResponse:
 def create_plan(session: Session, user_id: UUID, data: PlanCreate) -> PlanResponse:
     item = get_item(session, data.item_id)
     if item.space_id != data.space_id:
-        raise HTTPException(status_code=400, detail="Öğe aynı alana ait olmalı.")
+        raise HTTPException(
+            status_code=400, detail=message("message.theItemMustBelongToTheSameSpace")
+        )
     plan = Plan(
         space_id=data.space_id,
         item_id=data.item_id,
@@ -84,8 +87,8 @@ def process_due_reminders(session: Session, now: datetime | None = None) -> int:
             space_id=plan.space_id,
             actor_id=plan.created_by,
             notification_type="plan_reminder",
-            title="Plan hatırlatması",
-            body="Yaklaşan bir planınız var.",
+            title=message("message.planReminder"),
+            body=message("message.youHaveAnUpcomingPlan"),
             data={"plan_id": str(plan.id), "item_id": str(plan.item_id)},
         )
         reminder.sent_at = current_time
@@ -98,7 +101,7 @@ def process_due_reminders(session: Session, now: datetime | None = None) -> int:
 def get_plan(session: Session, plan_id: UUID) -> Plan:
     plan = plan_repository.get_by_id(session, plan_id)
     if plan is None:
-        raise HTTPException(status_code=404, detail="Plan bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.planNotFound"))
     return plan
 
 
@@ -106,7 +109,8 @@ def update_plan(session: Session, plan_id: UUID, data: PlanUpdate) -> PlanRespon
     plan = get_plan(session, plan_id)
     if plan.status in {PlanStatus.COMPLETED, PlanStatus.CANCELLED}:
         raise HTTPException(
-            status_code=409, detail="Tamamlanan veya iptal edilen plan güncellenemez."
+            status_code=409,
+            detail=message("message.completedOrCancelledPlansCanTBeUpdated"),
         )
     if data.scheduled_at is not None:
         plan.scheduled_at = data.scheduled_at

@@ -1,4 +1,7 @@
-﻿import { useLocalSearchParams, router } from 'expo-router';
+import { formatLocale, searchText, t } from '@/i18n';
+
+import { useTranslation } from 'react-i18next';
+import { useLocalSearchParams, router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View, Pressable, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +13,8 @@ import { colors, spacing, radius } from '@/design-system';
 const { width } = Dimensions.get('window');
 
 export default function ListSearchScreen() {
+  useTranslation();
+  const locale = formatLocale();
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const [query, setQuery] = useState('');
   const items = useItems(listId);
@@ -17,11 +22,12 @@ export default function ListSearchScreen() {
   const filtered = useMemo(
     () =>
       (items.data?.data ?? []).filter((item) =>
-        `${item.title ?? ''} ${item.description ?? ''} ${item.source_domain ?? ''}`
-          .toLocaleLowerCase('tr-TR')
-          .includes(query.toLocaleLowerCase('tr-TR')),
+        searchText(
+          `${item.title ?? ''} ${item.description ?? ''} ${item.source_domain ?? ''}`,
+          locale,
+        ).includes(searchText(query, locale)),
       ),
-    [items.data, query],
+    [items.data, query, locale],
   );
 
   return (
@@ -40,7 +46,7 @@ export default function ListSearchScreen() {
           }
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
@@ -50,10 +56,10 @@ export default function ListSearchScreen() {
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="largeTitle" style={styles.title}>
-            Listede Ara
+            {t('lists.searchThisList_d4145')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Aradığın bir içeriği başlığına veya web sitesi adına göre bul.
+            {t('lists.findASavedItemByItsTitleOrWebsite')}
           </AppText>
         </View>
 
@@ -69,7 +75,7 @@ export default function ListSearchScreen() {
             <TextField
               value={query}
               onChangeText={setQuery}
-              placeholder="Örn: Restoran adı, yemek, film..."
+              placeholder={t('lists.eGARestaurantRecipeOrMovie')}
               autoFocus
               style={styles.searchInput}
             />
@@ -87,11 +93,10 @@ export default function ListSearchScreen() {
               </View>
             </View>
             <AppText variant="sectionTitle" style={styles.emptyTitle}>
-              Sonuç bulunamadı
+              {t('lists.noResults')}
             </AppText>
             <AppText muted style={styles.emptySubtitle}>
-              &quot;{query}&quot; aramasıyla eşleşen bir kayıt bulunamadı. Lütfen
-              kelimeleri kontrol edip tekrar deneyin.
+              {t('lists.noSavedItemsMatchValueCheckYourSearchAndTry', { value0: query })}
             </AppText>
           </Card>
         ) : (

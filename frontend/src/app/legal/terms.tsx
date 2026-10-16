@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
@@ -6,16 +8,17 @@ import { AppText, Screen } from '@/components/ui';
 import { mono, radius, spacing } from '@/design-system';
 
 export default function LegalTermsScreen() {
+  useTranslation();
   return (
     <Screen scroll={true} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <AppText variant="screenTitle" style={styles.title}>
-            Kullanım Koşulları ve EULA
+            {t('common.termsOfServiceAndEula')}
           </AppText>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Kapat"
+            accessibilityLabel={t('legal.close')}
             onPress={() => router.back()}
             style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
           >
@@ -23,77 +26,72 @@ export default function LegalTermsScreen() {
           </Pressable>
         </View>
         <AppText muted style={styles.date}>
-          Son Güncelleme: 1 Ocak 2026
+          {t('legal.lastUpdated1January2026')}
         </AppText>
       </View>
 
       <View style={styles.content}>
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            1. Sözleşmenin Kabulü
+            {t('legal.1AcceptanceOfTheseTerms')}
           </AppText>
           <AppText style={styles.paragraph}>
-            WeDo uygulamasını indirerek, hesap oluşturarak veya kullanarak bu Kullanım Koşulları
-            ve Son Kullanıcı Lisans Sözleşmesi&apos;ni (EULA) kabul etmiş sayılırsınız. Şartları kabul
-            etmiyorsanız lütfen uygulamayı kullanmayınız.
+            {t('legal.byDownloadingWedoCreatingAnAccountOrUsingTheApp')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            2. Kullanıcı İçeriği ve Sıfır Tolerans Politikası (Apple Standardı)
+            {t('legal.2UserContentAndZeroTolerancePolicy')}
           </AppText>
+          <AppText style={styles.paragraph}>{t('legal.userContentPolicy')}</AppText>
           <AppText style={styles.paragraph}>
-            WeDo, kullanıcıların ortak alanlarda bağlantı, not, fotoğraf ve liste paylaşmasına olanak tanır.
-            Uygulamamızda sakıncalı içeriğe ve kötü niyetli kullanıcılara karşı <AppText style={styles.bold}>SIFIR TOLERANS</AppText> politikası uygulanmaktadır.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            Aşağıdaki nitelikteki içeriklerin paylaşılması kesinlikle yasaktır:
+            {t('legal.theFollowingContentIsProhibited')}
           </AppText>
           <AppText style={styles.bullet}>
-            • Taciz, nefret söylemi, ayrımcılık veya tehdit içeren paylaşımlar.
+            {t('legal.harassmentHateSpeechDiscriminationOrThreats')}
           </AppText>
           <AppText style={styles.bullet}>
-            • Müstehcen, pornografik veya şiddet içerikli görseller ve metinler.
+            {t('legal.obscenePornographicOrViolentImagesAndText')}
           </AppText>
           <AppText style={styles.bullet}>
-            • Başkalarının telif haklarını veya fikri mülkiyetini ihlal eden materyaller.
+            {t('legal.materialThatInfringesCopyrightOrOtherIntellectualPropertyRights')}
           </AppText>
           <AppText style={styles.bullet}>
-            • Yasa dışı faaliyetleri teşvik eden içerikler.
+            {t('legal.contentThatPromotesIllegalActivities')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            3. Şikayet ve Denetim Mekanizması
+            {t('legal.3ReportsAndModeration')}
+          </AppText>
+          <AppText style={styles.paragraph}>{t('legal.reportPolicy')}</AppText>
+        </View>
+
+        <View style={styles.section}>
+          <AppText variant="sectionTitle" style={styles.sectionTitle}>
+            {t('legal.4AccountSecurityAndTermination')}
           </AppText>
           <AppText style={styles.paragraph}>
-            Herhangi bir uygunsuz içerik veya rahatsız edici kullanıcı davranışı ile karşılaşırsanız,
-            uygulama içindeki Yardım menüsünden veya doğrudan <AppText style={styles.bold}>contact@durangezer.com</AppText> adresinden bildirimde bulunabilirsiniz.
-            Şikayet edilen içerikler en geç 24 saat içinde incelenir, sakıncalı içerikler kaldırılır ve kural ihlali yapan kullanıcıların hesapları askıya alınır veya kalıcı olarak sonlandırılır.
+            {t('legal.youAreResponsibleForKeepingYourAccountSecureYouMay')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            4. Hesap Güvenliği ve Fesih
+            {t('legal.5SupportAndContact')}
           </AppText>
           <AppText style={styles.paragraph}>
-            Kullanıcılar hesap güvenliklerinden sorumludur. Hesabınızı dilediğiniz zaman Ayarlar &gt; Hesabı Sil bölümünden tamamen kapatabilirsiniz. Koşulları ihlal eden hesapları önceden bildirmeksizin durdurma veya silme hakkımız saklıdır.
-          </AppText>
-        </View>
-
-        <View style={styles.section}>
-          <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            5. Destek ve İletişim
-          </AppText>
-          <AppText style={styles.paragraph}>
-            Kullanım koşulları veya destek ile ilgili her türlü konuyu görüşmek için:
+            {t('legal.forQuestionsAboutTheseTermsOrHelpWithTheApp')}
           </AppText>
           <Pressable
             accessibilityRole="link"
-            onPress={() => void Linking.openURL('mailto:contact@durangezer.com?subject=WeDo%20Kullanim%20Kosullari%20ve%20Destek')}
+            onPress={() =>
+              void Linking.openURL(
+                `mailto:contact@durangezer.com?subject=${encodeURIComponent(t('legal.supportSubject'))}`,
+              )
+            }
             style={({ pressed }) => [styles.emailLink, pressed && styles.pressed]}
           >
             <Ionicons name="mail-outline" size={17} color={mono.ink} />

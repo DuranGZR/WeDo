@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, type TextInputProps } from 'react-native';
@@ -16,6 +18,7 @@ export function PasswordField({
   accessibilityLabel,
   ...props
 }: PasswordFieldProps) {
+  useTranslation();
   const [visible, setVisible] = useState(false);
   return (
     <TextField
@@ -27,8 +30,8 @@ export function PasswordField({
       rightAccessory={
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={visible ? 'Şifreyi gizle' : 'Şifreyi göster'}
-          accessibilityHint="Şifre görünürlüğünü değiştirir"
+          accessibilityLabel={visible ? t('auth.hidePassword') : t('auth.showPassword')}
+          accessibilityHint={t('auth.togglesPasswordVisibility')}
           hitSlop={10}
           onPress={() => setVisible((current) => !current)}
           style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1, padding: 8 })}

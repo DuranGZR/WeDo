@@ -1,3 +1,6 @@
+import { formatLocale, searchText, t } from '@/i18n';
+
+import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useState, useMemo, useCallback } from 'react';
 import {
@@ -26,12 +29,14 @@ function getListIcon(name: string, isDefault: boolean): any {
     lower.includes('gez') ||
     lower.includes('yer') ||
     lower.includes('seyahat') ||
+    ['travel', 'place', 'visit'].some((word) => lower.includes(word)) ||
     lower.includes('tatil')
   ) {
     return 'location-outline';
   }
   if (
     lower.includes('izle') ||
+    ['watch', 'movie', 'series'].some((word) => lower.includes(word)) ||
     lower.includes('film') ||
     lower.includes('dizi') ||
     lower.includes('tv') ||
@@ -43,6 +48,7 @@ function getListIcon(name: string, isDefault: boolean): any {
     lower.includes('al') ||
     lower.includes('market') ||
     lower.includes('alışveriş') ||
+    ['shop', 'buy', 'grocer'].some((word) => lower.includes(word)) ||
     lower.includes('bakkal') ||
     lower.includes('kıyafet')
   ) {
@@ -52,6 +58,7 @@ function getListIcon(name: string, isDefault: boolean): any {
     lower.includes('yemek') ||
     lower.includes('mutfak') ||
     lower.includes('tarif') ||
+    ['recipe', 'food', 'restaurant'].some((word) => lower.includes(word)) ||
     lower.includes('restoran') ||
     lower.includes('kafe') ||
     lower.includes('akşam')
@@ -60,6 +67,7 @@ function getListIcon(name: string, isDefault: boolean): any {
   }
   if (
     lower.includes('müzik') ||
+    ['music', 'song', 'concert'].some((word) => lower.includes(word)) ||
     lower.includes('şarkı') ||
     lower.includes('çal') ||
     lower.includes('konser')
@@ -70,6 +78,7 @@ function getListIcon(name: string, isDefault: boolean): any {
     lower.includes('plan') ||
     lower.includes('takvim') ||
     lower.includes('etkinlik') ||
+    ['event', 'calendar', 'activity'].some((word) => lower.includes(word)) ||
     lower.includes('aktivite')
   ) {
     return 'calendar-outline';
@@ -78,6 +87,8 @@ function getListIcon(name: string, isDefault: boolean): any {
 }
 
 export default function ListDetailScreen() {
+  useTranslation();
+  const locale = formatLocale();
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const list = useList(listId);
   const result = useItems(listId);
@@ -102,16 +113,17 @@ export default function ListDetailScreen() {
         statusFilter === 'all' ||
         (statusFilter === 'completed' && item.status === 'completed') ||
         (statusFilter === 'pending' && item.status !== 'completed');
-      const query = searchQuery.trim().toLocaleLowerCase('tr-TR');
+      const query = searchText(searchQuery.trim(), locale);
       const matchesSearch =
         !isSearching ||
         !query ||
-        `${item.title ?? ''} ${item.description ?? ''} ${item.source_domain ?? ''}`
-          .toLocaleLowerCase('tr-TR')
-          .includes(query);
+        searchText(
+          `${item.title ?? ''} ${item.description ?? ''} ${item.source_domain ?? ''}`,
+          locale,
+        ).includes(query);
       return matchesStatus && matchesSearch;
     });
-  }, [items, isSearching, searchQuery, statusFilter]);
+  }, [items, isSearching, searchQuery, statusFilter, locale]);
 
   if (result.isLoading || list.isLoading) {
     return (
@@ -129,16 +141,16 @@ export default function ListDetailScreen() {
             <Ionicons name="alert-circle-outline" size={32} color={colors.error} />
           </View>
           <AppText variant="sectionTitle" style={styles.errorTitle}>
-            Liste yüklenemedi
+            {t('lists.couldnTLoadList')}
           </AppText>
           <AppText muted style={styles.errorSubtitle}>
-            Bağlantını kontrol edip tekrar dene.
+            {t('lists.checkYourConnectionAndTryAgain')}
           </AppText>
           <Pressable
             onPress={() => router.replace('/(tabs)/lists')}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.primaryBtnText}>Geri Git</AppText>
+            <AppText style={styles.primaryBtnText}>{t('lists.goBack')}</AppText>
           </Pressable>
         </Card>
       </Screen>
@@ -159,7 +171,7 @@ export default function ListDetailScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={mono.ink} />
         </Pressable>
@@ -169,7 +181,7 @@ export default function ListDetailScreen() {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Listeyi düzenle"
+          accessibilityLabel={t('lists.editList')}
         >
           <Ionicons
             name="create-outline"
@@ -177,10 +189,9 @@ export default function ListDetailScreen() {
             color={mono.ink}
             style={{ marginRight: 2 }}
           />
-          <AppText style={styles.editBtnText}>Düzenle</AppText>
+          <AppText style={styles.editBtnText}>{t('lists.edit')}</AppText>
         </Pressable>
       </View>
-
 
       <View style={styles.content}>
         {/* List Identity Card (Centered) */}
@@ -192,7 +203,9 @@ export default function ListDetailScreen() {
             {list.data.name}
           </AppText>
           <View style={styles.countBadge}>
-            <AppText style={styles.countBadgeText}>{items.length} içerik</AppText>
+            <AppText style={styles.countBadgeText}>
+              {t('common.itemCount', { count: items.length })}
+            </AppText>
           </View>
         </View>
 
@@ -209,7 +222,7 @@ export default function ListDetailScreen() {
               <TextField
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="Listede ara..."
+                placeholder={t('lists.searchThisList')}
                 style={styles.searchField}
                 autoFocus
               />
@@ -232,7 +245,7 @@ export default function ListDetailScreen() {
                 pressed && styles.btnPressed,
               ]}
             >
-              <AppText style={styles.cancelSearchText}>İptal</AppText>
+              <AppText style={styles.cancelSearchText}>{t('items.cancel')}</AppText>
             </Pressable>
           </View>
         ) : (
@@ -245,10 +258,10 @@ export default function ListDetailScreen() {
                 pressed && styles.btnPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Listede ara"
+              accessibilityLabel={t('lists.searchThisList_28c9c')}
             >
               <Ionicons name="search" size={18} color={colors.primaryText} />
-              <AppText style={styles.actionBtnText}>Ara</AppText>
+              <AppText style={styles.actionBtnText}>{t('lists.search')}</AppText>
             </Pressable>
 
             <Pressable
@@ -259,11 +272,11 @@ export default function ListDetailScreen() {
                 pressed && styles.btnPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Bağlantı ekle"
+              accessibilityLabel={t('lists.addLink')}
             >
               <Ionicons name="add" size={18} color={mono.paper} />
               <AppText style={[styles.actionBtnText, { color: mono.paper }]}>
-                Bağlantı Ekle
+                {t('lists.addLink_95772')}
               </AppText>
             </Pressable>
           </View>
@@ -273,9 +286,9 @@ export default function ListDetailScreen() {
           <View style={styles.filterRow}>
             {(
               [
-                ['all', 'Tümü'],
-                ['pending', 'Yapılmadı'],
-                ['completed', 'Yapıldı'],
+                ['all', t('lists.all')],
+                ['pending', t('lists.notDone')],
+                ['completed', t('lists.done')],
               ] as const
             ).map(([value, label]) => (
               <Pressable
@@ -291,7 +304,7 @@ export default function ListDetailScreen() {
                 ]}
 
                 accessibilityRole="button"
-                accessibilityLabel={`${label} filtrele`}
+                accessibilityLabel={t('lists.filterBy', { label })}
               >
                 <AppText
                   style={[
@@ -315,11 +328,10 @@ export default function ListDetailScreen() {
               <View style={styles.emptyBadge} />
             </View>
             <AppText variant="sectionTitle" style={styles.emptyTitle}>
-              Listeniz boş
+              {t('lists.yourListIsEmpty')}
             </AppText>
             <AppText muted style={styles.emptySubtitle}>
-              Dışarıdan bir içerik paylaşarak veya yukarıdan bağlantı ekleyerek ilk kaydı
-              oluşturun.
+              {t('lists.shareSomethingFromAnotherAppOrAddALinkAbove')}
             </AppText>
             <Pressable
               onPress={() => router.push(`/item/create?listId=${listId}`)}
@@ -328,9 +340,9 @@ export default function ListDetailScreen() {
                 pressed && styles.btnPressed,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="İlk içeriği ekle"
+              accessibilityLabel={t('lists.addYourFirstItem')}
             >
-              <AppText style={styles.emptyActionBtnText}>İçerik Ekle</AppText>
+              <AppText style={styles.emptyActionBtnText}>{t('items.addItem')}</AppText>
             </Pressable>
           </Card>
         ) : filteredItems.length === 0 ? (
@@ -352,17 +364,19 @@ export default function ListDetailScreen() {
             </View>
             <AppText variant="sectionTitle" style={styles.emptyTitle}>
               {isSearching && searchQuery.trim()
-                ? 'Sonuç bulunamadı'
+                ? t('lists.noResults')
                 : statusFilter === 'completed'
-                  ? 'Tamamlanan içerik yok'
-                  : 'Yapılacak içerik yok'}
+                  ? t('lists.noCompletedItems')
+                  : t('lists.nothingLeftToDo')}
             </AppText>
             <AppText muted style={styles.emptySubtitle}>
               {isSearching && searchQuery.trim()
-                ? `"${searchQuery}" aramasıyla eşleşen bir kayıt bulunamadı. Lütfen kelimeleri kontrol edip tekrar deneyin.`
+                ? t('lists.noSavedItemsMatchValueCheckYourSearchAndTry', {
+                    value0: searchQuery,
+                  })
                 : statusFilter === 'completed'
-                  ? 'Bu listede henüz yapıldı olarak işaretlenmiş bir içerik bulunmuyor.'
-                  : 'Bu listedeki tüm içerikler tamamlandı.'}
+                  ? t('lists.noItemsInThisListHaveBeenMarkedAsDone')
+                  : t('lists.youVeCompletedEverythingInThisList')}
             </AppText>
           </Card>
         ) : (

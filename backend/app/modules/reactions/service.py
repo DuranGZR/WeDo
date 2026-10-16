@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.localization import message
 from app.modules.activities.service import record_activity
 from app.modules.items.enums import ItemStatus
 from app.modules.items.service import get_item
@@ -51,8 +52,8 @@ def set_reaction(
         space_id=item.space_id,
         actor_id=user_id,
         notification_type="item_reacted",
-        title="İçeriğe tepki verildi",
-        body="Ortak içeriklerden birine yeni tepki geldi.",
+        title=message("message.newReaction"),
+        body=message("message.someoneReactedToASavedItemInYourShared"),
         data={"item_id": str(item.id)},
     )
     session.commit()

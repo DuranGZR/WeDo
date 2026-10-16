@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status
 
 from app.api.dependencies import SessionDep
+from app.core.localization import message
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.notifications.models import DevicePushToken
 from app.modules.notifications.schemas import DeviceTokenCreate, DeviceTokenResponse
@@ -29,7 +30,9 @@ def update_device_endpoint(
     from sqlalchemy import select
 
     if data.device_id != device_id:
-        raise HTTPException(status_code=400, detail="Cihaz kimliği eşleşmiyor.")
+        raise HTTPException(
+            status_code=400, detail=message("message.theDeviceIdentifierDoesnTMatch")
+        )
     device = session.scalar(
         select(DevicePushToken).where(
             DevicePushToken.user_id == current_user.id,
@@ -37,8 +40,9 @@ def update_device_endpoint(
         )
     )
     if device is None:
-        raise HTTPException(status_code=404, detail="Cihaz bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.deviceNotFound"))
     device.platform = data.platform
+    device.language = data.language
     device.push_token = data.push_token
     device.is_active = True
     session.commit()

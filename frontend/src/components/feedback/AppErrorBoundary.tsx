@@ -1,3 +1,4 @@
+import { t, i18n } from '@/i18n';
 import { Component, type ErrorInfo, type PropsWithChildren, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +11,13 @@ type State = { error: Error | null };
 
 export class AppErrorBoundary extends Component<PropsWithChildren, State> {
   override state: State = { error: null };
+  private refreshLanguage = () => this.forceUpdate();
+  override componentDidMount() {
+    i18n.on('languageChanged', this.refreshLanguage);
+  }
+  override componentWillUnmount() {
+    i18n.off('languageChanged', this.refreshLanguage);
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
@@ -36,15 +44,14 @@ export class AppErrorBoundary extends Component<PropsWithChildren, State> {
             </View>
           </View>
           <AppText variant="pageTitle" style={styles.title}>
-            Beklenmeyen bir durum oluştu
+            {t('common.somethingWentWrong')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            Uygulama çalışırken geçici bir aksaklık yaşandı. Verilerin güvende, tekrar
-            deneyerek devam edebilirsin.
+            {t('common.theAppRanIntoATemporaryProblemYourDataIs')}
           </AppText>
           <View style={styles.actionWrap}>
             <Button
-              label="Tekrar Dene"
+              label={t('common.tryAgain')}
               onPress={this.handleRetry}
               variant="primary"
               hapticFeedback="medium"

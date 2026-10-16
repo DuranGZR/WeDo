@@ -27,7 +27,10 @@ export function useCreateSpace() {
       useSpaceStore.getState().setSelectedSpaceId(space.id);
       client.setQueryData(queryKeys.spaces, (old: any) => {
         if (!old || !old.data) {
-          return { data: [space], pagination: { page: 1, page_size: 20, has_more: false } };
+          return {
+            data: [space],
+            pagination: { page: 1, page_size: 20, has_more: false },
+          };
         }
         const exists = old.data.some((s: any) => s.id === space.id);
         if (exists) return old;

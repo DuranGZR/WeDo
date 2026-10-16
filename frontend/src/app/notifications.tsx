@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import {
@@ -20,6 +22,7 @@ import { handleNotificationData } from '@/features/notifications/navigation';
 const { width } = Dimensions.get('window');
 
 export default function NotificationsScreen() {
+  useTranslation();
   const result = useNotifications();
   const client = useQueryClient();
   const notifications = result.data?.data ?? [];
@@ -36,7 +39,7 @@ export default function NotificationsScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={mono.ink} />
         </Pressable>
@@ -52,22 +55,23 @@ export default function NotificationsScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={({ pressed }) => [styles.readAllBtn, pressed && styles.btnPressed]}
             accessibilityRole="button"
-            accessibilityLabel="Tümünü okundu yap"
+            accessibilityLabel={t('notifications.markAllAsRead')}
           >
-            <AppText style={styles.readAllText}>Tümünü oku</AppText>
+            <AppText style={styles.readAllText}>
+              {t('notifications.markAllAsRead_7ac9f')}
+            </AppText>
           </Pressable>
         )}
       </View>
-
 
       <View style={styles.content}>
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="caption" muted style={styles.headerCategory}>
-            GÜNCELLEMELER
+            {t('notifications.updates')}
           </AppText>
           <AppText variant="largeTitle" style={styles.title}>
-            Bildirimler
+            {t('common.notifications')}
           </AppText>
         </View>
 
@@ -85,16 +89,17 @@ export default function NotificationsScreen() {
               </View>
             </View>
             <AppText variant="sectionTitle" style={styles.emptyTitle}>
-              Bildirim yok
+              {t('notifications.noNotifications')}
             </AppText>
             <AppText muted style={styles.emptySubtitle}>
-              Her şey güncel! Yeni ortak planlar veya güncellemeler olduğunda burada
-              görebilirsin.
+              {t('notifications.youReAllCaughtUpNewSharedPlansAndUpdates')}
             </AppText>
           </Card>
         ) : (
           <View style={styles.notificationsList}>
-            <SectionHeader title={`${notifications.length} güncelleme`} />
+            <SectionHeader
+              title={t('notifications.updateCount', { count: notifications.length })}
+            />
             {notifications.map((notification) => {
               const isUnread = !notification.read_at;
               return (
@@ -159,10 +164,12 @@ export default function NotificationsScreen() {
                         pressed && styles.btnPressed,
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel="Okundu işaretle"
+                      accessibilityLabel={t('notifications.markAsRead')}
                     >
                       <Ionicons name="checkmark" size={14} color={colors.accent} />
-                      <AppText style={styles.markReadText}>Okundu işaretle</AppText>
+                      <AppText style={styles.markReadText}>
+                        {t('notifications.markAsRead')}
+                      </AppText>
                     </Pressable>
                   )}
                 </Card>

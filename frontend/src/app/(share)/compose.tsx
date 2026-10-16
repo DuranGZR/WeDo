@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -26,6 +28,7 @@ import { haptic } from '@/lib/haptics';
 const findUrl = (value?: string | null) => value?.match(/https?:\/\/[^\s]+/i)?.[0];
 
 export default function ShareComposeScreen() {
+  useTranslation();
   const params = useLocalSearchParams<{
     url?: string;
     sharedText?: string;
@@ -100,8 +103,8 @@ export default function ShareComposeScreen() {
     if (!originalUrl) {
       haptic.warning();
       Alert.alert(
-        'Bağlantı bulunamadı',
-        'Bu paylaşımda kaydedilebilecek bir bağlantı yok.',
+        t('sharing.noLinkFound'),
+        t('sharing.thereSNoLinkToSaveInThisSharedContent'),
       );
       return;
     }
@@ -117,20 +120,20 @@ export default function ShareComposeScreen() {
       resetShareIntent();
       showToast({
         type: 'success',
-        title: 'İçerik kaydedildi',
-        message: `${list.name} listesine eklendi.`,
+        title: t('sharing.itemSaved'),
+        message: t('sharing.addedToList', { value0: list.name }),
       });
       router.replace(`/list/${list.id}`);
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 409) {
         haptic.warning();
         Alert.alert(
-          'Bu bağlantı zaten kayıtlı',
-          `${list.name} listesinde aynı bağlantı zaten var.`,
+          t('sharing.thisLinkIsAlreadySaved'),
+          t('sharing.thisLinkIsAlreadyInValue', { value0: list.name }),
           [
-            { text: 'Kapat', style: 'cancel' },
+            { text: t('legal.close'), style: 'cancel' },
             {
-              text: 'Listeye Git',
+              text: t('lists.goToList'),
               onPress: () => {
                 resetShareIntent();
                 router.replace(`/list/${list.id}`);
@@ -148,8 +151,8 @@ export default function ShareComposeScreen() {
       resetShareIntent();
       showToast({
         type: 'warning',
-        title: 'Çevrimdışı kaydedildi',
-        message: 'İnternet bağlantısı sağlandığında otomatik gönderilecek.',
+        title: t('sharing.savedOffline'),
+        message: t('sharing.weLlSyncItAutomaticallyWhenYouReBackOnline'),
       });
       router.replace('/(tabs)');
     }
@@ -174,8 +177,8 @@ export default function ShareComposeScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
         <EmptyState
-          title="Paylaşım içeriği yok"
-          description="Bir bağlantı, metin veya görsel ile tekrar dene."
+          title={t('sharing.nothingToShare')}
+          description={t('sharing.tryAgainWithALinkTextOrAnImage')}
         />
       </Screen>
     );
@@ -187,25 +190,25 @@ export default function ShareComposeScreen() {
         onPress={leaveShareFlow}
         style={styles.backButton}
         accessibilityRole="button"
-        accessibilityLabel="İptal et"
+        accessibilityLabel={t('sharing.cancel')}
       >
         <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
       </Pressable>
 
       <View style={styles.heading}>
-        <AppText variant="pageTitle">WeDo’ya kaydet</AppText>
-        <AppText muted>Bu bağlantıyı nereye eklemek istediğini seç.</AppText>
+        <AppText variant="pageTitle">{t('sharing.saveToWedo')}</AppText>
+        <AppText muted>{t('sharing.chooseWhereToSaveThisLink')}</AppText>
       </View>
 
       <View style={styles.card}>
         <View style={styles.linkRow}>
           <Ionicons name="link-outline" size={20} color={colors.primaryText} />
           <AppText numberOfLines={2} style={styles.linkText}>
-            {sharedUrl ?? sharedText ?? 'Paylaşılan içerik'}
+            {sharedUrl ?? sharedText ?? t('sharing.sharedContent')}
           </AppText>
         </View>
 
-        <AppText style={styles.label}>Alan</AppText>
+        <AppText style={styles.label}>{t('sharing.space')}</AppText>
         <View style={styles.optionList}>
           {spaces.data?.data.map((entry) => (
             <Pressable
@@ -228,7 +231,7 @@ export default function ShareComposeScreen() {
           ))}
         </View>
 
-        <AppText style={styles.label}>Liste</AppText>
+        <AppText style={styles.label}>{t('sharing.list')}</AppText>
         <View style={styles.optionList}>
           {lists.data?.data.map((entry) => (
             <Pressable
@@ -251,11 +254,11 @@ export default function ShareComposeScreen() {
           ))}
         </View>
 
-        <AppText style={styles.label}>Başlık</AppText>
+        <AppText style={styles.label}>{t('sharing.title')}</AppText>
         <TextInput
           value={title}
           onChangeText={setTitle}
-          placeholder="Bu içeriğe bir başlık ver"
+          placeholder={t('sharing.giveThisItemATitle')}
           placeholderTextColor={colors.tertiaryText}
           maxLength={120}
           style={styles.input}
@@ -273,7 +276,7 @@ export default function ShareComposeScreen() {
             <ActivityIndicator color={colors.surface} />
           ) : (
             <>
-              <AppText style={styles.saveText}>Kaydet</AppText>
+              <AppText style={styles.saveText}>{t('sharing.save')}</AppText>
               <Ionicons name="arrow-forward" size={20} color={colors.surface} />
             </>
           )}

@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.localization import message
 from app.integrations.storage.presigned_urls import create_presigned_put_url
 from app.modules.uploads.models import Upload
 from app.modules.uploads.schemas import (
@@ -45,7 +46,7 @@ def complete_upload(
 ) -> UploadCompleteResponse:
     upload = session.get(Upload, upload_id)
     if upload is None or upload.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Upload bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.uploadNotFound"))
     upload.status = "completed"
     session.commit()
     return UploadCompleteResponse.model_validate(upload, from_attributes=True)
@@ -54,6 +55,6 @@ def complete_upload(
 def delete_upload(session: Session, user_id: UUID, upload_id: UUID) -> None:
     upload = session.get(Upload, upload_id)
     if upload is None or upload.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Upload bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.uploadNotFound"))
     session.delete(upload)
     session.commit()

@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -22,6 +24,7 @@ export function Skeleton({
   borderRadius?: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  useTranslation();
   const pulseAnim = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
@@ -46,7 +49,7 @@ export function Skeleton({
 
   return (
     <Animated.View
-      accessibilityLabel="Yükleniyor"
+      accessibilityLabel={t('common.loading')}
       style={[
         styles.base,
         {
@@ -68,10 +71,12 @@ export function SkeletonCard({
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  useTranslation();
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
 export function HomeScreenSkeleton() {
+  useTranslation();
   return (
     <View style={styles.skeletonContainer}>
       {/* Top Bar Skeleton */}
@@ -97,7 +102,13 @@ export function HomeScreenSkeleton() {
       </SkeletonCard>
 
       {/* Lists Header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <Skeleton width={90} height={20} />
         <Skeleton width={50} height={16} />
       </View>
@@ -120,6 +131,7 @@ export function HomeScreenSkeleton() {
 }
 
 export function ListDetailSkeleton() {
+  useTranslation();
   return (
     <View style={styles.skeletonContainer}>
       {/* Header bar */}
@@ -159,6 +171,7 @@ export function ListDetailSkeleton() {
 }
 
 export function ItemDetailSkeleton() {
+  useTranslation();
   return (
     <View style={styles.skeletonContainer}>
       {/* Top Back */}
@@ -193,6 +206,7 @@ export function ItemDetailSkeleton() {
 }
 
 export function ShareComposeSkeleton() {
+  useTranslation();
   return (
     <View style={styles.skeletonContainer}>
       <Skeleton width={40} height={40} borderRadius={20} />
@@ -219,7 +233,12 @@ export function ShareComposeSkeleton() {
         </View>
       </SkeletonCard>
 
-      <Skeleton width="100%" height={52} borderRadius={radius.md} style={{ marginTop: spacing.md }} />
+      <Skeleton
+        width="100%"
+        height={52}
+        borderRadius={radius.md}
+        style={{ marginTop: spacing.md }}
+      />
     </View>
   );
 }

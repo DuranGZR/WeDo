@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSPhotoLibraryUsageDescription": "WeDo, ortak listelerinize ve anılarınıza fotoğraf ekleyebilmeniz için fotoğraf galerinize erişir.",
+    "NSPhotoLibraryAddUsageDescription": "WeDo, anılarınızı ve fotoğraflarınızı galerinize kaydetmek için izin ister.",
+    "NSCameraUsageDescription": "WeDo, fotoğraf çekip anı ve listelerinize ekleyebilmeniz için kameranıza erişir."
+  }
+}

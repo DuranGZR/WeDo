@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.api.dependencies import SessionDep
+from app.core.localization import message
 from app.modules.auth.models import RefreshSession
 from app.modules.auth.tokens import decode_token
 from app.modules.users.models import User
@@ -21,7 +22,7 @@ def get_current_user(
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Kimlik doğrulaması gerekli.",
+            detail=message("message.pleaseSignInToContinue"),
         )
     try:
         payload = decode_token(credentials.credentials, "access")
@@ -30,7 +31,7 @@ def get_current_user(
     except (ValueError, KeyError, jwt.InvalidTokenError) as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Access token geçersiz.",
+            detail=message("message.invalidAccessToken"),
         ) from error
     user = user_repository.get_by_id(session, user_id)
     refresh_session = session.get(RefreshSession, session_id)
@@ -43,7 +44,8 @@ def get_current_user(
         or refresh_session.revoked_at is not None
     ):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı."
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=message("message.userNotFound"),
         )
     return user
 

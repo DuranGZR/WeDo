@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel, Field
 
+from app.core.localization import message
 from app.modules.items.enums import ItemStatus, ItemType, MetadataStatus
 
 
@@ -32,7 +33,7 @@ class ItemResponse(BaseModel):
     space_id: UUID
     list_id: UUID
     created_by: UUID
-    created_by_name: str = "Bilinmeyen kullanıcı"
+    created_by_name: str = Field(default_factory=lambda: message("message.unknownUser"))
     client_item_id: str | None
     type: ItemType
     status: ItemStatus

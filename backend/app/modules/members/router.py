@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import SessionDep
+from app.core.localization import message
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.members.schemas import MemberRoleUpdate
 from app.modules.spaces.dependencies import SpaceMemberDep
@@ -17,7 +18,7 @@ router = APIRouter()
 def _member(session: SessionDep, member_id: UUID) -> SpaceMember:
     member = session.get(SpaceMember, member_id)
     if member is None or member.removed_at is not None:
-        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.memberNotFound"))
     return member
 
 
@@ -36,7 +37,9 @@ def update_member_role(
         or member.role == SpaceRole.OWNER
         or data.role == SpaceRole.OWNER
     ):
-        raise HTTPException(status_code=400, detail="Bu üyenin rolü değiştirilemez.")
+        raise HTTPException(
+            status_code=400, detail=message("message.thisMemberSRoleCanTBeChanged")
+        )
     member.role = data.role
     session.commit()
     return {"id": str(member.id), "user_id": str(member.user_id), "role": member.role}
@@ -51,7 +54,9 @@ def remove_member(
     require_space_admin(admin)
     member = _member(session, member_id)
     if member.space_id != space_id or member.role == SpaceRole.OWNER:
-        raise HTTPException(status_code=400, detail="Bu üye çıkarılamaz.")
+        raise HTTPException(
+            status_code=400, detail=message("message.thisMemberCanTBeRemoved")
+        )
     member.removed_at = datetime.now(UTC)
     session.commit()
 
@@ -62,6 +67,9 @@ def leave_space(
 ) -> None:
     member = get_space_member(session, space_id, current_user.id)
     if member.role == SpaceRole.OWNER:
-        raise HTTPException(status_code=400, detail="Alan sahibi alanı silebilir.")
+        raise HTTPException(
+            status_code=400,
+            detail=message("message.onlyTheSpaceOwnerCanDeleteThisSpace"),
+        )
     member.removed_at = datetime.now(UTC)
     session.commit()

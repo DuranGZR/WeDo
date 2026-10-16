@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -6,16 +8,17 @@ import { AppText, Screen } from '@/components/ui';
 import { mono, radius, spacing } from '@/design-system';
 
 export default function LegalPrivacyScreen() {
+  useTranslation();
   return (
     <Screen scroll={true} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <AppText variant="screenTitle" style={styles.title}>
-            Gizlilik Politikası
+            {t('common.privacyPolicy')}
           </AppText>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Kapat"
+            accessibilityLabel={t('legal.close')}
             onPress={() => router.back()}
             style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
           >
@@ -23,102 +26,87 @@ export default function LegalPrivacyScreen() {
           </Pressable>
         </View>
         <AppText muted style={styles.date}>
-          Son Güncelleme: 15 Ekim 2026
+          {t('legal.lastUpdated15October2026')}
         </AppText>
       </View>
 
       <View style={styles.content}>
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            1. Genel Bakış ve Taahhüdümüz
+            {t('legal.1OverviewAndOurCommitment')}
           </AppText>
           <AppText style={styles.paragraph}>
-            WeDo (&quot;Uygulama&quot;), birlikte içerik kaydetmek, planlamak ve ortak kararlar almak
-            isteyen kullanıcılar için tasarlanmış özel bir alandır. WeDo herkese açık bir sosyal ağ
-            değildir. Gizliliğinize ve kişisel verilerinizin korunmasına en üst düzeyde önem veririz.
+            {t('legal.wedoTheAppIsAPrivateSpaceForSavingIdeas')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            2. Toplanan Bilgiler
+            {t('legal.2InformationWeCollect')}
           </AppText>
           <AppText style={styles.paragraph}>
-            Uygulamayı kullanırken toplanan veriler şunlardır:
+            {t('legal.weCollectTheFollowingInformationWhenYouUseTheApp')}
           </AppText>
           <AppText style={styles.bullet}>
-            • <AppText style={styles.bold}>Hesap Bilgileri:</AppText> E-posta adresi, görünen ad ve
-            şifreli hesaplar için şifre özeti (hash). E-posta ile kayıtta adres doğrulaması için
-            süreli kod gönderilir; kodun güvenli özeti ve deneme bilgileri sunucuda tutulur.
+            • <AppText style={styles.bold}>{t('legal.accountInformation')}</AppText>{' '}
+            {t('legal.yourEmailAddressDisplayNameAndForPasswordBasedAccounts')}
           </AppText>
           <AppText style={styles.bullet}>
-            • <AppText style={styles.bold}>Apple ile Giriş:</AppText> Apple kimliğiyle oturum açıldığında,
-            Apple tarafından sağlanan anonim kullanıcı kimliği ve seçiminize bağlı olarak e-posta/ad bilgisi.
+            • <AppText style={styles.bold}>{t('legal.signInWithApple')}</AppText>{' '}
+            {t('legal.whenYouSignInWithAppleWeReceiveAnOpaque')}
           </AppText>
           <AppText style={styles.bullet}>
-            • <AppText style={styles.bold}>Google ile Giriş:</AppText> Google kullanıcı kimliği,
-            doğrulanmış e-posta adresi ve profil adı hesap oluşturma ve oturum doğrulama için
-            kullanılır. Google şifreniz alınmaz; Gmail, Drive veya Takvim erişimi istenmez.
+            • <AppText style={styles.bold}>{t('legal.signInWithGoogle')}</AppText>{' '}
+            {t('legal.yourGoogleUserIdentifierVerifiedEmailAddressAndProfileName')}
           </AppText>
           <AppText style={styles.bullet}>
-            • <AppText style={styles.bold}>Destek ve Silme Talepleri:</AppText> Formda paylaştığınız
-            e-posta ve açıklama destek posta kutusuna iletilir; talebin değerlendirilmesi ve
-            hesap sahipliğinin doğrulanması için kullanılır.
+            •{' '}
+            <AppText style={styles.bold}>{t('legal.supportAndDeletionRequests')}</AppText>{' '}
+            {t('legal.theEmailAddressAndDescriptionYouSubmitAreSentTo')}
           </AppText>
           <AppText style={styles.bullet}>
-            • <AppText style={styles.bold}>Ortak İçerikler:</AppText> Kaydettiğiniz bağlantılar,
-            notlar, oluşturduğunuz listeler, oylar ve ortak alanlara eklediğiniz anı fotoğrafları.
+            • <AppText style={styles.bold}>{t('legal.sharedContent')}</AppText>{' '}
+            {t('legal.linksNotesListsVotesAndMemoryPhotosYouAddTo')}
           </AppText>
           <AppText style={styles.bullet}>
-            • <AppText style={styles.bold}>Cihaz ve Bildirim Verileri:</AppText> Yalnızca ortak alanınızdaki
-            etkinliklerden haberdar olmanız için bildirim belirteçleri (push tokens).
+            •{' '}
+            <AppText style={styles.bold}>{t('legal.deviceAndNotificationData')}</AppText>{' '}
+            {t('legal.pushNotificationTokensUsedToNotifyYouOfActivityIn')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            3. İzinler (Kamera ve Galeri)
+            {t('legal.3PermissionsCameraAndPhotos')}
           </AppText>
           <AppText style={styles.paragraph}>
-            Uygulama, ortak anılarınıza veya kayıtlarınıza fotoğraf ekleyebilmeniz için Fotoğraf Galerisi
-            ve Kamera erişim izni talep eder. Bu izinler yalnızca sizin açık seçiminizle içerik eklemek
-            için kullanılır; arka planda otomatik tarama yapılmaz.
+            {t('legal.theAppRequestsAccessToYourCameraAndPhotoLibrary')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            4. Veri Paylaşımı ve Üçüncü Taraflar
+            {t('legal.4SharingAndThirdPartyServices')}
           </AppText>
           <AppText style={styles.paragraph}>
-            WeDo, kişisel verilerinizi reklam verenlere veya üçüncü taraf veri simsarlarına kesinlikle
-            satmaz veya kiralamaz. Ortak içerikleriniz açıkça davet ettiğiniz alan üyeleriyle
-            paylaşılır. Seçtiğiniz giriş yönteminde Google veya Apple kimlik doğrulama hizmetleri
-            kullanılır. Web destek taleplerindeki e-posta ve açıklama, Resend üzerinden Google
-            Workspace destek posta kutusuna iletilir.
+            {t('legal.wedoDoesNotSellOrRentPersonalInformationToAdvertisers')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            5. Hesap ve Veri Silme Hakkı (Apple Standardı)
+            {t('legal.5AccountAndDataDeletion')}
           </AppText>
           <AppText style={styles.paragraph}>
-            Apple App Store kuralları ve veri koruma yasaları uyarınca, hesabınızı ve ilişkili tüm
-            verilerinizi istediğiniz zaman doğrudan uygulama içinden (Ayarlar &gt; Hesabı Sil) kalıcı
-            olarak silebilirsiniz. Apple ile oturum açan kullanıcılar için herhangi bir şifre gerekmez;
-            onay vermeniz halinde tüm açık oturumlarınız ve kimlik bilgileriniz derhal silinir.
+            {t('legal.youCanDeleteYourAccountAndAssociatedPersonalDataIn')}
           </AppText>
         </View>
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            6. İletişim
+            {t('legal.6Contact')}
           </AppText>
-          <AppText style={styles.paragraph}>
-            Gizlilik politikamızla ilgili soru, talep veya geri bildirimleriniz için bize{' '}
-            <AppText style={styles.bold}>contact@durangezer.com</AppText> adresinden ulaşabilirsiniz.
-          </AppText>
+          <AppText style={styles.paragraph}>{t('legal.contactPolicy')}</AppText>
         </View>
       </View>
     </Screen>

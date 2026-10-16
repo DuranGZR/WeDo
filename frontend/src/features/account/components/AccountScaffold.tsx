@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
@@ -15,6 +17,7 @@ export function AccountScaffold({
   subtitle: string;
   children: ReactNode;
 }) {
+  useTranslation();
   return (
     <Screen scroll backgroundColor={mono.background}>
       <View style={styles.contourTop} pointerEvents="none" />
@@ -22,7 +25,7 @@ export function AccountScaffold({
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           onPress={() =>
             router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')
@@ -55,6 +58,7 @@ export function AccountCard({
   children: ReactNode;
   danger?: boolean;
 }) {
+  useTranslation();
   return <View style={[styles.card, danger && styles.dangerCard]}>{children}</View>;
 }
 
@@ -71,6 +75,7 @@ export function AccountRow({
   onPress: () => void;
   danger?: boolean;
 }) {
+  useTranslation();
   return (
     <Pressable
       accessibilityRole="button"

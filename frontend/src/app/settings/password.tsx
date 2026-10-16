@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -16,6 +18,7 @@ import { isStrongPassword } from '@/features/auth/password-strength';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function ChangePasswordScreen() {
+  useTranslation();
   const { user, changePassword } = useAuthStore();
   const { showToast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -26,17 +29,17 @@ export default function ChangePasswordScreen() {
   if (user?.has_password === false) {
     return (
       <AccountScaffold
-        title="Şifre"
-        subtitle="Hesap güvenlik yönteminiz."
+        title={t('common.password')}
+        subtitle={t('settings.howYouSignInToYourAccount')}
       >
         <AccountCard>
           <View style={styles.appleHero}>
             <View style={styles.appleIconWrap}>
               <Ionicons name="logo-apple" size={28} color={mono.paper} />
             </View>
-            <AppText variant="sectionTitle">Apple ile Korunuyor</AppText>
+            <AppText variant="sectionTitle">{t('settings.secureSignIn')}</AppText>
             <AppText muted style={styles.appleNoticeText}>
-              Hesabınız Apple ID ile ilişkilendirilmiştir. Bu hesap için parola kullanılmaz; giriş işlemleri doğrudan Face ID / Touch ID ve Apple ile Giriş üzerinden güvenle yapılır.
+              {t('settings.thisAccountUsesGoogleOrAppleSignInInsteadOf')}
             </AppText>
           </View>
         </AccountCard>
@@ -47,16 +50,16 @@ export default function ChangePasswordScreen() {
   const submit = async () => {
     if (newPassword !== confirmation) {
       showToast({
-        title: 'Şifreler eşleşmiyor',
-        message: 'Yeni şifreni iki alanda da aynı gir.',
+        title: t('settings.passwordsDonTMatch'),
+        message: t('settings.enterTheSameNewPasswordInBothFields'),
       });
       return;
     }
 
     if (!isStrongPassword(newPassword)) {
       showToast({
-        title: 'Daha güçlü bir şifre seç',
-        message: 'En az 8 karakter; büyük harf, küçük harf ve rakam kullan.',
+        title: t('settings.chooseAStrongerPassword'),
+        message: t('settings.useAtLeast8CharactersIncludingAnUppercaseLetterA'),
       });
       return;
     }
@@ -65,14 +68,14 @@ export default function ChangePasswordScreen() {
     try {
       await changePassword(currentPassword, newPassword);
       showToast({
-        title: 'Şifren değiştirildi',
-        message: 'Güvenlik için tüm oturumların kapatıldı.',
+        title: t('settings.passwordChanged'),
+        message: t('settings.youVeBeenSignedOutOfAllSessionsForSecurity'),
       });
       router.replace('/(auth)/sign-in');
     } catch (error) {
       showToast({
-        title: 'Şifre değiştirilemedi',
-        message: error instanceof Error ? error.message : 'Tekrar dene.',
+        title: t('settings.couldnTChangePassword'),
+        message: error instanceof Error ? error.message : t('common.tryAgainShort'),
       });
     } finally {
       setSaving(false);
@@ -81,26 +84,26 @@ export default function ChangePasswordScreen() {
 
   return (
     <AccountScaffold
-      title="Şifreyi değiştir"
-      subtitle="Yeni şifrenle tüm cihazlarda tekrar giriş yapacaksın."
+      title={t('settings.changePassword')}
+      subtitle={t('settings.youLlNeedToSignInAgainOnAllDevices')}
     >
       <AccountCard>
         <PasswordField
-          label="Mevcut şifre"
+          label={t('settings.currentPassword')}
           value={currentPassword}
           onChangeText={setCurrentPassword}
           autoComplete="current-password"
           textContentType="password"
         />
         <PasswordField
-          label="Yeni şifre"
+          label={t('settings.newPassword')}
           value={newPassword}
           onChangeText={setNewPassword}
           autoComplete="new-password"
           textContentType="newPassword"
         />
         <PasswordField
-          label="Yeni şifre tekrar"
+          label={t('settings.confirmNewPassword')}
           value={confirmation}
           onChangeText={setConfirmation}
           autoComplete="new-password"
@@ -110,13 +113,12 @@ export default function ChangePasswordScreen() {
         <View style={styles.ruleBox}>
           <Ionicons name="information-circle-outline" size={17} color={mono.ink} />
           <AppText muted style={styles.ruleText}>
-            En az 8 karakter; büyük harf, küçük harf ve rakam kullan. Eski şifreni tekrar
-            kullanamazsın.
+            {t('settings.useAtLeast8CharactersIncludingAnUppercaseLetterA_7abfc')}
           </AppText>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Şifreyi değiştir"
+          accessibilityLabel={t('settings.changePassword')}
           disabled={saving}
           onPress={() => void submit()}
           style={({ pressed }) => [
@@ -129,7 +131,9 @@ export default function ChangePasswordScreen() {
           ) : (
             <Ionicons name="key" size={18} color={mono.paper} />
           )}
-          <AppText style={accountStyles.primaryButtonText}>Şifreyi değiştir</AppText>
+          <AppText style={accountStyles.primaryButtonText}>
+            {t('settings.changePassword')}
+          </AppText>
         </Pressable>
       </AccountCard>
     </AccountScaffold>

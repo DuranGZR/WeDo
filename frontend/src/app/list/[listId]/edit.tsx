@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -15,6 +17,7 @@ import { useList } from '@/features/lists/hooks';
 import { mono, spacing } from '@/design-system';
 
 export default function EditListScreen() {
+  useTranslation();
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const list = useList(listId);
   const [name, setName] = useState('');
@@ -27,7 +30,7 @@ export default function EditListScreen() {
       await collaborationApi.updateList(listId, { name: currentName.trim() });
       router.back();
     } catch {
-      Alert.alert('Liste güncellenemedi', 'Bağlantıyı kontrol edip tekrar dene.');
+      Alert.alert(t('lists.couldnTUpdateList'), t('common.checkTheLinkAndTryAgain'));
     } finally {
       setSaving(false);
     }
@@ -38,7 +41,7 @@ export default function EditListScreen() {
       await collaborationApi.deleteList(listId);
       router.replace('/lists');
     } catch {
-      Alert.alert('Liste silinemedi', 'Varsayılan listeler silinemez.');
+      Alert.alert(t('lists.deleteFailed'), t('lists.defaultListsCanTBeDeleted'));
     } finally {
       setSaving(false);
     }
@@ -52,7 +55,7 @@ export default function EditListScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={mono.ink} />
         </Pressable>
@@ -60,16 +63,16 @@ export default function EditListScreen() {
 
       <View style={styles.content}>
         <View style={styles.glassCard}>
-          <AppText variant="pageTitle">Listeyi düzenle</AppText>
-          <AppText muted>Liste adını ve görünümünü güncelle.</AppText>
+          <AppText variant="pageTitle">{t('lists.editList')}</AppText>
+          <AppText muted>{t('lists.updateYourListSNameAndAppearance')}</AppText>
 
           <View style={{ height: spacing.lg }} />
 
           <TextField
-            label="Liste adı"
+            label={t('lists.listName_48d9b')}
             value={currentName}
             onChangeText={setName}
-            placeholder="Liste adı"
+            placeholder={t('lists.listName_48d9b')}
           />
 
           <View style={{ height: spacing.lg }} />
@@ -82,7 +85,7 @@ export default function EditListScreen() {
             {saving ? (
               <ActivityIndicator color={mono.paper} />
             ) : (
-              <AppText style={styles.primaryBtnText}>Kaydet</AppText>
+              <AppText style={styles.primaryBtnText}>{t('sharing.save')}</AppText>
             )}
           </Pressable>
 
@@ -91,9 +94,13 @@ export default function EditListScreen() {
           <Pressable
             style={({ pressed }) => [styles.deleteBtn, pressed && styles.btnPressed]}
             onPress={() =>
-              Alert.alert('Listeyi sil?', 'Bu işlem geri alınamaz.', [
-                { text: 'Vazgeç', style: 'cancel' },
-                { text: 'Sil', style: 'destructive', onPress: () => void remove() },
+              Alert.alert(t('lists.confirmDelete'), t('lists.thisCanTBeUndone'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('items.delete'),
+                  style: 'destructive',
+                  onPress: () => void remove(),
+                },
               ])
             }
             disabled={saving}
@@ -101,7 +108,7 @@ export default function EditListScreen() {
             {saving ? (
               <ActivityIndicator color={mono.danger} />
             ) : (
-              <AppText style={styles.deleteBtnText}>Listeyi sil</AppText>
+              <AppText style={styles.deleteBtnText}>{t('lists.deleteList')}</AppText>
             )}
           </Pressable>
         </View>

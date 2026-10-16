@@ -1,4 +1,6 @@
-﻿import { Ionicons } from '@expo/vector-icons';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -6,6 +8,7 @@ import { AppText, Badge, Screen } from '@/components/ui';
 import { colors, radius, spacing } from '@/design-system';
 
 export default function InviteAcceptedScreen() {
+  useTranslation();
   return (
     <Screen scroll={true}>
       <View style={styles.ambientContainer} pointerEvents="none">
@@ -17,7 +20,7 @@ export default function InviteAcceptedScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
@@ -25,29 +28,28 @@ export default function InviteAcceptedScreen() {
       <View style={styles.content}>
         <View style={styles.center}>
           <View style={styles.mark}>
-            <AppText style={styles.markText}>âœ“</AppText>
+            <AppText style={styles.markText}>✓</AppText>
           </View>
-          <Badge label="Davet kabul edildi" tone="success" />
-          <AppText variant="pageTitle">Birlikte karar vermeye hazırsın.</AppText>
+          <Badge label={t('common.invitationAccepted')} tone="success" />
+          <AppText variant="pageTitle">{t('common.youReReadyToDecideTogether')}</AppText>
           <AppText muted style={styles.copy}>
-            Artık ortak listeleri görebilir, yeni fikirler ekleyebilir ve seçimleri
-            birlikte netleştirebilirsiniz.
+            {t('common.youCanNowBrowseSharedListsSaveNewIdeasAnd')}
           </AppText>
           <View style={[styles.glassCard, styles.card]}>
-            <AppText variant="cardTitle">Sıradaki adım</AppText>
-            <AppText muted>Alanına git ve ilk ortak listenizi aç.</AppText>
+            <AppText variant="cardTitle">{t('common.whatSNext')}</AppText>
+            <AppText muted>{t('common.goToYourSpaceAndOpenYourFirstSharedList')}</AppText>
           </View>
           <Pressable
             onPress={() => router.replace('/(tabs)')}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.primaryBtnText}>Alana git</AppText>
+            <AppText style={styles.primaryBtnText}>{t('common.goToSpace')}</AppText>
           </Pressable>
           <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.ghostBtnText}>Daha sonra</AppText>
+            <AppText style={styles.ghostBtnText}>{t('onboarding.later')}</AppText>
           </Pressable>
         </View>
       </View>

@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
@@ -7,7 +9,7 @@ import { spacing } from '@/design-system';
 export function InfoScreen({
   title,
   description,
-  action = 'Geri dön',
+  action = t('common.goBack_e0c40'),
   onAction,
 }: {
   title: string;
@@ -15,6 +17,7 @@ export function InfoScreen({
   action?: string;
   onAction?: () => void;
 }) {
+  useTranslation();
   return (
     <Screen>
       <View style={styles.content}>

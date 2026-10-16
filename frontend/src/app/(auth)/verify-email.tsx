@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
@@ -8,6 +10,7 @@ import { spacing } from '@/design-system';
 import { resendVerification, verifyEmail } from '@/features/auth/email-verification';
 
 export default function VerifyEmailScreen() {
+  const { i18n } = useTranslation();
   const { email, verificationId, resendAfter, inviteToken } = useLocalSearchParams<{
     email?: string;
     verificationId?: string;
@@ -42,6 +45,17 @@ export default function VerifyEmailScreen() {
     });
   }
 
+  useEffect(() => {
+    const clearFeedback = () => {
+      setError(null);
+      setNotice(null);
+    };
+    i18n.on('languageChanged', clearFeedback);
+    return () => {
+      i18n.off('languageChanged', clearFeedback);
+    };
+  }, [i18n]);
+
   async function submit(resend: boolean) {
     if (pending.current || !verificationId || (resend && remaining > 0)) return;
     pending.current = true;
@@ -53,16 +67,16 @@ export default function VerifyEmailScreen() {
         const result = await resendVerification(verificationId);
         setRemaining(result.resend_after_seconds);
         setCode('');
-        setNotice(
-          'Doğrulama kodun gönderildi. Gelen kutunu ve spam klasörünü kontrol et.',
-        );
+        setNotice(t('auth.yourCodeHasBeenSentCheckYourInboxAndSpam'));
       } else {
         await verifyEmail(verificationId, code);
         setVerified(true);
       }
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : 'İşlem tamamlanamadı. Tekrar dene.',
+        failure instanceof Error
+          ? failure.message
+          : t('auth.somethingWentWrongPleaseTryAgain'),
       );
     } finally {
       pending.current = false;
@@ -72,12 +86,14 @@ export default function VerifyEmailScreen() {
 
   return (
     <AuthShell
-      footer={<AppText muted>Kodunu yalnızca WeDo uygulamasına gir.</AppText>}
-      title={verified ? 'E-postan doğrulandı' : 'E-postanı doğrula'}
+      footer={<AppText muted>{t('auth.onlyEnterYourCodeInTheWedoApp')}</AppText>}
+      title={verified ? t('auth.emailVerified') : t('auth.verifyYourEmail')}
       subtitle={
         verified
-          ? 'Artık e-posta adresin ve şifrenle giriş yapabilirsin.'
-          : `${email ?? 'E-posta adresin'} adresine gönderdiğimiz 6 haneli kodu gir.`
+          ? t('auth.youCanNowSignInWithYourEmailAndPassword')
+          : t('auth.enterThe6DigitCodeWeSentToValue', {
+              value0: email ?? t('common.yourEmail'),
+            })
       }
     >
       <View style={styles.form}>
@@ -87,12 +103,12 @@ export default function VerifyEmailScreen() {
             style={styles.button}
             onPress={goToSignIn}
           >
-            <AppText style={styles.buttonText}>Giriş yap</AppText>
+            <AppText style={styles.buttonText}>{t('common.signIn')}</AppText>
           </Pressable>
         ) : (
           <>
             <TextField
-              label="Doğrulama kodu"
+              label={t('auth.verificationCode')}
               value={code}
               maxLength={6}
               keyboardType="number-pad"
@@ -106,9 +122,7 @@ export default function VerifyEmailScreen() {
                 if (code.length === 6) void submit(false);
               }}
             />
-            <AppText muted>
-              Kod 10 dakika geçerlidir. E-posta gelmediyse spam klasörünü de kontrol et.
-            </AppText>
+            <AppText muted>{t('auth.yourCodeIsValidFor10MinutesCheckYourSpam')}</AppText>
             {error ? (
               <AppText accessibilityRole="alert" style={styles.error}>
                 {error}
@@ -117,7 +131,7 @@ export default function VerifyEmailScreen() {
             {notice ? <AppText accessibilityLiveRegion="polite">{notice}</AppText> : null}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="E-postamı doğrula"
+              accessibilityLabel={t('auth.verifyEmail')}
               disabled={busy || code.length !== 6}
               onPress={() => void submit(false)}
               style={[styles.button, (busy || code.length !== 6) && styles.disabled]}
@@ -125,7 +139,7 @@ export default function VerifyEmailScreen() {
               {busy ? (
                 <ActivityIndicator color={authColors.paper} />
               ) : (
-                <AppText style={styles.buttonText}>E-postamı doğrula</AppText>
+                <AppText style={styles.buttonText}>{t('auth.verifyEmail')}</AppText>
               )}
             </Pressable>
             <Pressable
@@ -136,8 +150,10 @@ export default function VerifyEmailScreen() {
             >
               <AppText muted={busy || remaining > 0}>
                 {remaining > 0
-                  ? `Yeni kod için ${remaining} saniye bekle`
-                  : 'Kodu tekrar gönder'}
+                  ? t('auth.resendCountdown', {
+                      count: remaining,
+                    })
+                  : t('auth.resendCode')}
               </AppText>
             </Pressable>
             <Pressable
@@ -145,7 +161,7 @@ export default function VerifyEmailScreen() {
               onPress={goToSignIn}
               style={styles.link}
             >
-              <AppText>Giriş ekranına dön / E-posta adresini değiştir</AppText>
+              <AppText>{t('auth.backToSignInChangeEmail')}</AppText>
             </Pressable>
           </>
         )}

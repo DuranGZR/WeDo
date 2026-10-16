@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import AppError
+from app.core.localization import message
 from app.core.mail import EmailDeliveryError, send_email
 from app.modules.auth.models import EmailVerification
 from app.modules.users.models import User
@@ -21,19 +22,19 @@ MAX_ATTEMPTS = 5
 class VerificationError(AppError):
     status_code = 400
     code = "INVALID_VERIFICATION"
-    default_message = "Kod geçersiz veya süresi dolmuş. Yeni kod iste."
+    default_message_key = "message.thisCodeIsInvalidOrHasExpiredRequestA"
 
 
 class VerificationRequired(AppError):
     status_code = 403
     code = "EMAIL_VERIFICATION_REQUIRED"
-    default_message = "Giriş yapmak için e-posta adresini doğrula."
+    default_message_key = "message.verifyYourEmailToSignIn"
 
 
 class VerificationMailError(AppError):
     status_code = 503
     code = "EMAIL_DELIVERY_FAILED"
-    default_message = "Doğrulama kodu gönderilemedi. Lütfen tekrar dene."
+    default_message_key = "message.weCouldnTSendYourVerificationCodePleaseTry"
 
 
 def _utc(value: datetime) -> datetime:
@@ -81,10 +82,15 @@ def issue_code(session: Session, user: User) -> dict:
     try:
         send_email(
             to=user.email,
-            subject="WeDo e-posta doğrulama kodun",
-            text=f"WeDo doğrulama kodun: {code}\n\n"
-            "Bu kod 10 dakika geçerlidir ve yalnızca bir kez kullanılabilir. "
-            "Kodu kimseyle paylaşma. Bu işlemi sen başlatmadıysan e-postayı yok say.",
+            subject=message(
+                "message.yourWedoEmailVerificationCode",
+                language=user.preferred_language,
+            ),
+            text=message(
+                "message.yourWedoVerificationCodeValue0ThisCodeIsValid",
+                value0=code,
+                language=user.preferred_language,
+            ),
         )
         session.flush()
     except EmailDeliveryError as error:
@@ -120,7 +126,9 @@ def verify_code(session: Session, challenge_id: UUID, code: str) -> None:
     if not challenge or _utc(challenge.expires_at) <= datetime.now(UTC):
         raise VerificationError()
     if challenge.attempts >= MAX_ATTEMPTS:
-        raise VerificationError("Çok fazla hatalı deneme. Yeni kod iste.")
+        raise VerificationError(
+            message("message.tooManyIncorrectAttemptsRequestANewCode")
+        )
     if not hmac.compare_digest(challenge.code_hash, _hash(challenge.id, code)):
         challenge.attempts += 1
         session.commit()

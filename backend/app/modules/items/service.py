@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.localization import message
 from app.modules.items.enums import ItemStatus, MetadataStatus
 from app.modules.items.models import Item
 from app.modules.items.repository import item_repository
@@ -24,7 +25,13 @@ def response_for_item(session: Session, item: Item) -> ItemResponse:
     return response.model_copy(
         update={
             "created_by_name": (
-                creator.display_name if creator else "Bilinmeyen kullanıcı"
+                (
+                    creator.display_name
+                    if creator.is_active
+                    else message("message.deletedUser")
+                )
+                if creator
+                else message("message.unknownUser")
             )
         }
     )
@@ -34,14 +41,15 @@ def create_item(session: Session, user_id: UUID, data: ItemCreate) -> ItemRespon
     target_list = list_repository.get_by_id(session, data.list_id)
     if target_list is None or target_list.space_id != data.space_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Liste bulunamadı."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=message("message.listNotFound"),
         )
     if data.client_item_id and item_repository.get_by_client_id(
         session, user_id, data.client_item_id
     ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Bu paylaşım daha önce kaydedildi.",
+            detail=message("message.thisSharedContentHasAlreadyBeenSaved"),
         )
     original_url = str(data.original_url) if data.original_url else None
     normalized_hash = url_hash(original_url) if original_url else None
@@ -50,7 +58,7 @@ def create_item(session: Session, user_id: UUID, data: ItemCreate) -> ItemRespon
     ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Bu bağlantı listede zaten bulunuyor.",
+            detail=message("message.thisLinkIsAlreadyInTheList"),
         )
     item = item_repository.create(
         session,
@@ -77,8 +85,8 @@ def create_item(session: Session, user_id: UUID, data: ItemCreate) -> ItemRespon
         space_id=item.space_id,
         actor_id=user_id,
         notification_type="item_created",
-        title="Yeni içerik kaydedildi",
-        body="Ortak alana yeni bir içerik eklendi.",
+        title=message("message.newItemSaved"),
+        body=message("message.aNewItemWasAddedToYourSharedSpace"),
         data={"item_id": str(item.id), "space_id": str(item.space_id)},
     )
     session.commit()
@@ -89,7 +97,7 @@ def create_item(session: Session, user_id: UUID, data: ItemCreate) -> ItemRespon
 def get_item(session: Session, item_id: UUID) -> Item:
     item = item_repository.get_by_id(session, item_id)
     if item is None:
-        raise HTTPException(status_code=404, detail="Öğe bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.itemNotFound"))
     return item
 
 
@@ -114,7 +122,9 @@ def move_item(session: Session, item_id: UUID, data: ItemMove) -> ItemResponse:
     item = get_item(session, item_id)
     target_list = list_repository.get_by_id(session, data.list_id)
     if target_list is None or target_list.space_id != item.space_id:
-        raise HTTPException(status_code=404, detail="Hedef liste bulunamadı.")
+        raise HTTPException(
+            status_code=404, detail=message("message.destinationListNotFound")
+        )
     item.list_id = data.list_id
     session.commit()
     return response_for_item(session, item)

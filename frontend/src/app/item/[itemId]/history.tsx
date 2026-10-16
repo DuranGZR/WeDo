@@ -1,27 +1,17 @@
-﻿import { router, useLocalSearchParams } from 'expo-router';
+import { formatDate, t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View, Platform, Pressable } from 'react-native';
 import { AppText, EmptyState, Screen } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
-import { collaborationApi } from '@/features/collaboration/api';
-import { useEffect, useState } from 'react';
+import { useItemActivities } from '@/features/collaboration/hooks';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ItemHistoryScreen() {
+  useTranslation();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
-  const [entries, setEntries] = useState<Awaited<
-    ReturnType<typeof collaborationApi.activitiesForItem>
-  > | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (itemId)
-      void collaborationApi
-        .activitiesForItem(itemId)
-        .then(setEntries)
-        .finally(() => setLoading(false));
-  }, [itemId]);
-
-  const data = entries?.data ?? [];
+  const result = useItemActivities(itemId);
+  const data = result.data?.data ?? [];
 
   return (
     <Screen scroll={true}>
@@ -34,28 +24,35 @@ export default function ItemHistoryScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
       </View>
 
       <View style={styles.content}>
-        <AppText variant="pageTitle">Geçmiş</AppText>
+        <AppText variant="pageTitle">{t('items.history')}</AppText>
 
-        {loading ? (
+        {result.isLoading ? (
           <ActivityIndicator color={colors.accent} />
+        ) : result.isError ? (
+          <EmptyState
+            title={t('items.historyLoadFailed')}
+            description={t('lists.checkYourConnectionAndTryAgain')}
+            action={t('common.tryAgain')}
+            onAction={() => void result.refetch()}
+          />
         ) : data.length === 0 ? (
           <EmptyState
-            title="Henüz geçmiş yok"
-            description="İçerikle ilgili hareketler burada görünecek."
+            title={t('items.noHistoryYet')}
+            description={t('items.activityForThisItemWillAppearHere')}
           />
         ) : (
           data.map((entry) => (
             <View key={entry.id} style={[styles.glassCard, styles.historyCard]}>
               <AppText>{entry.action}</AppText>
               <AppText variant="caption" muted>
-                {new Date(entry.created_at).toLocaleString('tr-TR')}
+                {formatDate(entry.created_at, true)}
               </AppText>
             </View>
           ))

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.localization import current_language, message
 from app.modules.auth.models import AuthIdentity, RefreshSession
 from app.modules.auth.passwords import hash_password, verify_password
 from app.modules.auth.repository import auth_repository
@@ -80,6 +81,7 @@ def sign_up(session: Session, data: SignUpRequest) -> dict:
         session,
         User(
             email=email,
+            preferred_language=current_language(),
             display_name=data.display_name.strip(),
             password_hash=hash_password(data.password),
         ),
@@ -101,15 +103,17 @@ def sign_up(session: Session, data: SignUpRequest) -> dict:
 def sign_in(
     session: Session, email: str, password: str, device_id: str | None
 ) -> TokenResponse:
-    user = session.scalar(select(User).where(User.email == email.lower()).with_for_update())
+    user = session.scalar(
+        select(User).where(User.email == email.lower()).with_for_update()
+    )
     if (
         user is None
         or user.password_hash is None
         or not verify_password(password, user.password_hash)
     ):
-        raise AuthError("E-posta veya şifre hatalı.")
+        raise AuthError(message("message.yourEmailOrPasswordIsIncorrect"))
     if not user.is_active:
-        raise AuthError("Kullanıcı hesabı aktif değil.")
+        raise AuthError(message("message.thisAccountIsNotActive"))
     if not user.email_verified:
         challenge = issue_code(session, user)
         session.commit()
@@ -125,7 +129,9 @@ def refresh(session: Session, refresh_token: str) -> TokenResponse:
         session_id = UUID(payload["session_id"])
         user_id = UUID(payload["sub"])
     except (ValueError, KeyError, jwt.InvalidTokenError) as error:
-        raise AuthError("Refresh token geçersiz.") from error
+        raise AuthError(
+            message("message.invalidRefreshTokenPleaseSignInAgain")
+        ) from error
     refresh_session = auth_repository.get_refresh_session(session, session_id)
     user = user_repository.get_by_id(session, user_id)
     if (
@@ -137,7 +143,7 @@ def refresh(session: Session, refresh_token: str) -> TokenResponse:
         or _is_expired(refresh_session.expires_at)
         or refresh_session.refresh_token_hash != hash_token(refresh_token)
     ):
-        raise AuthError("Refresh token geçersiz veya süresi dolmuş.")
+        raise AuthError(message("message.yourSessionHasExpiredPleaseSignInAgain"))
     auth_repository.revoke_refresh_session(refresh_session)
     response = _issue_tokens(session, user, refresh_session.device_id)
     session.commit()
@@ -166,7 +172,9 @@ def sign_out_all(session: Session, user_id: UUID) -> None:
 
 def _validate_new_password(current_password: str, new_password: str) -> None:
     if current_password == new_password:
-        raise AuthError("Yeni şifre mevcut şifrenle aynı olamaz.")
+        raise AuthError(
+            message("message.yourNewPasswordMustBeDifferentFromYourCurrent")
+        )
     _validate_password_strength(new_password)
 
 
@@ -178,7 +186,7 @@ def _validate_password_strength(password: str) -> None:
         and any(character.isdigit() for character in password)
     ):
         raise PasswordPolicyError(
-            "Şifre en az bir büyük harf, küçük harf ve rakam içermeli."
+            message("message.includeAnUppercaseLetterALowercaseLetterAndA")
         )
 
 
@@ -188,7 +196,7 @@ def change_password(
     if user.password_hash is None or not verify_password(
         current_password, user.password_hash
     ):
-        raise AuthError("Mevcut şifren doğru değil.")
+        raise AuthError(message("message.yourCurrentPasswordIsIncorrect"))
     _validate_new_password(current_password, new_password)
     user.password_hash = hash_password(new_password)
     auth_repository.revoke_all_for_user(session, user.id)
@@ -230,7 +238,7 @@ def _verify_apple_token(identity_token: str, apple_user_id: str) -> dict[str, ob
             except Exception:
                 pass
         raise AuthError(
-            f"Apple Identity Token geçersiz veya doğrulanamadı: {error}"
+            message("message.weCouldnTVerifyYourAppleSignInPlease")
         ) from error
 
 
@@ -239,7 +247,7 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
 
     token_sub = claims.get("sub")
     if not token_sub or str(token_sub) != data.apple_user_id:
-        raise AuthError("Apple kullanıcı kimliği doğrulaması başarısız.")
+        raise AuthError(message("message.weCouldnTVerifyYourAppleAccount"))
 
     token_email = claims.get("email")
     email: str
@@ -254,7 +262,7 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
     if identity:
         user = user_repository.get_by_id(session, identity.user_id)
         if not user or not user.is_active:
-            raise AuthError("Kullanıcı hesabı aktif değil.")
+            raise AuthError(message("message.thisAccountIsNotActive"))
     else:
         user = user_repository.get_by_email(session, email)
         if not user:
@@ -267,6 +275,7 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
                 session,
                 User(
                     email=email,
+                    preferred_language=current_language(),
                     display_name=display_name,
                     password_hash=None,
                     email_verified=True,
@@ -295,7 +304,7 @@ _google_jwks_client = jwt.PyJWKClient(
 
 def _verify_google_token(id_token: str) -> dict[str, object]:
     if not settings.google_web_client_id:
-        raise AuthError("Google ile giriş henüz yapılandırılmadı.")
+        raise AuthError(message("message.googleSignInHasnTBeenSetUpYet"))
     try:
         signing_key = _google_jwks_client.get_signing_key_from_jwt(id_token)
         return jwt.decode(
@@ -308,7 +317,7 @@ def _verify_google_token(id_token: str) -> dict[str, object]:
         )
     except (jwt.PyJWTError, ValueError) as error:
         raise AuthError(
-            "Google kimlik bilgisi doğrulanamadı. Tekrar giriş yap."
+            message("message.weCouldnTVerifyYourGoogleSignInPlease")
         ) from error
 
 
@@ -316,26 +325,28 @@ def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse
     claims = _verify_google_token(data.id_token)
     google_user_id = claims.get("sub")
     if not isinstance(google_user_id, str) or not google_user_id.strip():
-        raise AuthError("Google kullanıcı kimliği bulunamadı.")
+        raise AuthError(message("message.weCouldnTIdentifyYourGoogleAccount"))
     if claims.get("email_verified") is not True:
-        raise AuthError("Google e-posta adresi doğrulanmış olmalıdır.")
+        raise AuthError(message("message.yourGoogleEmailAddressMustBeVerified"))
     try:
         email = str(TypeAdapter(EmailStr).validate_python(claims.get("email"))).lower()
     except ValidationError as error:
-        raise AuthError("Google e-posta adresi geçersiz.") from error
+        raise AuthError(message("message.yourGoogleEmailAddressIsInvalid")) from error
     identity = auth_repository.get_identity(session, "google", google_user_id)
     if identity:
         user = user_repository.get_by_id(session, identity.user_id)
         if not user or not user.is_active:
-            raise AuthError("Kullanıcı hesabı aktif değil.")
+            raise AuthError(message("message.thisAccountIsNotActive"))
     else:
         user = user_repository.get_by_email(session, email)
         if user and not user.is_active:
-            raise AuthError("Kullanıcı hesabı aktif değil.")
+            raise AuthError(message("message.thisAccountIsNotActive"))
         # Google is authoritative for Gmail and verified Workspace domains only.
         # A third-party email's ownership may have changed since Google verified it.
         if user and not (email.endswith("@gmail.com") or claims.get("hd")):
-            raise AuthError("Bu e-posta ile mevcut hesabına şifrenle giriş yap.")
+            raise AuthError(
+                message("message.pleaseSignInToYourExistingAccountWithYour")
+            )
         if not user:
             token_name = claims.get("name")
             display_name = (
@@ -347,6 +358,7 @@ def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse
                 session,
                 User(
                     email=email,
+                    preferred_language=current_language(),
                     display_name=display_name,
                     password_hash=None,
                     email_verified=True,
@@ -366,4 +378,3 @@ def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse
     response = _issue_tokens(session, user, data.device_id)
     session.commit()
     return response
-

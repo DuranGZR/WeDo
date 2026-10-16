@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -26,6 +28,7 @@ import {
 import { useLists } from '@/features/lists/hooks';
 
 export default function ItemDetailScreen() {
+  useTranslation();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const item = useItem(itemId);
   const [isMoveOpen, setIsMoveOpen] = useState(false);
@@ -48,9 +51,9 @@ export default function ItemDetailScreen() {
         <Header onBack={goBack} />
         <EmptyState
           icon="cloud-offline-outline"
-          title="Yüklenemedi"
-          description="İçerik bilgisi alınırken bir sorun oluştu. Lütfen bağlantını kontrol et."
-          action="Yeniden Dene"
+          title={t('items.couldnTLoad')}
+          description={t('items.weCouldnTLoadThisItemPleaseCheckYourConnection')}
+          action={t('common.retry')}
           onAction={() => void item.refetch()}
         />
       </Screen>
@@ -62,9 +65,9 @@ export default function ItemDetailScreen() {
         <Header onBack={goBack} />
         <EmptyState
           icon="alert-circle-outline"
-          title="İçerik bulunamadı"
-          description="Bu içerik artık erişilebilir değil veya silinmiş."
-          action="Geri Dön"
+          title={t('items.itemNotFound')}
+          description={t('items.thisItemHasBeenDeletedOrIsNoLongerAvailable')}
+          action={t('items.goBack')}
           onAction={goBack}
         />
       </Screen>
@@ -75,10 +78,10 @@ export default function ItemDetailScreen() {
 
   const confirmDelete = () => {
     haptic.warning();
-    Alert.alert('İçeriği sil?', 'Bu içerik listeden kaldırılacak.', [
-      { text: 'Vazgeç', style: 'cancel' },
+    Alert.alert(t('items.deleteThisItem'), t('items.thisItemWillBeRemovedFromTheList'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sil',
+        text: t('items.delete'),
         style: 'destructive',
         onPress: () => {
           haptic.medium();
@@ -100,22 +103,24 @@ export default function ItemDetailScreen() {
             resizeMode="cover"
           />
           <AppText variant="pageTitle" style={styles.title}>
-            {value.title ?? 'Kaydedilen içerik'}
+            {value.title ?? t('common.savedItem')}
           </AppText>
           {value.original_url ? (
             <Pressable
               onPress={() => void Linking.openURL(value.original_url!)}
               style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed]}
               accessibilityRole="button"
-              accessibilityLabel="Linke git"
+              accessibilityLabel={t('items.openLink')}
             >
               <Ionicons name="open-outline" size={17} color={mono.ink} />
-              <AppText style={styles.sourceButtonText}>Linke git</AppText>
+              <AppText style={styles.sourceButtonText}>{t('items.openLink')}</AppText>
             </Pressable>
           ) : null}
           <View style={styles.creatorRow}>
             <Ionicons name="person-outline" size={17} color={colors.secondaryText} />
-            <AppText muted>Ekleyen: {value.created_by_name}</AppText>
+            <AppText muted>
+              {t('items.addedBy')} {value.created_by_name}
+            </AppText>
           </View>
         </Card>
         <Pressable
@@ -137,7 +142,7 @@ export default function ItemDetailScreen() {
           ]}
           accessibilityRole="button"
           accessibilityLabel={
-            completed ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle'
+            completed ? t('items.markAsNotDone') : t('items.markAsDone')
           }
         >
           {complete.isPending || restore.isPending ? (
@@ -150,7 +155,7 @@ export default function ItemDetailScreen() {
                 color={completed ? mono.ink : mono.paper}
               />
               <AppText style={[styles.completeText, completed && styles.restoreText]}>
-                {completed ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle'}
+                {completed ? t('items.markAsNotDone') : t('items.markAsDone')}
               </AppText>
             </>
           )}
@@ -161,11 +166,11 @@ export default function ItemDetailScreen() {
           accessibilityRole="button"
         >
           <Ionicons name="swap-horizontal-outline" size={19} color={mono.ink} />
-          <AppText style={styles.moveText}>Başka listeye taşı</AppText>
+          <AppText style={styles.moveText}>{t('items.moveToAnotherList')}</AppText>
         </Pressable>
         {isMoveOpen ? (
           <Card style={styles.moveCard}>
-            <AppText variant="cardTitle">Hedef liste</AppText>
+            <AppText variant="cardTitle">{t('items.destinationList')}</AppText>
             {lists.data?.data
               .filter((entry) => entry.id !== value.list_id)
               .map((entry) => (
@@ -187,7 +192,9 @@ export default function ItemDetailScreen() {
                 </Pressable>
               ))}
             {lists.data?.data.length === 1 ? (
-              <AppText muted>Taşımak için bu alanda ikinci bir liste oluştur.</AppText>
+              <AppText muted>
+                {t('items.createAnotherListInThisSpaceToMoveTheItem')}
+              </AppText>
             ) : null}
           </Card>
         ) : null}
@@ -201,11 +208,11 @@ export default function ItemDetailScreen() {
             remove.isPending && styles.disabled,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="İçeriği sil"
+          accessibilityLabel={t('items.deleteItem')}
         >
           <Ionicons name="trash-outline" size={18} color={colors.error} />
           <AppText style={styles.deleteText}>
-            {remove.isPending ? 'Siliniyor...' : 'İçeriği sil'}
+            {remove.isPending ? 'Siliniyor...' : t('items.deleteItem')}
           </AppText>
         </Pressable>
       </View>
@@ -214,6 +221,7 @@ export default function ItemDetailScreen() {
 }
 
 function Header({ onBack }: { onBack: () => void }) {
+  useTranslation();
   return (
     <View style={styles.header}>
       <Pressable
@@ -221,14 +229,13 @@ function Header({ onBack }: { onBack: () => void }) {
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel="Geri git"
+        accessibilityLabel={t('common.goBack')}
       >
         <Ionicons name="arrow-back" size={22} color={mono.ink} />
       </Pressable>
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   contourTop: {

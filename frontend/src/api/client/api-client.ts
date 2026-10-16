@@ -1,3 +1,4 @@
+import { t, currentLanguage } from '@/i18n';
 import { env } from '@/lib/env';
 
 export type ApiError = {
@@ -9,7 +10,7 @@ export class ApiClientError extends Error {
     public status: number,
     public payload: ApiError,
   ) {
-    super(payload.error?.message ?? 'İstek tamamlanamadı.');
+    super(payload.error?.message ?? t('common.weCouldnTCompleteYourRequest'));
   }
 }
 
@@ -35,6 +36,7 @@ export async function apiClient<T>(
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
       headers: {
         Accept: 'application/json',
+        'Accept-Language': currentLanguage(),
         ...(body && !(body instanceof FormData)
           ? { 'Content-Type': 'application/json' }
           : {}),
@@ -44,9 +46,10 @@ export async function apiClient<T>(
     });
   } catch (error) {
     if (timeoutController.signal.aborted) {
-      throw new Error('Sunucuya bağlanma zaman aşımına uğradı. Lütfen tekrar dene.');
+      throw new Error(t('common.theConnectionTimedOutPleaseTryAgain'));
     }
-    throw error;
+    if (request.signal?.aborted) throw error;
+    throw new Error(t('common.networkError'));
   } finally {
     clearTimeout(timeoutId);
   }

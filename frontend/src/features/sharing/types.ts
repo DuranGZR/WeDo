@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import { z } from 'zod';
 
 export const sharePayloadSchema = z
@@ -8,8 +9,7 @@ export const sharePayloadSchema = z
     mimeType: z.string().optional(),
     sourceApp: z.string().optional(),
   })
-  .refine(
-    (value) => Boolean(value.url || value.sharedText || value.imageUri),
-    'Paylaşım içeriği boş olamaz.',
-  );
+  .refine((value) => Boolean(value.url || value.sharedText || value.imageUri), {
+    error: () => t('sharing.sharedContentCanTBeEmpty'),
+  });
 export type SharePayload = z.infer<typeof sharePayloadSchema>;

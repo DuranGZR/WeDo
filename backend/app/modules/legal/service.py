@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 
+from app.core.localization import message
 from app.core.mail import EmailDeliveryError, send_email
 
 SUPPORT_EMAIL = "contact@durangezer.com"
@@ -14,18 +15,14 @@ DeletionDeliveryError = EmailDeliveryError
 
 
 def send_deletion_request(data: DeletionRequest) -> None:
-    text = (
-        "Web formundan hesap silme talebi alındı.\n\n"
-        f"Bildirilen hesap e-postası: {data.email}\n"
-        f"Açıklama: {data.reason.strip() or 'Belirtilmedi'}\n\n"
-        "Bu form hesap sahipliğini doğrulamaz. Herhangi bir silme işleminden "
-        "önce başvuranın hesap sahibi olduğunu doğrulayın.\n"
-        "Apple'ın E-postamı Gizle özelliği kullanıldıysa ilgili hesap "
-        "eşleştirmesini ayrıca doğrulayın.\n"
+    text = message(
+        "message.anAccountDeletionRequestWasReceivedFromTheWeb",
+        value0=data.email,
+        value1=data.reason.strip() or message("support.notProvided"),
     )
     send_email(
         to=SUPPORT_EMAIL,
-        subject="WeDo hesap silme talebi",
+        subject=message("support.deletionSubject"),
         text=text,
         reply_to=str(data.email),
     )

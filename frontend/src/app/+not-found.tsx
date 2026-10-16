@@ -1,4 +1,6 @@
-﻿import { Link, router } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { Link, router } from 'expo-router';
 import { StyleSheet, View, Platform, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -6,6 +8,7 @@ import { AppText, Screen } from '@/components/ui';
 import { colors, radius, spacing } from '@/design-system';
 
 export default function NotFound() {
+  useTranslation();
   return (
     <Screen scroll={true}>
       {/* Ambient Glow Background Blobs */}
@@ -20,7 +23,7 @@ export default function NotFound() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
@@ -28,9 +31,9 @@ export default function NotFound() {
 
       <View style={styles.content}>
         <View style={styles.glassCard}>
-          <AppText variant="pageTitle">Sayfa bulunamadı</AppText>
+          <AppText variant="pageTitle">{t('common.pageNotFound')}</AppText>
           <AppText muted style={styles.copy}>
-            Bu bağlantı artık geçerli değil veya taşınmış olabilir.
+            {t('common.thisLinkMayHaveMovedOrIsNoLongerAvailable')}
           </AppText>
         </View>
 
@@ -38,7 +41,7 @@ export default function NotFound() {
           <Pressable
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.primaryBtnText}>Ana sayfaya dön</AppText>
+            <AppText style={styles.primaryBtnText}>{t('common.backToHome')}</AppText>
           </Pressable>
         </Link>
       </View>

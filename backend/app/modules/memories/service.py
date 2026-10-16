@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.localization import message
 from app.modules.items.service import get_item
 from app.modules.memories.models import Memory
 from app.modules.memories.repository import memory_repository
@@ -35,7 +36,7 @@ def list_memories(session: Session, space_id: UUID) -> list[MemoryResponse]:
 def get_memory(session: Session, memory_id: UUID) -> Memory:
     memory = memory_repository.get(session, memory_id)
     if memory is None:
-        raise HTTPException(status_code=404, detail="Anı bulunamadı.")
+        raise HTTPException(status_code=404, detail=message("message.memoryNotFound"))
     return memory
 
 
@@ -44,7 +45,9 @@ def update_memory(
 ) -> MemoryResponse:
     memory = get_memory(session, memory_id)
     if memory.created_by != user_id:
-        raise HTTPException(status_code=403, detail="Bu anıyı düzenleyemezsiniz.")
+        raise HTTPException(
+            status_code=403, detail=message("message.youCanTEditThisMemory")
+        )
     memory.note = data.note
     memory.rating = data.rating
     memory.photo_url = data.photo_url
@@ -55,6 +58,8 @@ def update_memory(
 def delete_memory(session: Session, memory_id: UUID, user_id: UUID) -> None:
     memory = get_memory(session, memory_id)
     if memory.created_by != user_id:
-        raise HTTPException(status_code=403, detail="Bu anıyı silemezsiniz.")
+        raise HTTPException(
+            status_code=403, detail=message("message.youCanTDeleteThisMemory")
+        )
     session.delete(memory)
     session.commit()

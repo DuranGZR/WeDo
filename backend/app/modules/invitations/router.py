@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import SessionDep
+from app.core.localization import message
 from app.core.pagination import PageResponse, PaginationDep, paginate
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.invitations.repository import invitation_repository
@@ -60,7 +61,9 @@ def revoke_invitation_endpoint(
 ) -> None:
     invitation = invitation_repository.get_by_id(session, invitation_id)
     if invitation is None:
-        raise HTTPException(status_code=404, detail="Davet bulunamadı.")
+        raise HTTPException(
+            status_code=404, detail=message("message.invitationNotFound")
+        )
     member = get_space_member(session, invitation.space_id, current_user.id)
     require_space_admin(member)
     revoke_invitation(session, invitation_id)

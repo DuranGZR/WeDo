@@ -1,6 +1,13 @@
 from functools import lru_cache
 
-from pydantic import EmailStr, Field, PostgresDsn, SecretStr, model_validator
+from pydantic import (
+    AnyHttpUrl,
+    EmailStr,
+    Field,
+    PostgresDsn,
+    SecretStr,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +40,7 @@ class Settings(BaseSettings):
     resend_api_key: SecretStr = SecretStr("")
     support_sender_email: EmailStr = "contact@durangezer.com"
     public_invite_base_url: str | None = None
+    app_store_url: AnyHttpUrl | None = None
     cors_origins: list[str] = []
     rate_limit_per_minute: int = Field(default=120, ge=1, le=10_000)
     auth_rate_limit_per_minute: int = Field(default=10, ge=1, le=100)
@@ -49,9 +57,13 @@ class Settings(BaseSettings):
     def validate_production_secrets(self) -> "Settings":
         if self.environment == "production":
             if self.jwt_secret_key.startswith("development-only"):
-                raise ValueError("Production ortamında JWT_SECRET_KEY değiştirilmelidir.")
+                raise ValueError(
+                    "Production ortamında JWT_SECRET_KEY değiştirilmelidir."
+                )
             if len(self.jwt_secret_key) < 32:
-                raise ValueError("Production ortamında JWT_SECRET_KEY en az 32 karakter olmalıdır.")
+                raise ValueError(
+                    "Production ortamında JWT_SECRET_KEY en az 32 karakter olmalıdır."
+                )
             if self.debug:
                 raise ValueError("Production ortamında DEBUG=false olmalıdır.")
             db_url = str(self.database_url).lower()
@@ -71,14 +83,17 @@ class Settings(BaseSettings):
             if not is_internal_host:
                 valid_ssl = any(
                     mode in db_url
-                    for mode in ("sslmode=require", "sslmode=verify-ca", "sslmode=verify-full")
+                    for mode in (
+                        "sslmode=require",
+                        "sslmode=verify-ca",
+                        "sslmode=verify-full",
+                    )
                 )
                 if not valid_ssl:
                     raise ValueError(
                         "Production ortamında DATABASE_URL 'sslmode=require' (veya verify-full) içermelidir."
                     )
         return self
-
 
 
 @lru_cache

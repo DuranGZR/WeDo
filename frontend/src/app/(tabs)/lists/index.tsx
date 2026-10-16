@@ -1,3 +1,6 @@
+import { formatRelativeTime, formatLocale, t } from '@/i18n';
+
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueries } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -29,10 +32,11 @@ import { getItemPreviewImage } from '@/components/domain/ItemCard';
 const { width } = Dimensions.get('window');
 
 function PendingAvatar() {
+  useTranslation();
   return (
     <View
       accessible
-      accessibilityLabel="Partner avatarı, davet bekleniyor"
+      accessibilityLabel={t('home.partnerAvatarInvitationPending')}
       style={styles.pendingAvatar}
     >
       <AppText style={styles.pendingInitial}>?</AppText>
@@ -49,34 +53,27 @@ function MemberAvatar({
   fallback?: string;
   size?: number;
 }) {
-  return <MonoAvatar name={member?.display_name ?? fallback ?? 'Kullanıcı'} size={size} />;
+  useTranslation();
+  return (
+    <MonoAvatar name={member?.display_name ?? fallback ?? t('common.user')} size={size} />
+  );
 }
 
 function MonoAvatar({ name, size = 28 }: { name?: string; size?: number }) {
+  useTranslation();
   return (
     <View
       style={[styles.monoAvatar, { width: size, height: size, borderRadius: size / 2 }]}
     >
       <AppText style={[styles.monoAvatarText, { fontSize: Math.max(10, size * 0.42) }]}>
-        {name?.trim().charAt(0).toLocaleUpperCase('tr-TR') || '?'}
+        {name?.trim().charAt(0).toLocaleUpperCase(formatLocale()) || '?'}
       </AppText>
     </View>
   );
 }
 
-function formatRelativeTime(value: string) {
-  const diffMinutes = Math.max(
-    0,
-    Math.round((Date.now() - new Date(value).getTime()) / 60_000),
-  );
-  if (diffMinutes < 1) return 'şimdi';
-  if (diffMinutes < 60) return `${diffMinutes} dk önce`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} sa önce`;
-  return `${Math.floor(diffHours / 24)} gün önce`;
-}
-
 export default function ListsScreen() {
+  useTranslation();
   const user = useAuthStore((state) => state.user);
   const spaces = useSpaces();
   const selectedSpaceId = useSpaceStore((state) => state.selectedSpaceId);
@@ -122,10 +119,10 @@ export default function ListsScreen() {
   const newItemsToday = allItems.filter(
     (item) => new Date(item.created_at).toDateString() === today,
   ).length;
-  const activitySummary = `${entries.length} liste · ${newItemsToday} yeni içerik`;
+  const activitySummary = `${t('lists.listCount', { count: entries.length })} · ${t('lists.newItemCount', { count: newItemsToday })}`;
 
   const memberLabel = needsInvite
-    ? 'Davet bekleniyor'
+    ? t('home.invitationPending')
     : (members.data?.data ?? [])
         .slice(0, 2)
         .map((member) => member.display_name)
@@ -134,270 +131,293 @@ export default function ListsScreen() {
   return (
     <ScreenMotion>
       <Screen
-      scroll={true}
-      backgroundColor={mono.background}
-      contentContainerStyle={styles.screen}
-    >
-      <View style={styles.contourTop} pointerEvents="none" />
-      {/* Top Bar Header */}
-      <View style={styles.topBar}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Alan değiştir"
-          onPress={() => setSpaceSheetOpen(true)}
-          style={styles.spaceSelector}
-        >
-          <View style={styles.spaceCover}>
-            <Ionicons name="sparkles" size={17} color={mono.paper} />
-          </View>
-          <View style={styles.spaceSelectorBody}>
-            <View style={styles.spaceTitleRow}>
-              <AppText variant="cardTitle" style={styles.spaceTitle}>
-                {space?.name ?? 'Ortak alan'}
-              </AppText>
-              <Ionicons name="chevron-down" size={16} color={mono.ink} />
-            </View>
-            <View style={styles.memberRow}>
-              <MonoAvatar
-                name={user?.display_name || user?.email?.split('@')[0] || 'Kullanıcı'}
-                size={26}
-              />
-              {(() => {
-                const partner = members.data?.data?.find((m) => m.user_id !== user?.id);
-                return partner ? (
-                  <MemberAvatar member={partner} size={26} />
-                ) : (
-                  <PendingAvatar />
-                );
-              })()}
-              <AppText variant="caption" muted>
-                {memberLabel}
-              </AppText>
-            </View>
-          </View>
-        </Pressable>
-        <View style={styles.topActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Bildirimler"
-            onPress={() => router.push('/notifications')}
-            style={styles.headerIconButton}
-          >
-            <Ionicons name="notifications-outline" size={21} color={mono.ink} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Profil"
-            onPress={() => router.push('/profile')}
-          >
-            <MonoAvatar name={user?.display_name || user?.email?.split('@')[0] || 'Kullanıcı'} size={40} />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Loader for first fetch */}
-      {spaces.isLoading || lists.isLoading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={mono.ink} />
-        </View>
-      ) : !space ? (
-        <EmptyState
-          title="Önce bir alan oluştur"
-          description="Ortak listeler alanların içinde yaşar."
-          action="Alan oluştur"
-          onAction={() => router.push('/space/create')}
-        />
-      ) : (
-        <>
-          {/* Dashboard Premium Space Banner Card */}
-          <Card style={styles.bannerCard}>
-            <View style={styles.bannerGlow} />
-
-            <View style={styles.bannerTop}>
-              <View style={styles.spaceBadge}>
-                <Ionicons name="shapes-outline" size={14} color={mono.paper} />
-                <AppText style={styles.spaceBadgeText}>{space.name}</AppText>
-              </View>
-              <AppText style={styles.bannerTitle}>Bugün alanında neler var?</AppText>
-            </View>
-
-            <AppText style={styles.bannerDescription}>{activitySummary}</AppText>
-
-            <Pressable
-              onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
-              style={({ pressed }) => [
-                styles.bannerButton,
-                pressed && styles.bannerButtonPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Yeni liste oluştur"
-            >
-              <Ionicons name="add" size={16} color={mono.paper} />
-              <AppText style={styles.bannerButtonText}>Yeni Liste Ekle</AppText>
-            </Pressable>
-          </Card>
-
-          {/* Section Header */}
-          <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitleText}>Aktif Listeleriniz</AppText>
-            <View style={styles.badgeCount}>
-              <AppText style={styles.badgeCountText}>{entries.length}</AppText>
-            </View>
-          </View>
-
-          {/* Lists Entries */}
-          {entries.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="albums-outline" size={32} color={mono.paper} />
-                <View style={styles.emptyBadge} />
-              </View>
-              <AppText variant="sectionTitle" style={styles.emptyTitle}>
-                İlk listenizi oluşturun
-              </AppText>
-              <AppText muted style={styles.emptySubtitle}>
-                Gidilecek yerler, izlenecek filmler veya ortak hedefleriniz için bir liste
-                açın.
-              </AppText>
-              {space ? (
-                <Button
-                  label="Hemen Liste Oluştur"
-                  onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
-                  style={{ marginTop: spacing.md }}
-                />
-              ) : null}
-            </Card>
-          ) : (
-            <View style={styles.listContainer}>
-              {entries.map((list, index) => {
-                const items = itemQueries[index]?.data?.data ?? [];
-                const previews = items.slice(0, 4);
-                const latestItem = items[0];
-                return (
-                  <View key={list.id} style={styles.cardPressable}>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`${list.name} listesini aç`}
-                      onPress={() => router.push(`/list/${list.id}`)}
-                      style={({ pressed }) => [pressed && styles.cardPressed]}
-                    >
-                      <Card style={styles.card}>
-                        <View style={styles.previewGrid}>
-                          {Array.from({ length: 4 }).map((_, previewIndex) => {
-                            const item = previews[previewIndex];
-                            return item ? (
-                              <Image
-                                key={item.id}
-                                source={{ uri: getItemPreviewImage(item) }}
-                                style={styles.previewTile}
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <View
-                                key={`empty-${previewIndex}`}
-                                style={[styles.previewTile, styles.emptyPreviewTile]}
-                              />
-                            );
-                          })}
-                        </View>
-                        <View style={styles.body}>
-                          <AppText variant="cardTitle" style={styles.cardName}>
-                            {list.name}
-                          </AppText>
-                          <AppText
-                            muted
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                            style={styles.cardMeta}
-                          >
-                            {latestItem
-                              ? `${latestItem.created_by_name ?? 'Birisi'} ekledi · ${formatRelativeTime(latestItem.created_at)}`
-                              : '0 içerik'}
-                          </AppText>
-                        </View>
-                      </Card>
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`${list.name} listesine içerik ekle`}
-                      hitSlop={8}
-                      onPress={() => router.push(`/item/create?listId=${list.id}`)}
-                      style={({ pressed }) => [
-                        styles.quickAddButton,
-                        pressed && styles.quickAddButtonPressed,
-                      ]}
-                    >
-                      <Ionicons name="add" size={18} color={mono.paper} />
-                    </Pressable>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </>
-      )}
-
-      <Modal
-        visible={spaceSheetOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSpaceSheetOpen(false)}
+        scroll={true}
+        backgroundColor={mono.background}
+        contentContainerStyle={styles.screen}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setSpaceSheetOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
-            <View style={styles.sheetHandle} />
-            <AppText variant="sectionTitle">Alan değiştir</AppText>
-            {(spaces.data?.data ?? []).map((entry) => (
-              <Pressable
-                key={entry.id}
-                accessibilityRole="button"
-                accessibilityLabel={`${entry.name} alanını seç`}
-                onPress={() => {
-                  setSelectedSpaceId(entry.id);
-                  setSpaceSheetOpen(false);
-                }}
-                style={styles.sheetRow}
-              >
-                <View style={styles.listIcon}>
-                  <Ionicons name="people-outline" size={19} color={mono.paper} />
-                </View>
-                <View style={styles.sheetRowBody}>
-                  <AppText variant="cardTitle">{entry.name}</AppText>
-                  <AppText variant="caption" muted numberOfLines={1}>
-                    {(() => {
-                      const memberQuery =
-                        spaceMemberQueries[
-                          (spaces.data?.data ?? []).findIndex((space) => space.id === entry.id)
-                        ];
-                      const entryMembers = memberQuery?.data?.data ?? [];
-                      if (memberQuery?.isLoading) return 'Üyeler yükleniyor…';
-                      return entryMembers.length > 0
-                        ? entryMembers.map((member) => member.display_name).join(' · ')
-                        : 'Davet bekleniyor';
-                    })()}
-                  </AppText>
-                </View>
-                {entry.id === space?.id ? (
-                  <Ionicons name="checkmark" size={20} color={mono.ink} />
-                ) : null}
-              </Pressable>
-            ))}
+        <View style={styles.contourTop} pointerEvents="none" />
+        {/* Top Bar Header */}
+        <View style={styles.topBar}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('home.switchSpace')}
+            onPress={() => setSpaceSheetOpen(true)}
+            style={styles.spaceSelector}
+          >
+            <View style={styles.spaceCover}>
+              <Ionicons name="sparkles" size={17} color={mono.paper} />
+            </View>
+            <View style={styles.spaceSelectorBody}>
+              <View style={styles.spaceTitleRow}>
+                <AppText variant="cardTitle" style={styles.spaceTitle}>
+                  {space?.name ?? t('spaces.sharedSpace')}
+                </AppText>
+                <Ionicons name="chevron-down" size={16} color={mono.ink} />
+              </View>
+              <View style={styles.memberRow}>
+                <MonoAvatar
+                  name={
+                    user?.display_name || user?.email?.split('@')[0] || t('common.user')
+                  }
+                  size={26}
+                />
+                {(() => {
+                  const partner = members.data?.data?.find((m) => m.user_id !== user?.id);
+                  return partner ? (
+                    <MemberAvatar member={partner} size={26} />
+                  ) : (
+                    <PendingAvatar />
+                  );
+                })()}
+                <AppText variant="caption" muted>
+                  {memberLabel}
+                </AppText>
+              </View>
+            </View>
+          </Pressable>
+          <View style={styles.topActions}>
             <Pressable
               accessibilityRole="button"
-              onPress={() => {
-                setSpaceSheetOpen(false);
-                router.push('/space/create');
-              }}
-              style={({ pressed }) => [
-                styles.sheetCreateButton,
-                pressed && styles.cardPressed,
-              ]}
+              accessibilityLabel={t('common.notifications')}
+              onPress={() => router.push('/notifications')}
+              style={styles.headerIconButton}
             >
-              <AppText style={styles.sheetCreateText}>Yeni alan oluştur</AppText>
+              <Ionicons name="notifications-outline" size={21} color={mono.ink} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('common.profile')}
+              onPress={() => router.push('/profile')}
+            >
+              <MonoAvatar
+                name={
+                  user?.display_name || user?.email?.split('@')[0] || t('common.user')
+                }
+                size={40}
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Loader for first fetch */}
+        {spaces.isLoading || lists.isLoading ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color={mono.ink} />
+          </View>
+        ) : !space ? (
+          <EmptyState
+            title={t('lists.createASpaceFirst')}
+            description={t('lists.sharedListsBelongToASpace')}
+            action={t('home.createSpace')}
+            onAction={() => router.push('/space/create')}
+          />
+        ) : (
+          <>
+            {/* Dashboard Premium Space Banner Card */}
+            <Card style={styles.bannerCard}>
+              <View style={styles.bannerGlow} />
+
+              <View style={styles.bannerTop}>
+                <View style={styles.spaceBadge}>
+                  <Ionicons name="shapes-outline" size={14} color={mono.paper} />
+                  <AppText style={styles.spaceBadgeText}>{space.name}</AppText>
+                </View>
+                <AppText style={styles.bannerTitle}>
+                  {t('lists.whatSHappeningInYourSpaceToday')}
+                </AppText>
+              </View>
+
+              <AppText style={styles.bannerDescription}>{activitySummary}</AppText>
+
+              <Pressable
+                onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
+                style={({ pressed }) => [
+                  styles.bannerButton,
+                  pressed && styles.bannerButtonPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t('home.createANewList')}
+              >
+                <Ionicons name="add" size={16} color={mono.paper} />
+                <AppText style={styles.bannerButtonText}>{t('lists.addNewList')}</AppText>
+              </Pressable>
+            </Card>
+
+            {/* Section Header */}
+            <View style={styles.sectionHeader}>
+              <AppText style={styles.sectionTitleText}>
+                {t('lists.yourActiveLists')}
+              </AppText>
+              <View style={styles.badgeCount}>
+                <AppText style={styles.badgeCountText}>{entries.length}</AppText>
+              </View>
+            </View>
+
+            {/* Lists Entries */}
+            {entries.length === 0 ? (
+              <Card style={styles.emptyCard}>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="albums-outline" size={32} color={mono.paper} />
+                  <View style={styles.emptyBadge} />
+                </View>
+                <AppText variant="sectionTitle" style={styles.emptyTitle}>
+                  {t('lists.createYourFirstList')}
+                </AppText>
+                <AppText muted style={styles.emptySubtitle}>
+                  {t('lists.makeAListOfPlacesToVisitMoviesToWatch')}
+                </AppText>
+                {space ? (
+                  <Button
+                    label={t('lists.createAList')}
+                    onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
+                    style={{ marginTop: spacing.md }}
+                  />
+                ) : null}
+              </Card>
+            ) : (
+              <View style={styles.listContainer}>
+                {entries.map((list, index) => {
+                  const items = itemQueries[index]?.data?.data ?? [];
+                  const previews = items.slice(0, 4);
+                  const latestItem = items[0];
+                  return (
+                    <View key={list.id} style={styles.cardPressable}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('home.openValue', { value0: list.name })}
+                        onPress={() => router.push(`/list/${list.id}`)}
+                        style={({ pressed }) => [pressed && styles.cardPressed]}
+                      >
+                        <Card style={styles.card}>
+                          <View style={styles.previewGrid}>
+                            {Array.from({ length: 4 }).map((_, previewIndex) => {
+                              const item = previews[previewIndex];
+                              return item ? (
+                                <Image
+                                  key={item.id}
+                                  source={{ uri: getItemPreviewImage(item) }}
+                                  style={styles.previewTile}
+                                  resizeMode="cover"
+                                />
+                              ) : (
+                                <View
+                                  key={`empty-${previewIndex}`}
+                                  style={[styles.previewTile, styles.emptyPreviewTile]}
+                                />
+                              );
+                            })}
+                          </View>
+                          <View style={styles.body}>
+                            <AppText variant="cardTitle" style={styles.cardName}>
+                              {list.name}
+                            </AppText>
+                            <AppText
+                              muted
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                              style={styles.cardMeta}
+                            >
+                              {latestItem
+                                ? t('lists.lastAdded', {
+                                    name:
+                                      latestItem.created_by_name ?? t('common.someone'),
+                                    time: formatRelativeTime(latestItem.created_at),
+                                  })
+                                : t('lists.0Items')}
+                            </AppText>
+                          </View>
+                        </Card>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('lists.addAnItemToValue', {
+                          value0: list.name,
+                        })}
+                        hitSlop={8}
+                        onPress={() => router.push(`/item/create?listId=${list.id}`)}
+                        style={({ pressed }) => [
+                          styles.quickAddButton,
+                          pressed && styles.quickAddButtonPressed,
+                        ]}
+                      >
+                        <Ionicons name="add" size={18} color={mono.paper} />
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        )}
+
+        <Modal
+          visible={spaceSheetOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setSpaceSheetOpen(false)}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setSpaceSheetOpen(false)}
+          >
+            <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+              <View style={styles.sheetHandle} />
+              <AppText variant="sectionTitle">{t('home.switchSpace')}</AppText>
+              {(spaces.data?.data ?? []).map((entry) => (
+                <Pressable
+                  key={entry.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home.chooseValue', { value0: entry.name })}
+                  onPress={() => {
+                    setSelectedSpaceId(entry.id);
+                    setSpaceSheetOpen(false);
+                  }}
+                  style={styles.sheetRow}
+                >
+                  <View style={styles.listIcon}>
+                    <Ionicons name="people-outline" size={19} color={mono.paper} />
+                  </View>
+                  <View style={styles.sheetRowBody}>
+                    <AppText variant="cardTitle">{entry.name}</AppText>
+                    <AppText variant="caption" muted numberOfLines={1}>
+                      {(() => {
+                        const memberQuery =
+                          spaceMemberQueries[
+                            (spaces.data?.data ?? []).findIndex(
+                              (space) => space.id === entry.id,
+                            )
+                          ];
+                        const entryMembers = memberQuery?.data?.data ?? [];
+                        if (memberQuery?.isLoading) return t('home.loadingMembers');
+                        return entryMembers.length > 0
+                          ? entryMembers.map((member) => member.display_name).join(' · ')
+                          : t('home.invitationPending');
+                      })()}
+                    </AppText>
+                  </View>
+                  {entry.id === space?.id ? (
+                    <Ionicons name="checkmark" size={20} color={mono.ink} />
+                  ) : null}
+                </Pressable>
+              ))}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setSpaceSheetOpen(false);
+                  router.push('/space/create');
+                }}
+                style={({ pressed }) => [
+                  styles.sheetCreateButton,
+                  pressed && styles.cardPressed,
+                ]}
+              >
+                <AppText style={styles.sheetCreateText}>
+                  {t('home.createANewSpace')}
+                </AppText>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </Modal>
       </Screen>
     </ScreenMotion>
   );

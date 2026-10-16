@@ -1,10 +1,13 @@
 import html
+import json
+from urllib.parse import quote
 
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
 from app.api.dependencies import SessionDep
 from app.core.config import settings
+from app.core.localization import current_language, message
 from app.modules.invitations.service import preview_invitation
 
 web_router = APIRouter()
@@ -12,53 +15,58 @@ web_router = APIRouter()
 
 @web_router.get("/invite/{token}", response_class=HTMLResponse)
 def invite_web_landing(token: str, session: SessionDep) -> HTMLResponse:
-    deep_link = f"{settings.mobile_scheme}://invite/{token}"
+    deep_link = f"{settings.mobile_scheme}://invite/{quote(token, safe='')}"
+    download_button = (
+        f'<a href="{html.escape(str(settings.app_store_url))}" '
+        f'class="btn btn-secondary">{message("invite.download")}</a>'
+        if settings.app_store_url else ""
+    )
     try:
         preview = preview_invitation(session, token)
         space_name = html.escape(preview.space_name)
         inviter_name = html.escape(preview.inviter_name)
         valid = True
     except Exception:
-        space_name = "Ortak Alan"
-        inviter_name = "Bir WeDo Kullanıcısı"
+        space_name = html.escape(message("invite.space"))
+        inviter_name = html.escape(message("invite.someone"))
         valid = False
 
     if valid:
         body_content = f"""
-        <div class="badge">Ortak Alan Daveti</div>
+        <div class="badge">{message("invite.badge")}</div>
         <h1 class="title">{space_name}</h1>
-        <p class="subtitle"><strong>{inviter_name}</strong> seni WeDo'da ortak bir alana davet etti. Birlikte kaydetmek, planlamak ve seçmek için hemen katıl.</p>
+        <p class="subtitle">{html.escape(message("invite.description", name=preview.inviter_name))}</p>
         <div class="actions">
-            <a href="{deep_link}" class="btn btn-primary">WeDo Uygulamasında Aç</a>
-            <a href="https://apps.apple.com/app/wedo/id" class="btn btn-secondary">App Store'dan İndir</a>
+            <a href="{deep_link}" class="btn btn-primary">{message("invite.open")}</a>
+            {download_button}
         </div>
         """
         auto_redirect = f"""
         <script>
             if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {{
-                window.location.href = "{deep_link}";
+                window.location.href = {json.dumps(deep_link)};
             }}
         </script>
         """
     else:
-        body_content = """
-        <div class="badge badge-error">Geçersiz Davet</div>
-        <h1 class="title">Davet Bulunamadı</h1>
-        <p class="subtitle">Bu davet bağlantısının süresi dolmuş veya kullanım limitine ulaşılmış olabilir. Lütfen davet eden kişiden yeni bir bağlantı isteyin.</p>
+        body_content = f"""
+        <div class="badge badge-error">{message("invite.invalid")}</div>
+        <h1 class="title">{message("invite.notFound")}</h1>
+        <p class="subtitle">{message("invite.expired")}</p>
         <div class="actions">
-            <a href="https://apps.apple.com/app/wedo/id" class="btn btn-secondary">App Store'dan İndir</a>
+            {download_button}
         </div>
         """
         auto_redirect = ""
 
     html_content = f"""<!DOCTYPE html>
-<html lang="tr">
+<html lang="{current_language()}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeDo Daveti - {space_name}</title>
-    <meta property="og:title" content="WeDo - {space_name} Alanına Davet Edildiniz" />
-    <meta property="og:description" content="{inviter_name} seni WeDo'da birlikte kaydetmeye davet etti." />
+    <title>{message("invite.title", space=space_name)}</title>
+    <meta property="og:title" content="{message("invite.metaTitle", space=space_name)}" />
+    <meta property="og:description" content="{message("invite.metaDescription", name=inviter_name)}" />
     <meta property="og:type" content="website" />
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -155,9 +163,10 @@ def invite_web_landing(token: str, session: SessionDep) -> HTMLResponse:
 </head>
 <body>
     <div class="card">
+        <nav aria-label="{message('web.language')}"><a href="?lang=tr" lang="tr">Türkçe</a> · <a href="?lang=en" lang="en">English</a></nav>
         <div class="brand">WeDo<span>.</span></div>
         {body_content}
-        <div class="footer">Birlikte kaydet, birlikte seç, birlikte yap.</div>
+        <div class="footer">{message("invite.footer")}</div>
     </div>
 </body>
 </html>

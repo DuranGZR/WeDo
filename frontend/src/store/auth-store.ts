@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import { create } from 'zustand';
 
 import { apiClient } from '@/api/client/api-client';
@@ -101,7 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   async updateProfile({ displayName, notifyPartnerActivity, pushNotificationsEnabled }) {
     const token = get().accessToken;
-    if (!token) throw new Error('Oturum bulunamadı.');
+    if (!token) throw new Error(t('common.noActiveSession'));
     const user = await apiClient<User>('/api/v1/users/me', {
       method: 'PATCH',
       accessToken: token,
@@ -119,7 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   async changePassword(currentPassword, newPassword) {
     const token = get().accessToken;
-    if (!token) throw new Error('Oturum bulunamadı.');
+    if (!token) throw new Error(t('common.noActiveSession'));
     await apiClient<void>('/api/v1/auth/change-password', {
       method: 'POST',
       accessToken: token,

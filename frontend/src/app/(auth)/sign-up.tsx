@@ -1,7 +1,9 @@
+import { t } from '@/i18n';
+import { useTranslation, Trans } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -18,6 +20,7 @@ import { getPasswordStrength } from '@/features/auth/password-strength';
 import { useAuthStore } from '@/store/auth-store';
 
 function PasswordCheck({ passed, label }: { passed: boolean; label: string }) {
+  useTranslation();
   return (
     <View style={styles.checkRow}>
       <Ionicons
@@ -33,6 +36,7 @@ function PasswordCheck({ passed, label }: { passed: boolean; label: string }) {
 }
 
 export default function SignUpScreen() {
+  const { i18n } = useTranslation();
   const signUp = useAuthStore((state) => state.signUp);
   const { inviteToken } = useLocalSearchParams<{ inviteToken?: string }>();
   const form = useSignUpForm();
@@ -40,6 +44,16 @@ export default function SignUpScreen() {
   const strength = getPasswordStrength(password);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const clearFeedback = () => {
+      setSubmitError(null);
+    };
+    i18n.on('languageChanged', clearFeedback);
+    return () => {
+      i18n.off('languageChanged', clearFeedback);
+    };
+  }, [i18n]);
 
   async function submit(values: {
     displayName: string;
@@ -65,7 +79,9 @@ export default function SignUpScreen() {
       const message = getAuthSubmitError(error, 'sign-up');
       setSubmitError(message);
       if (error instanceof ApiClientError && error.status === 409) {
-        form.setError('email', { message: 'Bu e-posta adresiyle zaten bir hesap var.' });
+        form.setError('email', {
+          message: t('auth.anAccountWithThisEmailAlreadyExists'),
+        });
       }
     } finally {
       setLoading(false);
@@ -74,11 +90,11 @@ export default function SignUpScreen() {
 
   return (
     <AuthShell
-      title="WeDo'ya katıl"
-      subtitle="Önce hesabını oluştur, sonra güvenli şekilde giriş yap."
+      title={t('auth.joinWedo')}
+      subtitle={t('auth.createYourAccountThenVerifyYourEmailToGetStarted')}
       footer={
         <AppText style={styles.footerText}>
-          Zaten hesabın var mı?{' '}
+          {t('auth.alreadyHaveAnAccount')}{' '}
           <Link
             href={
               inviteToken
@@ -87,7 +103,7 @@ export default function SignUpScreen() {
             }
             style={styles.footerLink}
           >
-            Giriş yap
+            {t('common.signIn')}
           </Link>
         </AppText>
       }
@@ -102,7 +118,7 @@ export default function SignUpScreen() {
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
           <AppText muted style={styles.dividerText}>
-            veya e-posta ile
+            {t('auth.orUseYourEmail')}
           </AppText>
           <View style={styles.dividerLine} />
         </View>
@@ -112,8 +128,8 @@ export default function SignUpScreen() {
           name="displayName"
           render={({ field, fieldState }) => (
             <TextField
-              label="Ad"
-              placeholder="Adın"
+              label={t('auth.name')}
+              placeholder={t('auth.yourName')}
               autoCapitalize="words"
               value={field.value}
               onChangeText={field.onChange}
@@ -127,12 +143,12 @@ export default function SignUpScreen() {
           name="email"
           render={({ field, fieldState }) => (
             <TextField
-              label="E-posta"
+              label={t('auth.email')}
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="email"
               keyboardType="email-address"
-              placeholder="ornek@email.com"
+              placeholder={t('auth.youExampleCom')}
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
@@ -145,8 +161,8 @@ export default function SignUpScreen() {
           name="password"
           render={({ field, fieldState }) => (
             <PasswordField
-              label="Şifre"
-              placeholder="Güçlü bir şifre oluştur"
+              label={t('common.password')}
+              placeholder={t('auth.createAStrongPassword')}
               autoComplete="new-password"
               textContentType="newPassword"
               value={field.value}
@@ -158,7 +174,7 @@ export default function SignUpScreen() {
         />
         <View style={styles.strengthCard}>
           <View style={styles.strengthHeader}>
-            <AppText style={styles.strengthTitle}>Şifre gücü</AppText>
+            <AppText style={styles.strengthTitle}>{t('auth.passwordStrength')}</AppText>
             <AppText
               style={[
                 styles.strengthLabel,
@@ -180,10 +196,19 @@ export default function SignUpScreen() {
             ))}
           </View>
           <View style={styles.checks}>
-            <PasswordCheck passed={strength.checks.length} label="En az 8 karakter" />
-            <PasswordCheck passed={strength.checks.uppercase} label="Bir büyük harf" />
-            <PasswordCheck passed={strength.checks.lowercase} label="Bir küçük harf" />
-            <PasswordCheck passed={strength.checks.digit} label="Bir rakam" />
+            <PasswordCheck
+              passed={strength.checks.length}
+              label={t('auth.atLeast8Characters')}
+            />
+            <PasswordCheck
+              passed={strength.checks.uppercase}
+              label={t('auth.anUppercaseLetter')}
+            />
+            <PasswordCheck
+              passed={strength.checks.lowercase}
+              label={t('auth.aLowercaseLetter')}
+            />
+            <PasswordCheck passed={strength.checks.digit} label={t('auth.aNumber')} />
           </View>
         </View>
         <Controller
@@ -191,8 +216,8 @@ export default function SignUpScreen() {
           name="passwordConfirmation"
           render={({ field, fieldState }) => (
             <PasswordField
-              label="Şifre tekrar"
-              placeholder="Şifreni tekrar gir"
+              label={t('auth.confirmPassword')}
+              placeholder={t('auth.enterYourPasswordAgain')}
               autoComplete="new-password"
               textContentType="newPassword"
               value={field.value}
@@ -213,27 +238,29 @@ export default function SignUpScreen() {
 
         <View style={styles.legalNotice}>
           <AppText muted style={styles.legalText}>
-            Hesap oluşturarak{' '}
-            <AppText
-              style={styles.legalLink}
-              onPress={() => router.push('/legal/terms' as never)}
-            >
-              Kullanım Koşulları
-            </AppText>{' '}
-            ve{' '}
-            <AppText
-              style={styles.legalLink}
-              onPress={() => router.push('/legal/privacy' as never)}
-            >
-              Gizlilik Politikası
-            </AppText>
-            &apos;nı kabul etmiş olursunuz.
+            <Trans
+              i18nKey="auth.registrationAgreement"
+              components={{
+                terms: (
+                  <AppText
+                    style={styles.legalLink}
+                    onPress={() => router.push('/legal/terms' as never)}
+                  />
+                ),
+                privacy: (
+                  <AppText
+                    style={styles.legalLink}
+                    onPress={() => router.push('/legal/privacy' as never)}
+                  />
+                ),
+              }}
+            />
           </AppText>
         </View>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Hesap oluştur"
+          accessibilityLabel={t('auth.createAccount')}
           onPress={() => void form.handleSubmit(submit)()}
           disabled={loading}
           style={({ pressed }) => [
@@ -245,13 +272,15 @@ export default function SignUpScreen() {
             <ActivityIndicator color={authColors.paper} />
           ) : (
             <>
-              <AppText style={styles.primaryButtonText}>Hesap oluştur</AppText>
+              <AppText style={styles.primaryButtonText}>
+                {t('auth.createAccount')}
+              </AppText>
               <Ionicons name="arrow-forward" size={18} color={authColors.paper} />
             </>
           )}
         </Pressable>
         <AppText muted style={styles.afterRegister}>
-          Hesabı oluşturduktan sonra giriş yapman istenir.
+          {t('auth.weLlEmailYouAVerificationCodeAfterYouSign')}
         </AppText>
       </View>
     </AuthShell>

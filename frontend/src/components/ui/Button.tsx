@@ -1,4 +1,10 @@
-import { ActivityIndicator, Pressable, type StyleProp, StyleSheet, type ViewStyle } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  type StyleProp,
+  StyleSheet,
+  type ViewStyle,
+} from 'react-native';
 
 import { colors, radius, spacing } from '@/design-system';
 import { haptic, type HapticStyle } from '@/lib/haptics';

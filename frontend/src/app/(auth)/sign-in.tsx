@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -16,6 +18,7 @@ import { useSignInForm } from '@/features/auth/forms';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function SignInScreen() {
+  const { i18n } = useTranslation();
   const signIn = useAuthStore((state) => state.signIn);
   const { inviteToken, email: registeredEmail } = useLocalSearchParams<{
     inviteToken?: string;
@@ -29,6 +32,16 @@ export default function SignInScreen() {
     if (registeredEmail)
       form.setValue('email', registeredEmail, { shouldValidate: true });
   }, [form, registeredEmail]);
+
+  useEffect(() => {
+    const clearFeedback = () => {
+      setSubmitError(null);
+    };
+    i18n.on('languageChanged', clearFeedback);
+    return () => {
+      i18n.off('languageChanged', clearFeedback);
+    };
+  }, [i18n]);
 
   async function submit(values: { email: string; password: string }) {
     setSubmitError(null);
@@ -58,11 +71,11 @@ export default function SignInScreen() {
 
   return (
     <AuthShell
-      title="Tekrar hoş geldin"
-      subtitle="Ortak planlarına kaldığın yerden güvenle devam et."
+      title={t('auth.welcomeBack')}
+      subtitle={t('auth.pickUpWhereYouLeftOffWithYourSharedPlans')}
       footer={
         <AppText style={styles.footerText}>
-          Hesabın yok mu?{' '}
+          {t('auth.newToWedo')}{' '}
           <Link
             href={
               inviteToken
@@ -71,7 +84,7 @@ export default function SignInScreen() {
             }
             style={styles.footerLink}
           >
-            Kayıt ol
+            {t('auth.signUp')}
           </Link>
         </AppText>
       }
@@ -83,7 +96,7 @@ export default function SignInScreen() {
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
           <AppText muted style={styles.dividerText}>
-            veya e-posta ile
+            {t('auth.orUseYourEmail')}
           </AppText>
           <View style={styles.dividerLine} />
         </View>
@@ -92,7 +105,7 @@ export default function SignInScreen() {
           <View style={styles.registrationNotice}>
             <Ionicons name="checkmark-circle" size={18} color="#47734B" />
             <AppText style={styles.registrationNoticeText}>
-              Hesabın oluşturuldu. Şifrenle giriş yap.
+              {t('auth.onceYourEmailIsVerifiedSignInWithYourPassword')}
             </AppText>
           </View>
         ) : null}
@@ -101,12 +114,12 @@ export default function SignInScreen() {
           name="email"
           render={({ field, fieldState }) => (
             <TextField
-              label="E-posta"
+              label={t('auth.email')}
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="email"
               keyboardType="email-address"
-              placeholder="ornek@email.com"
+              placeholder={t('auth.youExampleCom')}
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
@@ -119,10 +132,10 @@ export default function SignInScreen() {
           name="password"
           render={({ field, fieldState }) => (
             <PasswordField
-              label="Şifre"
+              label={t('common.password')}
               autoComplete="password"
               textContentType="password"
-              placeholder="Şifren"
+              placeholder={t('auth.yourPassword')}
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
@@ -139,7 +152,7 @@ export default function SignInScreen() {
         ) : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Giriş yap"
+          accessibilityLabel={t('common.signIn')}
           onPress={() => void form.handleSubmit(submit)()}
           disabled={loading}
           style={({ pressed }) => [
@@ -151,13 +164,13 @@ export default function SignInScreen() {
             <ActivityIndicator color={authColors.paper} />
           ) : (
             <>
-              <AppText style={styles.primaryButtonText}>Giriş yap</AppText>
+              <AppText style={styles.primaryButtonText}>{t('common.signIn')}</AppText>
               <Ionicons name="arrow-forward" size={18} color={authColors.paper} />
             </>
           )}
         </Pressable>
         <AppText muted style={styles.securityHint}>
-          E-posta doğrulama ve şifre sıfırlama, güvenli kod sistemiyle yakında eklenecek.
+          {t('auth.verifyYourEmailToSignInSecurely')}
         </AppText>
       </View>
     </AuthShell>

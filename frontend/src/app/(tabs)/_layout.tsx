@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, View, useWindowDimensions } from 'react-native';
@@ -14,6 +16,7 @@ const tabColors = {
 } as const;
 
 export default function TabsLayout() {
+  useTranslation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -88,8 +91,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Ana Sayfa',
-          tabBarLabel: 'Ana Sayfa',
+          title: t('home.home'),
+          tabBarLabel: t('home.home'),
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
@@ -113,8 +116,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="lists"
         options={{
-          title: 'Listeler',
-          tabBarLabel: 'Listeler',
+          title: t('home.lists'),
+          tabBarLabel: t('home.lists'),
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
@@ -138,8 +141,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profil',
-          tabBarLabel: 'Profil',
+          title: t('common.profile'),
+          tabBarLabel: t('common.profile'),
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{

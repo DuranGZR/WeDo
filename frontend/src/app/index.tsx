@@ -1,4 +1,6 @@
-﻿import { Redirect } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View, Platform } from 'react-native';
 
 import { AppText } from '@/components/ui';
@@ -6,6 +8,7 @@ import { colors, spacing, radius } from '@/design-system';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function IndexRoute() {
+  useTranslation();
   const { hydrated, user } = useAuthStore();
   if (!hydrated)
     return (
@@ -20,7 +23,7 @@ export default function IndexRoute() {
               <AppText style={styles.markText}>W</AppText>
             </View>
             <AppText variant="display">WeDo</AppText>
-            <AppText muted>Birlikte kaydet. Birlikte yap.</AppText>
+            <AppText muted>{t('common.saveTogetherMakeItHappenTogether')}</AppText>
             <ActivityIndicator color={colors.accent} style={styles.loader} />
           </View>
         </View>

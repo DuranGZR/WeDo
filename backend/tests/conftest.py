@@ -64,7 +64,7 @@ def google_token(monkeypatch):
 
 @pytest.fixture
 def client() -> TestClient:
-    with TestClient(app) as test_client:
+    with TestClient(app, headers={"Accept-Language": "tr"}) as test_client:
         yield test_client
 
 
@@ -97,7 +97,7 @@ def auth_client(monkeypatch) -> Generator[TestClient]:
     settings.auth_rate_limit_per_minute = 10_000
     app.dependency_overrides[get_session] = override_session
     try:
-        with TestClient(app) as test_client:
+        with TestClient(app, headers={"Accept-Language": "tr"}) as test_client:
             test_client.verification_messages = messages
             yield test_client
     finally:

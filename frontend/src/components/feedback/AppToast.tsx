@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import {
   createContext,
@@ -33,7 +35,11 @@ function getToastIconConfig(type: ToastType = 'success') {
     case 'error':
       return { icon: 'alert-circle' as const, iconColor: '#FFFFFF', wrapBg: '#E5484D' };
     case 'warning':
-      return { icon: 'cloud-offline-outline' as const, iconColor: '#090909', wrapBg: '#F5D90A' };
+      return {
+        icon: 'cloud-offline-outline' as const,
+        iconColor: '#090909',
+        wrapBg: '#F5D90A',
+      };
     case 'info':
       return { icon: 'information' as const, iconColor: '#090909', wrapBg: '#E7E7E5' };
     case 'success':
@@ -42,7 +48,14 @@ function getToastIconConfig(type: ToastType = 'success') {
   }
 }
 
-function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismiss: () => void }) {
+function ToastViewport({
+  toast,
+  onDismiss,
+}: {
+  toast: ToastInput | null;
+  onDismiss: () => void;
+}) {
+  useTranslation();
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -70,7 +83,12 @@ function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismi
           bottom: insets.bottom + 86,
           opacity: progress,
           transform: [
-            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) },
+            {
+              translateY: progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [28, 0],
+              }),
+            },
           ],
         },
       ]}
@@ -103,7 +121,7 @@ function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismi
           ) : null}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Bildirimi kapat"
+            accessibilityLabel={t('common.dismissNotification')}
             onPress={() => {
               haptic.light();
               onDismiss();
@@ -120,6 +138,7 @@ function ToastViewport({ toast, onDismiss }: { toast: ToastInput | null; onDismi
 }
 
 export function ToastProvider({ children }: PropsWithChildren) {
+  const { i18n } = useTranslation();
   const [toast, setToast] = useState<ToastInput | null>(null);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -128,6 +147,13 @@ export function ToastProvider({ children }: PropsWithChildren) {
     dismissTimer.current = null;
     setToast(null);
   }, []);
+
+  useEffect(() => {
+    i18n.on('languageChanged', dismissToast);
+    return () => {
+      i18n.off('languageChanged', dismissToast);
+    };
+  }, [dismissToast, i18n]);
 
   const showToast = useCallback(
     (nextToast: ToastInput) => {

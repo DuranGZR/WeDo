@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -18,6 +19,7 @@ class NotificationResponse(BaseModel):
 
 
 class DeviceTokenCreate(BaseModel):
+    language: Literal["tr", "en"] = "tr"
     device_id: str = Field(min_length=1, max_length=255)
     platform: str = Field(pattern="^(ios|android)$")
     push_token: str = Field(min_length=1, max_length=512)

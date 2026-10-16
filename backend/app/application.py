@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.exception_handlers import register_exception_handlers
+from app.core.localization import LanguageMiddleware
 from app.core.middleware import register_middlewares
 from app.core.rate_limit import register_rate_limit
 
@@ -28,6 +29,7 @@ def create_application() -> FastAPI:
     )
     register_middlewares(application)
     register_rate_limit(application)
+    application.add_middleware(LanguageMiddleware)
     register_exception_handlers(application)
     if settings.cors_origins:
         from fastapi.middleware.cors import CORSMiddleware
@@ -41,7 +43,9 @@ def create_application() -> FastAPI:
         )
     application.include_router(api_router)
     from app.modules.invitations.web import web_router
+
     application.include_router(web_router)
     from app.modules.legal.web import legal_router
+
     application.include_router(legal_router)
     return application

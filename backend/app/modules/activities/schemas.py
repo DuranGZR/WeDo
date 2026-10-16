@@ -9,6 +9,7 @@ class ActivityResponse(BaseModel):
     space_id: UUID
     actor_id: UUID
     type: str
+    action: str = ""
     entity_type: str
     entity_id: UUID | None
     payload: dict

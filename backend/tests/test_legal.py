@@ -2,7 +2,13 @@ from fastapi.testclient import TestClient
 
 
 def test_legal_pages_accessible(auth_client: TestClient) -> None:
-    for path in ["/legal", "/legal/privacy", "/legal/terms", "/legal/delete-account", "/legal/account-deletion"]:
+    for path in [
+        "/legal",
+        "/legal/privacy",
+        "/legal/terms",
+        "/legal/delete-account",
+        "/legal/account-deletion",
+    ]:
         resp = auth_client.get(path)
         assert resp.status_code == 200
         assert "text/html" in resp.headers["content-type"]
@@ -12,9 +18,9 @@ def test_legal_pages_accessible(auth_client: TestClient) -> None:
 
 def test_legal_redirects(auth_client: TestClient) -> None:
     redirects = {
-        "/privacy": "/legal#privacy",
-        "/terms": "/legal#terms",
-        "/delete-account": "/legal#delete-account",
+        "/privacy": "/legal?lang=tr#privacy",
+        "/terms": "/legal?lang=tr#terms",
+        "/delete-account": "/legal?lang=tr#delete-account",
     }
     for path, target in redirects.items():
         resp = auth_client.get(path, follow_redirects=False)

@@ -1,4 +1,6 @@
-﻿import { router, useLocalSearchParams } from 'expo-router';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, View, StyleSheet, Platform, Pressable } from 'react-native';
 import { AppText, EmptyState, Screen } from '@/components/ui';
 import { useSpaceMemories } from '@/features/collaboration/hooks';
@@ -7,6 +9,7 @@ import { theme } from '@/design-system/theme';
 const { colors, radius, spacing } = theme;
 
 export default function MemoriesScreen() {
+  useTranslation();
   const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
   const result = useSpaceMemories(spaceId);
   const memories = result.data?.data ?? [];
@@ -23,27 +26,29 @@ export default function MemoriesScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
       </View>
 
       <View style={styles.content}>
-        <AppText variant="pageTitle">Anılar</AppText>
+        <AppText variant="pageTitle">{t('memories.memories')}</AppText>
         {result.isLoading ? (
           <ActivityIndicator />
         ) : memories.length === 0 ? (
           <EmptyState
-            title="Henüz anı yok"
-            description="Tamamlanan içeriklere not ve puan ekleyebilirsin."
+            title={t('memories.noMemoriesYet')}
+            description={t('memories.addNotesAndRatingsToThingsYouVeDoneTogether')}
           />
         ) : (
           memories.map((memory) => (
             <View key={memory.id} style={styles.glassCard}>
               <AppText>{memory.note}</AppText>
               <AppText variant="caption" muted style={{ marginTop: spacing.xs }}>
-                {memory.rating ? `Puan: ${memory.rating}/5` : 'Puansız'}
+                {memory.rating
+                  ? t('memories.rating', { rating: memory.rating })
+                  : t('memories.notRated')}
               </AppText>
             </View>
           ))

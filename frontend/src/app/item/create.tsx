@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect, useMemo } from 'react';
 import {
@@ -22,6 +24,7 @@ import { colors, mono, spacing } from '@/design-system';
 const { width } = Dimensions.get('window');
 
 export default function CreateItemScreen() {
+  useTranslation();
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const singleList = useList(listId || '');
   const spaces = useSpaces();
@@ -50,7 +53,7 @@ export default function CreateItemScreen() {
 
   async function submit() {
     if (!selectedList || !url.trim()) {
-      Alert.alert('Hata', 'Lütfen bir bağlantı adresi (URL) girin.');
+      Alert.alert(t('items.error'), t('items.pleaseEnterALinkUrl'));
       return;
     }
     try {
@@ -63,7 +66,7 @@ export default function CreateItemScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace(`/item/${item.id}`);
     } catch {
-      Alert.alert('İçerik eklenemedi', 'Bağlantıyı kontrol edip tekrar dene.');
+      Alert.alert(t('items.couldnTAddItem'), t('common.checkTheLinkAndTryAgain'));
     }
   }
 
@@ -92,22 +95,20 @@ export default function CreateItemScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={mono.ink} />
         </Pressable>
       </View>
 
-
       <View style={styles.content}>
         {/* Title Section */}
         <View style={styles.header}>
           <AppText variant="largeTitle" style={styles.title}>
-            İçerik Ekle
+            {t('items.addItem')}
           </AppText>
           <AppText muted style={styles.subtitle}>
-            İnternette beğendiğin bir içeriğin bağlantısını elle girerek ortak alanına
-            aktarabilirsin.
+            {t('items.pasteALinkToSomethingYouFoundOnlineToSave')}
           </AppText>
         </View>
 
@@ -116,7 +117,7 @@ export default function CreateItemScreen() {
           <View style={styles.form}>
             {/* List Selector */}
             <View style={styles.pickerWrapper}>
-              <AppText style={styles.fieldLabel}>Kaydedilecek Liste</AppText>
+              <AppText style={styles.fieldLabel}>{t('items.saveToList')}</AppText>
               <Pressable
                 onPress={() => setListPickerOpen(true)}
                 style={({ pressed }) => [
@@ -124,11 +125,11 @@ export default function CreateItemScreen() {
                   pressed && styles.pickerTriggerPressed,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel="Liste seç"
+                accessibilityLabel={t('items.chooseAList')}
               >
                 <Ionicons name="list" size={18} color={mono.ink} />
                 <AppText style={styles.pickerValueText}>
-                  {selectedList?.name || 'Lütfen liste seçin...'}
+                  {selectedList?.name || t('items.pleaseChooseAList')}
                 </AppText>
                 <Ionicons
                   name="chevron-down"
@@ -141,7 +142,7 @@ export default function CreateItemScreen() {
 
             {/* URL Input */}
             <TextField
-              label="Bağlantı Adresi (URL)"
+              label={t('items.linkUrl')}
               value={url}
               onChangeText={setUrl}
               placeholder="https://..."
@@ -151,10 +152,10 @@ export default function CreateItemScreen() {
 
             {/* Title Input */}
             <TextField
-              label="Başlık (İsteğe bağlı)"
+              label={t('items.titleOptional')}
               value={title}
               onChangeText={setTitle}
-              placeholder="Örn: Akşam yemeği için gitmek istediğimiz yer"
+              placeholder={t('items.eGAPlaceWeDLikeToTryFor')}
             />
 
             {/* Action Button */}
@@ -167,13 +168,13 @@ export default function CreateItemScreen() {
                   styles.btnDisabled,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="İçeriği kaydet"
+              accessibilityLabel={t('items.saveItem')}
             >
               {create.isPending ? (
                 <ActivityIndicator color={mono.paper} />
               ) : (
                 <>
-                  <AppText style={styles.primaryBtnText}>İçeriği kaydet</AppText>
+                  <AppText style={styles.primaryBtnText}>{t('items.saveItem')}</AppText>
                   <Ionicons
                     name="arrow-forward"
                     size={18}
@@ -198,7 +199,7 @@ export default function CreateItemScreen() {
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <AppText variant="sectionTitle" style={styles.sheetTitle}>
-              Liste Seçin
+              {t('items.chooseAList_62287')}
             </AppText>
 
             <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
@@ -213,7 +214,7 @@ export default function CreateItemScreen() {
                       setListPickerOpen(false);
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={`${l.name} listesini seç`}
+                    accessibilityLabel={t('items.chooseValue', { value0: l.name })}
                   >
                     <View
                       style={[styles.listIcon, isSelected && styles.listIconSelected]}
@@ -246,7 +247,7 @@ export default function CreateItemScreen() {
             </ScrollView>
 
             <Button
-              label="İptal"
+              label={t('items.cancel')}
               variant="secondary"
               onPress={() => setListPickerOpen(false)}
             />

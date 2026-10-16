@@ -26,8 +26,10 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   scheme: 'wedo',
   userInterfaceStyle: 'light',
+  locales: { tr: './locales/tr.json', en: './locales/en.json' },
   plugins: [
     'expo-router',
+    ['expo-localization', { supportedLocales: ['tr', 'en'] }],
     [
       'expo-splash-screen',
       {
@@ -63,6 +65,7 @@ const config: ExpoConfig = {
       },
     ],
     './plugins/withShareIntegration',
+    './plugins/withShareLocales',
   ],
   experiments: { typedRoutes: true },
   ios: {
@@ -71,12 +74,13 @@ const config: ExpoConfig = {
     buildNumber: '1',
     usesAppleSignIn: true,
     infoPlist: {
+      CFBundleDevelopmentRegion: 'en',
       NSPhotoLibraryUsageDescription:
-        'WeDo, ortak listelerinize ve anılarınıza fotoğraf ekleyebilmeniz için fotoğraf galerinize erişim gerektirir.',
+        'WeDo uses your photo library to add photos to your shared lists and memories.',
       NSPhotoLibraryAddUsageDescription:
-        'WeDo, anılarınızı ve fotoğraflarınızı cihazınızın albümüne kaydedebilmeniz için galeriye kaydetme izni gerektirir.',
+        'WeDo needs permission to save your memories and photos to your photo library.',
       NSCameraUsageDescription:
-        'WeDo, fotoğraf çekip anı ve listelerinize ekleyebilmeniz için kamera erişimi gerektirir.',
+        'WeDo uses your camera to take photos for your lists and memories.',
       ITSAppUsesNonExemptEncryption: false,
     },
   },

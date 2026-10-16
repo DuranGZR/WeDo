@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
+from app.core.localization import message
 
 
 def _is_valid_ip(address: str) -> bool:
@@ -115,8 +116,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "error": {
                         "code": "rate_limited",
                         "message": (
-                            "Çok fazla deneme yapıldı. "
-                            "Lütfen bir dakika sonra tekrar dene."
+                            message("message.tooManyAttemptsPleaseTryAgainInAMinute")
                         ),
                         "details": {},
                         "request_id": getattr(request.state, "request_id", None),
@@ -129,4 +129,3 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 def register_rate_limit(application: FastAPI) -> None:
     application.add_middleware(RateLimitMiddleware)
-

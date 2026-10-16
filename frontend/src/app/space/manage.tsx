@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import {
@@ -16,6 +18,7 @@ import { useSpaces, useUpdateSpace, useDeleteSpace } from '@/features/spaces/hoo
 import type { Space } from '@/features/spaces/types';
 
 export default function ManageSpacesScreen() {
+  useTranslation();
   const { data: spacesPage, isLoading, refetch } = useSpaces();
   const spaces = spacesPage?.data ?? [];
 
@@ -40,17 +43,17 @@ export default function ManageSpacesScreen() {
   async function handleSaveName() {
     if (!editingSpace) return;
     if (editName.trim().length < 2) {
-      Alert.alert('Hata', 'Alan adı en az 2 karakter olmalıdır.');
+      Alert.alert(t('items.error'), t('spaces.theSpaceNameMustBeAtLeast2Characters'));
       return;
     }
     setSaving(true);
     try {
       await updateSpace.mutateAsync({ spaceId: editingSpace.id, name: editName.trim() });
-      Alert.alert('Başarılı', 'Alan adı güncellendi.');
+      Alert.alert(t('spaces.success'), t('spaces.spaceNameUpdated'));
       cancelEditing();
       refetch();
     } catch {
-      Alert.alert('Hata', 'Alan adı güncellenemedi.');
+      Alert.alert(t('items.error'), t('spaces.couldnTUpdateSpaceName'));
     } finally {
       setSaving(false);
     }
@@ -63,7 +66,7 @@ export default function ManageSpacesScreen() {
       setDeleting(true);
       try {
         await deleteSpace.mutateAsync(editingSpace.id);
-        Alert.alert('Başarılı', 'Alan başarıyla silindi.');
+        Alert.alert(t('spaces.success'), t('spaces.spaceDeleted'));
         cancelEditing();
 
         // If it was the last space, redirect to onboarding
@@ -74,8 +77,8 @@ export default function ManageSpacesScreen() {
         }
       } catch {
         Alert.alert(
-          'Hata',
-          'Alan silinemedi. Sadece alan sahibi olan yöneticiler alanı silebilir.',
+          t('items.error'),
+          t('spaces.couldnTDeleteSpaceOnlyTheOwnerCanDeleteIt'),
         );
       } finally {
         setDeleting(false);
@@ -84,17 +87,17 @@ export default function ManageSpacesScreen() {
 
     if (Platform.OS === 'web') {
       const confirmWeb = window.confirm(
-        `"${editingSpace.name}" alanını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+        t('spaces.areYouSureYouWantToDeleteValueThisCan', { value0: editingSpace.name }),
       );
       if (confirmWeb) void performDelete();
     } else {
       Alert.alert(
-        'Alanı Sil',
-        `"${editingSpace.name}" alanını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+        t('spaces.deleteSpace'),
+        t('spaces.areYouSureYouWantToDeleteValueThisCan', { value0: editingSpace.name }),
         [
-          { text: 'Vazgeç', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Alanı Sil',
+            text: t('spaces.deleteSpace'),
             style: 'destructive',
             onPress: () => void performDelete(),
           },
@@ -123,22 +126,21 @@ export default function ManageSpacesScreen() {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={mono.ink} />
         </Pressable>
       </View>
-
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
             <AppText variant="pageTitle" style={styles.title}>
-              Alanlarımı Yönet
+              {t('spaces.manageMySpaces')}
             </AppText>
             <AppText muted style={styles.subtitle}>
-              Oluşturduğun veya katıldığın ortak alanları düzenle veya sil.
+              {t('spaces.editOrDeleteTheSharedSpacesYouVeCreatedOr')}
             </AppText>
           </View>
 
@@ -150,15 +152,15 @@ export default function ManageSpacesScreen() {
             /* Editing Space Sub-view */
             <Card style={styles.glassCard}>
               <AppText variant="sectionTitle" style={styles.cardTitle}>
-                Alanı Düzenle
+                {t('spaces.editSpace')}
               </AppText>
 
               <View style={styles.editForm}>
                 <TextField
-                  label="Alan Adı"
+                  label={t('spaces.spaceName')}
                   value={editName}
                   onChangeText={setEditName}
-                  placeholder="Alan adı girin"
+                  placeholder={t('spaces.enterASpaceName')}
                 />
 
                 <Pressable
@@ -175,7 +177,7 @@ export default function ManageSpacesScreen() {
                   ) : (
                     <>
                       <AppText style={styles.primaryBtnText}>
-                        Değişiklikleri Kaydet
+                        {t('spaces.saveChanges')}
                       </AppText>
                       <Ionicons name="checkmark" size={18} color={mono.paper} />
                     </>
@@ -194,7 +196,9 @@ export default function ManageSpacesScreen() {
                     <ActivityIndicator color={colors.surface} />
                   ) : (
                     <>
-                      <AppText style={styles.dangerBtnText}>Alanı Sil</AppText>
+                      <AppText style={styles.dangerBtnText}>
+                        {t('spaces.deleteSpace')}
+                      </AppText>
                       <Ionicons name="trash-outline" size={18} color={colors.surface} />
                     </>
                   )}
@@ -207,7 +211,7 @@ export default function ManageSpacesScreen() {
                     pressed && styles.btnPressed,
                   ]}
                 >
-                  <AppText style={styles.secondaryBtnText}>Vazgeç</AppText>
+                  <AppText style={styles.secondaryBtnText}>{t('common.cancel')}</AppText>
                 </Pressable>
               </View>
             </Card>
@@ -217,14 +221,17 @@ export default function ManageSpacesScreen() {
               <Card style={styles.glassCard}>
                 <View style={styles.listHeader}>
                   <AppText variant="sectionTitle" style={styles.cardTitle}>
-                    Mevcut Alanlar
+                    {t('spaces.yourSpaces')}
                   </AppText>
-                  <Badge label={`${spaces.length} Alan`} tone="accent" />
+                  <Badge
+                    label={t('spaces.spaceCount', { count: spaces.length })}
+                    tone="accent"
+                  />
                 </View>
 
                 {spaces.length === 0 ? (
                   <AppText muted style={styles.emptyText}>
-                    Henüz bir alanın bulunmuyor.
+                    {t('spaces.youDonTHaveAnySpacesYet')}
                   </AppText>
                 ) : (
                   <View style={styles.list}>
@@ -251,7 +258,7 @@ export default function ManageSpacesScreen() {
                               {space.name}
                             </AppText>
                             <AppText variant="caption" muted>
-                              {space.member_count} Üye
+                              {t('spaces.memberCount', { count: space.member_count })}
                             </AppText>
                           </View>
                         </View>
@@ -272,7 +279,9 @@ export default function ManageSpacesScreen() {
                 style={({ pressed }) => [styles.createBtn, pressed && styles.btnPressed]}
               >
                 <Ionicons name="add-circle-outline" size={22} color={mono.ink} />
-                <AppText style={styles.createBtnText}>Yeni Alan Oluştur</AppText>
+                <AppText style={styles.createBtnText}>
+                  {t('spaces.createNewSpace')}
+                </AppText>
               </Pressable>
             </View>
           )}

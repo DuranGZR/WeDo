@@ -1,4 +1,6 @@
-﻿import { Ionicons } from '@expo/vector-icons';
+import { t } from '@/i18n';
+import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -6,6 +8,7 @@ import { AppText, Badge, Screen } from '@/components/ui';
 import { colors, radius, spacing } from '@/design-system';
 
 export default function InviteInvalidScreen() {
+  useTranslation();
   return (
     <Screen scroll={true}>
       <View style={styles.ambientContainer} pointerEvents="none">
@@ -17,7 +20,7 @@ export default function InviteInvalidScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Geri git"
+          accessibilityLabel={t('common.goBack')}
         >
           <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
         </Pressable>
@@ -27,28 +30,28 @@ export default function InviteInvalidScreen() {
           <View style={styles.mark}>
             <AppText style={styles.markText}>!</AppText>
           </View>
-          <Badge label="Davet bulunamadı" tone="error" />
-          <AppText variant="pageTitle">Bu davet bağlantısı artık geçerli değil.</AppText>
+          <Badge label={t('common.invitationNotFound')} tone="error" />
+          <AppText variant="pageTitle">
+            {t('common.thisInviteLinkIsNoLongerValid')}
+          </AppText>
           <AppText muted style={styles.copy}>
-            Bağlantının süresi dolmuş veya davet daha önce iptal edilmiş olabilir.
+            {t('common.theLinkMayHaveExpiredOrTheInvitationMayHave')}
           </AppText>
           <View style={[styles.glassCard, styles.card]}>
-            <AppText variant="cardTitle">Ne yapabilirsin?</AppText>
-            <AppText muted>
-              Alan sahibinden yeni bir davet bağlantısı istemeyi deneyebilirsin.
-            </AppText>
+            <AppText variant="cardTitle">{t('common.whatCanYouDo')}</AppText>
+            <AppText muted>{t('common.askTheSpaceOwnerForANewInviteLink')}</AppText>
           </View>
           <Pressable
             onPress={() => router.replace('/(tabs)')}
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.primaryBtnText}>Ana sayfaya dön</AppText>
+            <AppText style={styles.primaryBtnText}>{t('common.backToHome')}</AppText>
           </Pressable>
           <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
           >
-            <AppText style={styles.ghostBtnText}>Geri dön</AppText>
+            <AppText style={styles.ghostBtnText}>{t('common.goBack_e0c40')}</AppText>
           </Pressable>
         </View>
       </View>

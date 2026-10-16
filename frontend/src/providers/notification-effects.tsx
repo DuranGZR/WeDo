@@ -5,8 +5,10 @@ import { Platform } from 'react-native';
 import { handleNotificationData } from '@/features/notifications/navigation';
 import { registerForPushNotifications } from '@/features/notifications/service';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
 
 export function NotificationEffects() {
+  const language = useLanguageStore((state) => state.language);
   const accessToken = useAuthStore((state) => state.accessToken);
   const pushEnabled = useAuthStore(
     (state) => state.user?.push_notifications_enabled ?? true,
@@ -29,6 +31,6 @@ export function NotificationEffects() {
     if (Platform.OS === 'web') return;
     if (!accessToken || !pushEnabled) return;
     void registerForPushNotifications(accessToken).catch(() => undefined);
-  }, [accessToken, pushEnabled]);
+  }, [accessToken, pushEnabled, language]);
   return null;
 }

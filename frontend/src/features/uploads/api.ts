@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import { apiClient } from '@/api/client/api-client';
 
 type Presign = {
@@ -25,7 +26,7 @@ export async function uploadFile(
     headers: { 'Content-Type': contentType },
     body: blob,
   });
-  if (!upload.ok) throw new Error('Dosya yüklenemedi.');
+  if (!upload.ok) throw new Error(t('common.couldnTUploadTheFile'));
   return apiClient<Complete>('/api/v1/uploads/complete', {
     method: 'POST',
     accessToken: token,
