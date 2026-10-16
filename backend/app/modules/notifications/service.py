@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.localization import current_language, message
@@ -44,7 +44,7 @@ def notification_text(notification: Notification, field: str, language: str) -> 
         return message(
             key, language=language, **(notification.message_params or {}).get(field, {})
         )
-    # Legacy rows do not contain language-neutral parameters. Do not translate user text.
+    # Legacy rows lack language-neutral parameters; preserve user text.
     if language == "tr":
         return getattr(notification, field)
     legacy_keys = LEGACY_MESSAGES.get(notification.type)
@@ -194,6 +194,14 @@ def mark_all_read(session: Session, user_id: UUID) -> None:
 def register_device(
     session: Session, user_id: UUID, data: DeviceTokenCreate
 ) -> DeviceTokenResponse:
+    # One installation's push token must never remain attached to another account.
+    session.execute(
+        delete(DevicePushToken).where(
+            DevicePushToken.push_token == data.push_token,
+            (DevicePushToken.user_id != user_id)
+            | (DevicePushToken.device_id != data.device_id),
+        )
+    )
     device = notification_repository.get_device(session, user_id, data.device_id)
     if device is None:
         device = DevicePushToken(

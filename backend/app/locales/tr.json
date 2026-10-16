@@ -55,9 +55,6 @@
   "message.thisMemberSRoleCanTBeChanged": "Bu üyenin rolü değiştirilemez.",
   "message.thisMemberCanTBeRemoved": "Bu üye çıkarılamaz.",
   "message.onlyTheSpaceOwnerCanDeleteThisSpace": "Alan sahibi alanı silebilir.",
-  "message.memoryNotFound": "Anı bulunamadı.",
-  "message.youCanTEditThisMemory": "Bu anıyı düzenleyemezsiniz.",
-  "message.youCanTDeleteThisMemory": "Bu anıyı silemezsiniz.",
   "message.thisLinkRedirectsTooManyTimes": "Çok fazla yönlendirme (redirect loop).",
   "message.thisPageIsLargerThanTheAllowedLimit": "Sayfa boyutu izin verilen limiti aşıyor.",
   "message.weCouldnTLoadAPreviewForThisLink": "Metadata alınamadı.",
@@ -80,7 +77,6 @@
   "message.spaceNotFound": "Alan bulunamadı.",
   "message.youDonTHaveAccessToThisSpace": "Bu alana erişim yetkiniz bulunmuyor.",
   "message.youNeedAdministratorAccessToDoThis": "Bu işlem için yönetici yetkisi gerekiyor.",
-  "message.uploadNotFound": "Upload bulunamadı.",
   "message.deletedUser": "Silinmiş Kullanıcı",
   "message.newComment": "Yeni yorum",
   "message.youCanTDeleteThisComment": "Bu yorumu silemezsiniz.",
@@ -117,7 +113,6 @@
   "web.supportAndDeletionRequests": "Destek ve Silme Talepleri:",
   "web.theEmailAddressAndOptionalDescriptionYouProvide": "Formda verdiğiniz e-posta adresi ve isteğe bağlı açıklama, destek posta kutusuna iletilir ve talebinizi değerlendirmek ile hesap sahipliğini doğrulamak için kullanılır.",
   "web.userContent": "Kullanıcı İçerikleri:",
-  "web.linksMemoryPhotosVotesAndReactionsAddedTo": "Ortak listelere eklenen bağlantılar, anı fotoğrafları, oylar ve reaksiyonlar.",
   "web.deviceAndNotificationData": "Cihaz & Bildirim Belirteci:",
   "web.expoPushNotificationTokensUsedToNotifyYou": "Ortak alan aktivitelerinden anlık haberdar olabilmeniz için Expo Push Token.",
   "web.2SecurityAndSharing": "2. Veri Güvenliği ve Paylaşım",
@@ -167,5 +162,6 @@
   "invite.footer": "Birlikte kaydet, birlikte seç, birlikte yap.",
   "web.language": "Dil",
   "apple.serviceUnavailable": "Apple girişi şu anda kullanılamıyor. Lütfen kısa bir süre sonra tekrar dene.",
-  "apple.reauthorizeRequired": "Lütfen WeDo’nun güncel sürümünden Apple ile tekrar giriş yap."
+  "apple.reauthorizeRequired": "Lütfen WeDo’nun güncel sürümünden Apple ile tekrar giriş yap.",
+  "web.savedLinksAndPreviews": "Ortak listelere eklenen bağlantılar, başlıklar, listeler ve bağlantı önizleme görselleri."
 }

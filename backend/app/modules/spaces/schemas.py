@@ -33,3 +33,4 @@ class SpaceMemberResponse(BaseModel):
     user_id: UUID
     role: SpaceRole
     joined_at: datetime
+    display_name: str = ""

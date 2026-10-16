@@ -15,7 +15,7 @@
 | `src/app/(onboarding)/share-tutorial.tsx` | 22 |
 | `src/app/(onboarding)/usage-type.tsx` | 9 |
 | `src/app/(onboarding)/_layout.tsx` | 0 |
-| `src/app/(share)/compose.tsx` | 21 |
+| `src/app/(share)/compose.tsx` | 22 |
 | `src/app/(share)/_layout.tsx` | 0 |
 | `src/app/(tabs)/index.tsx` | 76 |
 | `src/app/(tabs)/lists/index.tsx` | 31 |
@@ -39,8 +39,6 @@
 | `src/app/list/[listId]/edit.tsx` | 15 |
 | `src/app/list/[listId]/index.tsx` | 27 |
 | `src/app/list/[listId]/search.tsx` | 6 |
-| `src/app/memories/create.tsx` | 10 |
-| `src/app/memories/index.tsx` | 6 |
 | `src/app/notifications.tsx` | 10 |
 | `src/app/settings/delete-account.tsx` | 22 |
 | `src/app/settings/help.tsx` | 22 |

@@ -43,6 +43,7 @@ def test_space_lifecycle_and_permissions(auth_client: TestClient) -> None:
     members = auth_client.get(f"/api/v1/spaces/{space['id']}/members", headers=headers)
     assert members.status_code == 200
     assert members.json()["data"][0]["role"] == "owner"
+    assert members.json()["data"][0]["display_name"] == "Test User"
 
     updated = auth_client.patch(
         f"/api/v1/spaces/{space['id']}",

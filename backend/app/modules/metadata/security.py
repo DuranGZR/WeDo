@@ -23,7 +23,7 @@ def _is_public_ip(address: str) -> bool:
 
 
 def validate_and_resolve_url(url: str) -> tuple[str, int, str]:
-    """Validate URL, verify all resolved IPs are public, and return (hostname, port, validated_ip).
+    """Validate public DNS results and return (hostname, port, validated_ip).
 
     This enables libcurl DNS pinning (CURLOPT_RESOLVE) to prevent DNS rebinding attacks.
     """

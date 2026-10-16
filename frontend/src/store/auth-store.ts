@@ -1,7 +1,10 @@
 import { t } from '@/i18n';
 import { create } from 'zustand';
 
-import { apiClient } from '@/api/client/api-client';
+import { apiClient, ApiClientError } from '@/api/client/api-client';
+import { authenticatedApiClient } from '@/api/client/authenticated-api-client';
+import { queryClient } from '@/api/query-client';
+import { useSpaceStore } from './space-store';
 import { tokenResponseSchema, type User } from '@/api/schemas';
 import { secureStorage } from '@/lib/secure-storage';
 import {
@@ -10,6 +13,14 @@ import {
 } from '@/features/auth/email-verification';
 
 type AppleRevocationStatus = 'not_required' | 'pending' | 'manual';
+
+let refreshInFlight: Promise<boolean> | null = null;
+
+function clearAccountCache() {
+  void queryClient.cancelQueries();
+  queryClient.clear();
+  useSpaceStore.getState().setSelectedSpaceId(undefined);
+}
 
 type AuthState = {
   user: User | null;
@@ -57,9 +68,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       set({ user, accessToken: tokens.accessToken, hydrated: true });
     } catch {
-      const refreshed = await get().refresh();
+      await get().refresh();
       set({ hydrated: true });
-      if (!refreshed) await secureStorage.clear();
     }
   },
   async signIn(email, password) {
@@ -113,9 +123,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   async updateProfile({ displayName, notifyPartnerActivity, pushNotificationsEnabled }) {
     const token = get().accessToken;
     if (!token) throw new Error(t('common.noActiveSession'));
-    const user = await apiClient<User>('/api/v1/users/me', {
+    const user = await authenticatedApiClient<User>('/api/v1/users/me', {
       method: 'PATCH',
-      accessToken: token,
       body: {
         display_name: displayName.trim(),
         ...(notifyPartnerActivity !== undefined
@@ -131,9 +140,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   async changePassword(currentPassword, newPassword) {
     const token = get().accessToken;
     if (!token) throw new Error(t('common.noActiveSession'));
-    await apiClient<void>('/api/v1/auth/change-password', {
+    await authenticatedApiClient<void>('/api/v1/auth/change-password', {
       method: 'POST',
-      accessToken: token,
       body: { current_password: currentPassword, new_password: newPassword },
     });
     await secureStorage.clear();
@@ -143,14 +151,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const token = get().accessToken;
     let appleRevocation: AppleRevocationStatus = 'not_required';
     if (token) {
-      const result = await apiClient<{ apple_revocation: AppleRevocationStatus }>(
-        '/api/v1/users/me',
-        {
-          method: 'DELETE',
-          accessToken: token,
-          body: currentPassword ? { current_password: currentPassword } : {},
-        },
-      );
+      const result = await authenticatedApiClient<{
+        apple_revocation: AppleRevocationStatus;
+      }>('/api/v1/users/me', {
+        method: 'DELETE',
+        body: currentPassword ? { current_password: currentPassword } : {},
+      });
       appleRevocation = result?.apple_revocation ?? 'not_required';
     }
     await secureStorage.clear();
@@ -161,9 +167,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const token = get().accessToken;
     if (token) {
       try {
-        await apiClient('/api/v1/auth/sign-out-all', {
+        await authenticatedApiClient('/api/v1/auth/sign-out-all', {
           method: 'POST',
-          accessToken: token,
         });
       } catch {
         /* local logout still succeeds */
@@ -173,21 +178,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: null, accessToken: null });
   },
   async refresh() {
-    const { refreshToken } = await secureStorage.getTokens();
-    if (!refreshToken) return false;
+    if (refreshInFlight) return refreshInFlight;
+    const startingToken = get().accessToken;
+    refreshInFlight = (async () => {
+      const { refreshToken } = await secureStorage.getTokens();
+      if (!refreshToken) return false;
+      try {
+        const raw = await apiClient<unknown>('/api/v1/auth/refresh', {
+          method: 'POST',
+          body: { refresh_token: refreshToken },
+        });
+        if (get().accessToken !== startingToken) return false;
+        const result = tokenResponseSchema.parse(raw);
+        await secureStorage.setTokens(result.access_token, result.refresh_token);
+        set({ user: result.user, accessToken: result.access_token });
+        return true;
+      } catch (error) {
+        // A temporary network/server failure must not destroy a valid session.
+        if (
+          error instanceof ApiClientError &&
+          error.status === 401 &&
+          get().accessToken === startingToken
+        ) {
+          await secureStorage.clear();
+          set({ user: null, accessToken: null });
+        }
+        return false;
+      }
+    })();
     try {
-      const raw = await apiClient<unknown>('/api/v1/auth/refresh', {
-        method: 'POST',
-        body: { refresh_token: refreshToken },
-      });
-      const result = tokenResponseSchema.parse(raw);
-      await secureStorage.setTokens(result.access_token, result.refresh_token);
-      set({ user: result.user, accessToken: result.access_token });
-      return true;
-    } catch {
-      await secureStorage.clear();
-      set({ user: null, accessToken: null });
-      return false;
+      return await refreshInFlight;
+    } finally {
+      refreshInFlight = null;
     }
   },
 }));
+
+// Query keys and the selected space belong to one account, never to the device.
+useAuthStore.subscribe((state, previous) => {
+  if (state.user?.id !== previous.user?.id) clearAccountCache();
+});

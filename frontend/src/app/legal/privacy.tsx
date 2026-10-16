@@ -66,7 +66,7 @@ export default function LegalPrivacyScreen() {
           </AppText>
           <AppText style={styles.bullet}>
             • <AppText style={styles.bold}>{t('legal.sharedContent')}</AppText>{' '}
-            {t('legal.linksNotesListsVotesAndMemoryPhotosYouAddTo')}
+            {t('legal.savedLinksAndPreviews')}
           </AppText>
           <AppText style={styles.bullet}>
             •{' '}
@@ -77,10 +77,10 @@ export default function LegalPrivacyScreen() {
 
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
-            {t('legal.3PermissionsCameraAndPhotos')}
+            {t('legal.3LinkPreviews')}
           </AppText>
           <AppText style={styles.paragraph}>
-            {t('legal.theAppRequestsAccessToYourCameraAndPhotoLibrary')}
+            {t('legal.howLinkPreviewsWork')}
           </AppText>
         </View>
 

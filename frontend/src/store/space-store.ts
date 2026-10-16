@@ -5,14 +5,16 @@ const SELECTED_SPACE_KEY = 'wedo.selected-space';
 
 type SpaceState = {
   selectedSpaceId?: string;
-  setSelectedSpaceId: (spaceId: string) => void;
+  setSelectedSpaceId: (spaceId?: string) => void;
 };
 
 export const useSpaceStore = create<SpaceState>((set) => ({
   selectedSpaceId: undefined,
   setSelectedSpaceId: (selectedSpaceId) => {
     set({ selectedSpaceId });
-    void AsyncStorage.setItem(SELECTED_SPACE_KEY, selectedSpaceId);
+    void (selectedSpaceId
+      ? AsyncStorage.setItem(SELECTED_SPACE_KEY, selectedSpaceId)
+      : AsyncStorage.removeItem(SELECTED_SPACE_KEY));
   },
 }));
 

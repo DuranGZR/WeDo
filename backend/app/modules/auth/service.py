@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 import jwt
 from pydantic import EmailStr, TypeAdapter, ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -19,6 +19,7 @@ from app.modules.auth.schemas import (
 )
 from app.modules.auth.tokens import create_token, decode_token, hash_token
 from app.modules.auth.verification import VerificationRequired, issue_code
+from app.modules.notifications.models import DevicePushToken
 from app.modules.users.models import User
 from app.modules.users.repository import user_repository
 from app.modules.users.schemas import UserResponse
@@ -137,6 +138,7 @@ def refresh(session: Session, refresh_token: str) -> TokenResponse:
     if (
         refresh_session is None
         or user is None
+        or not user.is_active
         or not user.email_verified
         or refresh_session.user_id != user.id
         or refresh_session.revoked_at is not None
@@ -167,6 +169,7 @@ def sign_out(session: Session, refresh_token: str) -> None:
 
 def sign_out_all(session: Session, user_id: UUID) -> None:
     auth_repository.revoke_all_for_user(session, user_id)
+    session.execute(delete(DevicePushToken).where(DevicePushToken.user_id == user_id))
     session.commit()
 
 
@@ -200,6 +203,7 @@ def change_password(
     _validate_new_password(current_password, new_password)
     user.password_hash = hash_password(new_password)
     auth_repository.revoke_all_for_user(session, user.id)
+    session.execute(delete(DevicePushToken).where(DevicePushToken.user_id == user.id))
     session.commit()
 
 

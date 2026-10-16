@@ -26,7 +26,11 @@ class AuthRepository:
     def get_refresh_session(
         self, session: Session, session_id: UUID
     ) -> RefreshSession | None:
-        return session.get(RefreshSession, session_id)
+        return session.scalar(
+            select(RefreshSession)
+            .where(RefreshSession.id == session_id)
+            .with_for_update()
+        )
 
     def create_refresh_session(
         self, session: Session, refresh_session: RefreshSession

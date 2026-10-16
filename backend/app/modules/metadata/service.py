@@ -18,7 +18,15 @@ def is_expiring_cdn(url: str | None) -> bool:
         return False
     low = url.lower()
     return (
-        any(host in low for host in ("cdninstagram.com", "fbcdn.net", "instagram.com", "tiktokcdn.com"))
+        any(
+            host in low
+            for host in (
+                "cdninstagram.com",
+                "fbcdn.net",
+                "instagram.com",
+                "tiktokcdn.com",
+            )
+        )
         or "oe=" in low
         or "x-expires=" in low
     )
@@ -76,8 +84,14 @@ def process_item_metadata(
         if raw_image_url and is_expiring_cdn(raw_image_url):
             try:
                 img_resp = active_fetcher.fetch(raw_image_url)
-                if img_resp and hasattr(img_resp, "content") and len(img_resp.content) > 100:
-                    optimized_bytes, content_type = optimize_preview_image(img_resp.content)
+                if (
+                    img_resp
+                    and hasattr(img_resp, "content")
+                    and len(img_resp.content) > 100
+                ):
+                    optimized_bytes, content_type = optimize_preview_image(
+                        img_resp.content
+                    )
                     from app.modules.items.models import ItemPreviewImage
 
                     preview_record = session.get(ItemPreviewImage, item.id)

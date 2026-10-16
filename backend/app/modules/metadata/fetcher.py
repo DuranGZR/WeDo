@@ -32,7 +32,7 @@ class MetadataFetcher:
                 allow_redirects=False,
             )
 
-            # Follow redirects manually so each hop is validated against private network IPs
+            # Validate every redirect against private network IPs.
             if response.status_code in {301, 302, 303, 307, 308}:
                 location = response.headers.get("location") or response.headers.get(
                     "Location"

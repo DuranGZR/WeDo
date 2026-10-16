@@ -1,15 +1,9 @@
 import { authenticatedApiClient } from '@/api/client/authenticated-api-client';
+import { allPages } from '@/api/client/paginated-api-client';
 import type { Item } from './types';
 
-type Page<T> = {
-  data: T[];
-  pagination: { page: number; page_size: number; has_more: boolean };
-};
 export const itemsApi = {
-  list: (listId: string) =>
-    authenticatedApiClient<Page<Item>>(
-      `/api/v1/lists/${listId}/items?page=1&page_size=50`,
-    ),
+  list: (listId: string) => allPages<Item>(`/api/v1/lists/${listId}/items`),
   get: (itemId: string) => authenticatedApiClient<Item>(`/api/v1/items/${itemId}`),
   create: (input: {
     space_id: string;

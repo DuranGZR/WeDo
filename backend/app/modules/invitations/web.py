@@ -19,7 +19,8 @@ def invite_web_landing(token: str, session: SessionDep) -> HTMLResponse:
     download_button = (
         f'<a href="{html.escape(str(settings.app_store_url))}" '
         f'class="btn btn-secondary">{message("invite.download")}</a>'
-        if settings.app_store_url else ""
+        if settings.app_store_url
+        else ""
     )
     try:
         preview = preview_invitation(session, token)
@@ -35,7 +36,9 @@ def invite_web_landing(token: str, session: SessionDep) -> HTMLResponse:
         body_content = f"""
         <div class="badge">{message("invite.badge")}</div>
         <h1 class="title">{space_name}</h1>
-        <p class="subtitle">{html.escape(message("invite.description", name=preview.inviter_name))}</p>
+        <p class="subtitle">
+            {html.escape(message("invite.description", name=preview.inviter_name))}
+        </p>
         <div class="actions">
             <a href="{deep_link}" class="btn btn-primary">{message("invite.open")}</a>
             {download_button}
@@ -65,13 +68,16 @@ def invite_web_landing(token: str, session: SessionDep) -> HTMLResponse:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{message("invite.title", space=space_name)}</title>
-    <meta property="og:title" content="{message("invite.metaTitle", space=space_name)}" />
-    <meta property="og:description" content="{message("invite.metaDescription", name=inviter_name)}" />
+    <meta property="og:title"
+          content="{message("invite.metaTitle", space=space_name)}" />
+    <meta property="og:description"
+          content="{message("invite.metaDescription", name=inviter_name)}" />
     <meta property="og:type" content="website" />
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, Helvetica, Arial, sans-serif;
             background-color: #F7F6F2;
             color: #090909;
             min-height: 100vh;
@@ -163,7 +169,10 @@ def invite_web_landing(token: str, session: SessionDep) -> HTMLResponse:
 </head>
 <body>
     <div class="card">
-        <nav aria-label="{message('web.language')}"><a href="?lang=tr" lang="tr">Türkçe</a> · <a href="?lang=en" lang="en">English</a></nav>
+        <nav aria-label="{message("web.language")}">
+            <a href="?lang=tr" lang="tr">Türkçe</a> ·
+            <a href="?lang=en" lang="en">English</a>
+        </nav>
         <div class="brand">WeDo<span>.</span></div>
         {body_content}
         <div class="footer">{message("invite.footer")}</div>

@@ -33,9 +33,9 @@ Güncelleme: 16 Ekim 2026. Kod ve yerel doğrulama tamamlandı; mağaza yayını
 16 Ekim 2026 yerel sonuçları:
 
 - Frontend TypeScript kontrolü başarılı.
-- 27 frontend testi başarılı: dil çözümleme, kalıcılık, sistem moduna dönüş, saklama hatası, form/kod/davet korunması, API başlığı, çoğul, tarih/sayı, Türkçe karakter araması, web Google düğmesi ve davet ekranı dahil.
-- 136 backend testi başarılı: istekler arasında dil yalıtımı, hesap dili, e-posta, cihaz bazlı push, eski bildirimler, dinamik şema varsayılanları, davet HTML kaçışları ve silme formu dahil.
-- Katalog kontrolü: 612 anahtar ve 742 kaynak çeviri çağrısı. İki dilde eksik/boş anahtar, farklı parametre ve tarama kapsamındaki sabit UI metni bulunmadı. Bu kontrol, insan redaksiyonunun veya cihaz testinin yerine geçmez.
+- 37 frontend testi başarılı: dil çözümleme, kalıcılık, sistem moduna dönüş, saklama hatası, form/kod/davet korunması, API başlığı, çoğul, tarih/sayı, Türkçe karakter araması, web Google düğmesi ve davet ekranı dahil.
+- 142 backend testi başarılı: istekler arasında dil yalıtımı, hesap dili, e-posta, cihaz bazlı push, eski bildirimler, dinamik şema varsayılanları, davet HTML kaçışları ve silme formu dahil.
+- Katalog kontrolü: 598 anahtar ve 727 kaynak çeviri çağrısı. İki dilde eksik/boş anahtar, farklı parametre ve tarama kapsamındaki sabit UI metni bulunmadı. Bu kontrol, insan redaksiyonunun veya cihaz testinin yerine geçmez.
 - ESLint: 0 hata; 39 uyarı var (React ref/animasyon, kullanılmayan değişkenler ve test mock importları dahil).
 - Migration: izole SQLite veritabanında `0014 → 0015 → 0014 → 0015`; PostgreSQL için çevrimdışı SQL üretimi başarılı. Üretim veritabanına bağlanılmadı.
 - iOS JavaScript/Hermes export başarılı. Bu, imzalanmış `.ipa` veya TestFlight testi değildir.
@@ -80,3 +80,5 @@ Windows ortamında Expo iOS native proje üretimini desteklemediği için native
 Yayın durumu Git geçmişinden ve dağıtım servisinden ayrıca kontrol edilmelidir. Bu belgedeki yerel kontroller, mağaza yayınının tamamlandığı anlamına gelmez.
 
 Apple hesap bildirimleri, şifreli token saklama, iptal kuyruğu ve canlı kurulum sırası: [APPLE_SIGN_IN.md](APPLE_SIGN_IN.md). Bu ekleme gerçek Apple anahtarı ve TestFlight testi bekler.
+
+Son build öncesi genel denetim ve kalan gerçek cihaz kontrolleri: [RELEASE_READINESS.md](RELEASE_READINESS.md).

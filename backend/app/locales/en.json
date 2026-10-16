@@ -55,9 +55,6 @@
   "message.thisMemberSRoleCanTBeChanged": "This member's role can't be changed.",
   "message.thisMemberCanTBeRemoved": "This member can't be removed.",
   "message.onlyTheSpaceOwnerCanDeleteThisSpace": "Only the space owner can delete this space.",
-  "message.memoryNotFound": "Memory not found.",
-  "message.youCanTEditThisMemory": "You can't edit this memory.",
-  "message.youCanTDeleteThisMemory": "You can't delete this memory.",
   "message.thisLinkRedirectsTooManyTimes": "This link redirects too many times.",
   "message.thisPageIsLargerThanTheAllowedLimit": "This page is larger than the allowed limit.",
   "message.weCouldnTLoadAPreviewForThisLink": "We couldn't load a preview for this link.",
@@ -80,7 +77,6 @@
   "message.spaceNotFound": "Space not found.",
   "message.youDonTHaveAccessToThisSpace": "You don't have access to this space.",
   "message.youNeedAdministratorAccessToDoThis": "You need administrator access to do this.",
-  "message.uploadNotFound": "Upload not found.",
   "message.deletedUser": "Deleted user",
   "message.newComment": "New comment",
   "message.youCanTDeleteThisComment": "You can't delete this comment.",
@@ -117,7 +113,6 @@
   "web.supportAndDeletionRequests": "Support and deletion requests:",
   "web.theEmailAddressAndOptionalDescriptionYouProvide": "The email address and optional description you provide are sent to our support inbox to assess your request and verify account ownership.",
   "web.userContent": "User content:",
-  "web.linksMemoryPhotosVotesAndReactionsAddedTo": "Links, memory photos, votes and reactions added to shared lists.",
   "web.deviceAndNotificationData": "Device and notification data:",
   "web.expoPushNotificationTokensUsedToNotifyYou": "Expo push notification tokens used to notify you of activity in shared spaces.",
   "web.2SecurityAndSharing": "2. Security and sharing",
@@ -167,5 +162,6 @@
   "invite.footer": "Save it together. Pick it together. Do it together.",
   "web.language": "Language",
   "apple.serviceUnavailable": "Apple sign-in is temporarily unavailable. Please try again shortly.",
-  "apple.reauthorizeRequired": "Please sign in with Apple again using the latest version of WeDo."
+  "apple.reauthorizeRequired": "Please sign in with Apple again using the latest version of WeDo.",
+  "web.savedLinksAndPreviews": "Links, titles, lists and link preview images saved in shared spaces."
 }

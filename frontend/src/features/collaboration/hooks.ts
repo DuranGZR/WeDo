@@ -56,14 +56,6 @@ export function useSpacePlans(spaceId: string) {
   });
 }
 
-export function useSpaceMemories(spaceId: string) {
-  return useQuery({
-    queryKey: ['spaces', spaceId, 'memories'],
-    queryFn: () => collaborationApi.memories(spaceId),
-    enabled: Boolean(spaceId),
-  });
-}
-
 export function useNotifications() {
   const language = useLanguageStore((state) => state.language);
   return useQuery({

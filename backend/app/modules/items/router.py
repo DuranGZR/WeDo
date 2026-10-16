@@ -42,7 +42,7 @@ def _needs_legacy_short_link_refresh(item) -> bool:
 
 
 def _needs_expiring_cdn_refresh(item) -> bool:
-    """Retry completed items with expiring Instagram/Facebook CDN links to permanently cache them."""
+    """Cache expiring Instagram/Facebook preview images permanently."""
     if not item.preview_image_url or item.preview_image_url.endswith("/preview"):
         return False
     return is_expiring_cdn(item.preview_image_url)

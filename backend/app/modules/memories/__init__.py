@@ -1,1 +1,1 @@
-"""Completed item memories feature module."""
+"""Historical database model retained for migration compatibility; no active API."""

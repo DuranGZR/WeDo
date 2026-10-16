@@ -27,6 +27,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 
+@pytest.fixture(autouse=True)
+def isolate_background_database(monkeypatch):
+    # Lifespan must never contact the developer's configured DB during tests.
+    from app.modules.auth import apple_jobs
+
+    monkeypatch.setattr(apple_jobs, "run_revocation_cycle", lambda: 0)
+
+
 @pytest.fixture
 def google_token(monkeypatch):
     from app.modules.auth import service
@@ -93,8 +101,10 @@ def auth_client(monkeypatch) -> Generator[TestClient]:
 
     previous_metadata_enabled = settings.metadata_enabled
     previous_auth_rate_limit = settings.auth_rate_limit_per_minute
+    previous_rate_limit = settings.rate_limit_per_minute
     settings.metadata_enabled = False
     settings.auth_rate_limit_per_minute = 10_000
+    settings.rate_limit_per_minute = 10_000
     app.dependency_overrides[get_session] = override_session
     try:
         with TestClient(app, headers={"Accept-Language": "tr"}) as test_client:
@@ -103,5 +113,6 @@ def auth_client(monkeypatch) -> Generator[TestClient]:
     finally:
         settings.metadata_enabled = previous_metadata_enabled
         settings.auth_rate_limit_per_minute = previous_auth_rate_limit
+        settings.rate_limit_per_minute = previous_rate_limit
         app.dependency_overrides.clear()
         Base.metadata.drop_all(engine)

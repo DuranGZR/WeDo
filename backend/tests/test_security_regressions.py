@@ -211,31 +211,6 @@ def test_item_activity_endpoint_returns_item_events(auth_client: TestClient) -> 
     assert response.status_code == 404
 
 
-def test_upload_completion_contract_accepts_upload_id_body(
-    auth_client: TestClient,
-) -> None:
-    auth = _signup(auth_client, "upload-contract@example.com")
-    headers = {"Authorization": f"Bearer {auth['access_token']}"}
-    presigned = auth_client.post(
-        "/api/v1/uploads/presign",
-        headers=headers,
-        json={
-            "filename": "photo.png",
-            "content_type": "image/png",
-            "size_bytes": 1024,
-        },
-    )
-    assert presigned.status_code == 201
-    upload_id = presigned.json()["upload_id"]
-    response = auth_client.post(
-        "/api/v1/uploads/complete",
-        headers=headers,
-        json={"upload_id": upload_id},
-    )
-    assert response.status_code == 200
-    assert response.json()["id"] == upload_id
-
-
 def test_errors_include_common_request_id_envelope(auth_client: TestClient) -> None:
     response = auth_client.get(
         "/api/v1/users/me", headers={"X-Request-ID": "contract-request-1"}

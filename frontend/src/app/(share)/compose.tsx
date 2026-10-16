@@ -143,8 +143,16 @@ export default function ShareComposeScreen() {
         );
         return;
       }
+      if (error instanceof ApiClientError && error.status < 500) {
+        showToast({
+          type: 'error',
+          title: t('settings.couldnTSave'),
+          message: error.message,
+        });
+        return;
+      }
       queueShare(
-        { ...share, sharedText: title.trim() || share.sharedText },
+        { ...share, url: originalUrl, sharedText: title.trim() || share.sharedText },
         space.id,
         list.id,
       );

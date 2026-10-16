@@ -7,7 +7,6 @@ from app.core.pagination import PageResponse, PaginationDep, paginate
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.spaces.dependencies import SpaceMemberDep
 from app.modules.spaces.permissions import require_space_admin
-from app.modules.spaces.repository import space_member_repository
 from app.modules.spaces.schemas import (
     SpaceCreate,
     SpaceMemberResponse,
@@ -18,6 +17,7 @@ from app.modules.spaces.service import (
     create_space,
     delete_space,
     get_space,
+    list_members,
     list_spaces,
     update_space,
 )
@@ -76,6 +76,4 @@ def list_members_endpoint(
     pagination: PaginationDep,
 ) -> PageResponse[SpaceMemberResponse]:
     page, page_size = pagination
-    return paginate(
-        space_member_repository.list_for_space(session, space_id), page, page_size
-    )
+    return paginate(list_members(session, space_id), page, page_size)

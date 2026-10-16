@@ -30,7 +30,7 @@ def _is_trusted_proxy_connection(host: str) -> bool:
 def extract_client_ip(request: Request) -> str:
     direct_ip = request.client.host if request.client else "unknown"
 
-    # Only inspect forwarded headers if connection arrives from a trusted proxy or private gateway
+    # Inspect forwarded headers only from a trusted proxy or private gateway.
     if _is_trusted_proxy_connection(direct_ip):
         cf_connecting_ip = request.headers.get("cf-connecting-ip")
         if cf_connecting_ip and _is_valid_ip(cf_connecting_ip.strip()):

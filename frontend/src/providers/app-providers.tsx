@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/api/query-client';
 import { PropsWithChildren, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,10 +14,6 @@ import { ToastProvider } from '@/components/feedback/AppToast';
 import { useLanguageStore } from '@/store/language-store';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '@/api/client/api-client';
-
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
-});
 
 enableFreeze(true);
 
@@ -46,6 +43,14 @@ export function AppProviders({ children }: PropsWithChildren) {
       void SplashScreen.hideAsync().catch(() => {});
     }
   }, [hydrated, languageHydrated]);
+  useEffect(() => {
+    if (!accessToken) return;
+    void syncOutbox();
+    const retry = setInterval(() => {
+      if (AppState.currentState === 'active') void syncOutbox();
+    }, 30_000);
+    return () => clearInterval(retry);
+  }, [accessToken]);
   useEffect(() => {
     if (!languageHydrated || !accessToken) return;
     const syncLanguage = () => {

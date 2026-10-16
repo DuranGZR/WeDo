@@ -75,12 +75,6 @@ const config: ExpoConfig = {
     usesAppleSignIn: true,
     infoPlist: {
       CFBundleDevelopmentRegion: 'en',
-      NSPhotoLibraryUsageDescription:
-        'WeDo uses your photo library to add photos to your shared lists and memories.',
-      NSPhotoLibraryAddUsageDescription:
-        'WeDo needs permission to save your memories and photos to your photo library.',
-      NSCameraUsageDescription:
-        'WeDo uses your camera to take photos for your lists and memories.',
       ITSAppUsesNonExemptEncryption: false,
     },
   },
@@ -92,7 +86,7 @@ const config: ExpoConfig = {
       backgroundColor: '#F7F6F2',
       monochromeImage: './assets/notification-icon.png',
     },
-    permissions: ['RECEIVE_BOOT_COMPLETED', 'READ_MEDIA_IMAGES', 'POST_NOTIFICATIONS'],
+    permissions: ['RECEIVE_BOOT_COMPLETED', 'POST_NOTIFICATIONS'],
   },
   web: {
     favicon: './assets/TekLogo.png',

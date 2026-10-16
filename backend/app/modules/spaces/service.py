@@ -1,12 +1,43 @@
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.localization import message
 from app.modules.spaces.enums import SpaceRole
 from app.modules.spaces.models import Space, SpaceMember
 from app.modules.spaces.repository import space_member_repository, space_repository
-from app.modules.spaces.schemas import SpaceCreate, SpaceResponse, SpaceUpdate
+from app.modules.spaces.schemas import (
+    SpaceCreate,
+    SpaceMemberResponse,
+    SpaceResponse,
+    SpaceUpdate,
+)
+from app.modules.users.models import User
+
+
+def list_members(session: Session, space_id: UUID) -> list[SpaceMemberResponse]:
+    members = space_member_repository.list_for_space(session, space_id)
+    users = {
+        user.id: user
+        for user in session.scalars(
+            select(User).where(User.id.in_([member.user_id for member in members]))
+        )
+    }
+    result = []
+    for member in members:
+        user = users.get(member.user_id)
+        name = (
+            user.display_name
+            if user and user.is_active
+            else message("message.deletedUser")
+        )
+        result.append(
+            SpaceMemberResponse.model_validate(member, from_attributes=True).model_copy(
+                update={"display_name": name}
+            )
+        )
+    return result
 
 
 def _to_response(session: Session, space: Space) -> SpaceResponse:

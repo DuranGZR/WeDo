@@ -9,8 +9,9 @@ export type OutboxEntry = {
   status: 'pending' | 'processing' | 'failed';
   attempts: number;
   created_at: string;
+  owner_id: string;
 };
-export function enqueue(type: string, payload: unknown) {
+export function enqueue(type: string, payload: unknown, ownerId: string) {
   const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   if (!database) {
     webOutbox.set(id, {
@@ -20,28 +21,31 @@ export function enqueue(type: string, payload: unknown) {
       status: 'pending',
       attempts: 0,
       created_at: new Date().toISOString(),
+      owner_id: ownerId,
     });
     return id;
   }
   database.runSync(
-    'INSERT INTO outbox (id, type, payload, status, created_at) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO outbox (id, type, payload, status, created_at, owner_id) VALUES (?, ?, ?, ?, ?, ?)',
     id,
     type,
     JSON.stringify(payload),
     'pending',
     new Date().toISOString(),
+    ownerId,
   );
   return id;
 }
-export function pendingEntries() {
+export function pendingEntries(ownerId: string) {
   if (!database) {
     return [...webOutbox.values()]
-      .filter((entry) => entry.status === 'pending')
+      .filter((entry) => entry.status === 'pending' && entry.owner_id === ownerId)
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
   }
   return database.getAllSync<OutboxEntry>(
-    'SELECT id, type, payload, status, attempts, created_at FROM outbox WHERE status = ? ORDER BY created_at ASC',
+    'SELECT id, type, payload, status, attempts, created_at, owner_id FROM outbox WHERE status = ? AND owner_id = ? ORDER BY created_at ASC',
     'pending',
+    ownerId,
   );
 }
 export function removeEntry(id: string) {

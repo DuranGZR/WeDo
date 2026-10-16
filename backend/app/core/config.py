@@ -49,10 +49,6 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = Field(default=120, ge=1, le=10_000)
     auth_rate_limit_per_minute: int = Field(default=10, ge=1, le=100)
     metadata_enabled: bool = True
-    storage_endpoint: str | None = None
-    storage_bucket: str | None = None
-    storage_access_key: str | None = None
-    storage_secret_key: str | None = None
     expo_push_url: str = "https://exp.host/--/api/v2/push/send"
     trusted_proxies: list[str] = ["127.0.0.1", "::1"]
     trust_proxy_headers: bool = False
@@ -95,7 +91,8 @@ class Settings(BaseSettings):
                 )
                 if not valid_ssl:
                     raise ValueError(
-                        "Production ortamında DATABASE_URL 'sslmode=require' (veya verify-full) içermelidir."
+                        "Production ortamında DATABASE_URL 'sslmode=require' "
+                        "(veya verify-full) içermelidir."
                     )
         return self
 

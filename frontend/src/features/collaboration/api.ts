@@ -62,16 +62,6 @@ export type Plan = {
   created_at: string;
   updated_at: string;
 };
-export type Memory = {
-  id: string;
-  item_id: string;
-  user_id: string;
-  note: string;
-  rating: number | null;
-  photo_url: string | null;
-  created_at: string;
-  updated_at: string;
-};
 export type Notification = {
   id: string;
   type: string;
@@ -171,26 +161,6 @@ export const collaborationApi = {
     authenticatedApiClient<Plan>(`/api/v1/plans/${id}`, { method: 'PATCH', body }),
   planAction: (id: string, action: 'approve' | 'reject' | 'cancel' | 'complete') =>
     authenticatedApiClient<Plan>(`/api/v1/plans/${id}/${action}`, { method: 'POST' }),
-  memories: (spaceId: string, pageNumber = 1) =>
-    page<Memory>(`/api/v1/spaces/${spaceId}/memories?page=${pageNumber}&page_size=50`),
-  itemMemories: (itemId: string, pageNumber = 1) =>
-    page<Memory>(`/api/v1/items/${itemId}/memories?page=${pageNumber}&page_size=50`),
-  createMemory: (
-    itemId: string,
-    body: { note: string; rating?: number; photo_url?: string },
-  ) =>
-    authenticatedApiClient<Memory>(`/api/v1/items/${itemId}/memories`, {
-      method: 'POST',
-      body,
-    }),
-  memory: (id: string) => authenticatedApiClient<Memory>(`/api/v1/memories/${id}`),
-  updateMemory: (
-    id: string,
-    body: { note?: string; rating?: number; photo_url?: string },
-  ) =>
-    authenticatedApiClient<Memory>(`/api/v1/memories/${id}`, { method: 'PATCH', body }),
-  deleteMemory: (id: string) =>
-    authenticatedApiClient<void>(`/api/v1/memories/${id}`, { method: 'DELETE' }),
   notifications: (pageNumber = 1) =>
     page<Notification>(`/api/v1/notifications?page=${pageNumber}&page_size=50`),
   unreadCount: () =>

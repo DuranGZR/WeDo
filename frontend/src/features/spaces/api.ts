@@ -1,21 +1,15 @@
 import { authenticatedApiClient } from '@/api/client/authenticated-api-client';
+import { allPages } from '@/api/client/paginated-api-client';
 import type { List, Space } from './types';
 
-type Page<T> = {
-  data: T[];
-  pagination: { page: number; page_size: number; has_more: boolean };
-};
 export const spacesApi = {
-  list: () => authenticatedApiClient<Page<Space>>('/api/v1/spaces?page=1&page_size=50'),
+  list: () => allPages<Space>('/api/v1/spaces'),
   create: (name: string, type: Space['type']) =>
     authenticatedApiClient<Space>('/api/v1/spaces', {
       method: 'POST',
       body: { name, type },
     }),
-  lists: (spaceId: string) =>
-    authenticatedApiClient<Page<List>>(
-      `/api/v1/spaces/${spaceId}/lists?page=1&page_size=50`,
-    ),
+  lists: (spaceId: string) => allPages<List>(`/api/v1/spaces/${spaceId}/lists`),
   update: (spaceId: string, name: string) =>
     authenticatedApiClient<Space>(`/api/v1/spaces/${spaceId}`, {
       method: 'PATCH',
