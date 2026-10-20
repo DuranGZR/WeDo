@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from io import BytesIO
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -11,6 +12,7 @@ from app.modules.metadata.exceptions import MetadataError
 from app.modules.metadata.fetcher import MetadataFetcher
 from app.modules.metadata.parser import parse_metadata
 from app.modules.metadata.providers import resolve_provider_metadata
+from app.modules.safety.policy import violates_policy
 
 
 def is_expiring_cdn(url: str | None) -> bool:
@@ -79,6 +81,16 @@ def process_item_metadata(
         )
         item.canonical_url = metadata["canonical_url"] or resolved_url
         item.source_domain = _source_domain(item.canonical_url)
+
+        if violates_policy(
+            item.title,
+            item.description,
+            item.shared_text,
+            urls=(resolved_url, item.canonical_url, raw_image_url),
+        ):
+            item.deleted_at = datetime.now(UTC)
+            item.metadata_status = MetadataStatus.FAILED
+            return
 
         # Permanent caching for expiring CDN URLs (Instagram, Facebook, TikTok, etc.)
         if raw_image_url and is_expiring_cdn(raw_image_url):

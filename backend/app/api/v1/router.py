@@ -7,6 +7,7 @@ from app.modules.lists.router import router as lists_router
 from app.modules.members.router import router as members_router
 from app.modules.notifications.devices_router import router as devices_router
 from app.modules.notifications.router import router as notifications_router
+from app.modules.safety.router import router as safety_router
 from app.modules.spaces.router import router as spaces_router
 from app.modules.users.router import router as users_router
 
@@ -20,3 +21,4 @@ api_v1_router.include_router(notifications_router, tags=["Notifications"])
 api_v1_router.include_router(devices_router, tags=["Devices"])
 api_v1_router.include_router(members_router, tags=["Members"])
 api_v1_router.include_router(lists_router, tags=["Lists"])
+api_v1_router.include_router(safety_router, prefix="/safety", tags=["Safety"])

@@ -20,6 +20,7 @@ from app.modules.auth.schemas import (
 from app.modules.auth.tokens import create_token, decode_token, hash_token
 from app.modules.auth.verification import VerificationRequired, issue_code
 from app.modules.notifications.models import DevicePushToken
+from app.modules.safety.policy import check_content
 from app.modules.users.models import User
 from app.modules.users.repository import user_repository
 from app.modules.users.schemas import UserResponse
@@ -74,6 +75,7 @@ def _issue_tokens(session: Session, user: User, device_id: str | None) -> TokenR
 
 
 def sign_up(session: Session, data: SignUpRequest) -> dict:
+    check_content(data.display_name)
     email = str(data.email).lower()
     if user_repository.get_by_email(session, email):
         raise EmailAlreadyRegisteredError("Bu e-posta adresiyle zaten bir hesap var.")
@@ -264,6 +266,7 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
                 if data.display_name
                 else email.split("@")[0].capitalize()
             )
+            check_content(display_name)
             user = user_repository.create(
                 session,
                 User(
@@ -350,6 +353,7 @@ def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse
                 if isinstance(token_name, str) and token_name.strip()
                 else email.split("@")[0].capitalize()
             )
+            check_content(display_name)
             user = user_repository.create(
                 session,
                 User(

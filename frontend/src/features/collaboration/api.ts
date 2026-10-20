@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client/api-client';
 import { authenticatedApiClient } from '@/api/client/authenticated-api-client';
+import { allPages } from '@/api/client/paginated-api-client';
 
 export type Page<T> = {
   data: T[];
@@ -10,8 +11,9 @@ export type SpaceMember = {
   id: string;
   user_id: string;
   display_name: string;
-  email: string;
   role: string;
+  joined_at: string;
+  is_active: boolean;
 };
 export type Invitation = {
   id: string;
@@ -76,6 +78,15 @@ export type Notification = {
 const page = <T>(path: string) => authenticatedApiClient<Page<T>>(path);
 
 export const collaborationApi = {
+  allMembers: (spaceId: string) =>
+    allPages<SpaceMember>(`/api/v1/spaces/${spaceId}/members`),
+  member: (spaceId: string, memberId: string) =>
+    authenticatedApiClient<SpaceMember>(`/api/v1/spaces/${spaceId}/members/${memberId}`),
+  leaveSpace: (spaceId: string, successorUserId?: string) =>
+    authenticatedApiClient<void>(`/api/v1/spaces/${spaceId}/leave`, {
+      method: 'POST',
+      body: { successor_user_id: successorUserId },
+    }),
   space: (id: string) => authenticatedApiClient(`/api/v1/spaces/${id}`),
   updateSpace: (id: string, body: { name?: string; type?: string }) =>
     authenticatedApiClient(`/api/v1/spaces/${id}`, { method: 'PATCH', body }),

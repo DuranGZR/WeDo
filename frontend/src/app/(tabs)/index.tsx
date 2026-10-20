@@ -31,7 +31,7 @@ import {
 import { ScreenMotion } from '@/components/motion/ScreenMotion';
 import { useToast } from '@/components/feedback/AppToast';
 import { colors, mono, radius, spacing } from '@/design-system';
-import { collaborationApi, type SpaceMember } from '@/features/collaboration/api';
+import { collaborationApi } from '@/features/collaboration/api';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
 import { itemsApi } from '@/features/items/api';
 import { metadataRefreshInterval } from '@/features/items/hooks';
@@ -39,6 +39,7 @@ import type { Item } from '@/features/items/types';
 import { useCreateList, useLists } from '@/features/lists/hooks';
 import type { List } from '@/features/lists/types';
 import { useSpaces } from '@/features/spaces/hooks';
+import { MemberLinks } from '@/features/spaces/MemberLinks';
 import { useAuthStore } from '@/store/auth-store';
 import { useSpaceStore } from '@/store/space-store';
 import {
@@ -168,21 +169,6 @@ function MonoAvatar({
         {name?.trim().charAt(0).toLocaleUpperCase(formatLocale()) ?? 'W'}
       </AppText>
     </View>
-  );
-}
-
-function MemberAvatar({
-  member,
-  fallback,
-  size = 28,
-}: {
-  member?: SpaceMember;
-  fallback?: string;
-  size?: number;
-}) {
-  useTranslation();
-  return (
-    <MonoAvatar name={member?.display_name ?? fallback ?? t('common.user')} size={size} />
   );
 }
 
@@ -543,12 +529,6 @@ export default function HomeScreen() {
   );
   const memberNames = (members.data?.data ?? []).map((member) => member.display_name);
   const spaceLabel = space?.name ?? t('spaces.sharedSpace');
-  const memberLabel = needsInvite
-    ? t('home.invitationPending')
-    : (members.data?.data ?? [])
-        .slice(0, 2)
-        .map((member) => member.display_name)
-        .join(' · ');
   const dailyMessage = getDailyMessage(allItems);
   const { width: windowWidth } = useWindowDimensions();
   const recentCardWidth = useMemo(() => {
@@ -607,43 +587,43 @@ export default function HomeScreen() {
       >
         {/* Top Bar Header */}
         <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('home.switchSpace')}
-            onPress={() => setSpaceSheetOpen(true)}
-            style={styles.spaceSelector}
-          >
-            <View style={styles.spaceCover}>
+          <View style={styles.spaceSelector}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('home.switchSpace')}
+              onPress={() => setSpaceSheetOpen(true)}
+              style={styles.spaceCover}
+            >
               <Ionicons name="sparkles" size={17} color={mono.paper} />
-            </View>
+            </Pressable>
             <View style={styles.spaceSelectorBody}>
-              <View style={styles.spaceTitleRow}>
-                <AppText variant="cardTitle" style={styles.spaceTitle}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('home.switchSpace')}
+                onPress={() => setSpaceSheetOpen(true)}
+                style={styles.spaceTitleRow}
+              >
+                <AppText
+                  variant="cardTitle"
+                  numberOfLines={1}
+                  style={[styles.spaceTitle, { flex: 1 }]}
+                >
                   {space?.name ?? t('spaces.sharedSpace')}
                 </AppText>
                 <Ionicons name="chevron-down" size={16} color={mono.ink} />
-              </View>
+              </Pressable>
               <View style={styles.memberRow}>
-                <MonoAvatar
-                  name={
-                    user?.display_name || user?.email?.split('@')[0] || t('common.user')
-                  }
-                  size={26}
-                />
-                {(() => {
-                  const partner = members.data?.data?.find((m) => m.user_id !== user?.id);
-                  return partner ? (
-                    <MemberAvatar member={partner} size={26} />
-                  ) : (
-                    <PendingAvatar />
-                  );
-                })()}
-                <AppText variant="caption" muted>
-                  {memberLabel}
-                </AppText>
+                {space ? (
+                  <MemberLinks
+                    avatars
+                    spaceId={space.id}
+                    members={(members.data?.data ?? []).slice(0, 2)}
+                  />
+                ) : null}
+                {needsInvite ? <PendingAvatar /> : null}
               </View>
             </View>
-          </Pressable>
+          </View>
           <View style={styles.topActions}>
             <Pressable
               accessibilityRole="button"
@@ -882,52 +862,90 @@ export default function HomeScreen() {
                   </AppText>
                 </View>
               </View>
-              {(spaces.data?.data ?? []).map((entry) => (
-                <Pressable
-                  key={entry.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('home.chooseValue', { value0: entry.name })}
-                  onPress={() => {
-                    setSelectedSpaceId(entry.id);
-                    setSpaceSheetOpen(false);
-                  }}
-                  style={({ pressed }) => [
-                    styles.sheetRow,
-                    entry.id === space?.id && styles.sheetRowActive,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View style={styles.sheetRowIcon}>
-                    <Ionicons name="people-outline" size={19} color={homeColors.paper} />
-                  </View>
-                  <View style={styles.sheetRowBody}>
-                    <AppText variant="cardTitle" style={styles.sheetRowTitle}>
-                      {entry.name}
-                    </AppText>
-                    <AppText style={styles.sheetRowMeta}>
-                      {(() => {
-                        const memberQuery =
-                          spaceMemberQueries[
-                            (spaces.data?.data ?? []).findIndex(
-                              (space) => space.id === entry.id,
-                            )
-                          ];
-                        const entryMembers = memberQuery?.data?.data ?? [];
-                        if (entryMembers.length > 0) {
-                          return entryMembers
-                            .map((member) => member.display_name)
-                            .join(' · ');
-                        }
-                        if (memberQuery?.isLoading) return t('home.loadingMembers');
-                        return t('home.invitationPending');
-                      })()}
-                    </AppText>
-                  </View>
-                  {entry.id === space?.id && (
-                    <Ionicons name="checkmark-circle" size={21} color={homeColors.ink} />
-                  )}
-                </Pressable>
-              ))}
+              <ScrollView
+                style={{ maxHeight: 360 }}
+                contentContainerStyle={{ gap: spacing.sm }}
+              >
+                {(spaces.data?.data ?? []).map((entry, index) => {
+                  const memberQuery = spaceMemberQueries[index];
+                  const entryMembers = memberQuery?.data?.data ?? [];
+                  return (
+                    <View
+                      key={entry.id}
+                      style={[
+                        styles.sheetRow,
+                        entry.id === space?.id && styles.sheetRowActive,
+                      ]}
+                    >
+                      <View style={styles.sheetSelectRow}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={t('home.chooseValue', {
+                            value0: entry.name,
+                          })}
+                          onPress={() => {
+                            setSelectedSpaceId(entry.id);
+                            setSpaceSheetOpen(false);
+                          }}
+                          style={({ pressed }) => [
+                            styles.sheetSelectButton,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <View style={styles.sheetRowIcon}>
+                            <Ionicons
+                              name="people-outline"
+                              size={19}
+                              color={homeColors.paper}
+                            />
+                          </View>
+                          <AppText
+                            variant="cardTitle"
+                            style={[styles.sheetRowTitle, { flex: 1 }]}
+                          >
+                            {entry.name}
+                          </AppText>
+                          {entry.id === space?.id ? (
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={21}
+                              color={homeColors.ink}
+                            />
+                          ) : null}
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={t('members.leaveNamed', {
+                            name: entry.name,
+                          })}
+                          onPress={() => {
+                            setSpaceSheetOpen(false);
+                            router.push(`/space/${entry.id}/leave` as never);
+                          }}
+                          style={styles.sheetLeaveButton}
+                        >
+                          <Ionicons name="exit-outline" size={21} color={mono.danger} />
+                        </Pressable>
+                      </View>
+                      {entryMembers.length ? (
+                        <MemberLinks
+                          spaceId={entry.id}
+                          members={entryMembers}
+                          onOpen={() => setSpaceSheetOpen(false)}
+                        />
+                      ) : (
+                        <AppText style={styles.sheetRowMeta}>
+                          {memberQuery?.isLoading
+                            ? t('home.loadingMembers')
+                            : memberQuery?.isError
+                              ? t('members.unavailable')
+                              : t('home.invitationPending')}
+                        </AppText>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
@@ -969,8 +987,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 18,
+    gap: spacing.sm,
   },
   spaceSelector: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -990,7 +1011,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: mono.ink,
   },
-  spaceSelectorBody: { gap: 2 },
+  spaceSelectorBody: { gap: 2, flex: 1, minWidth: 0 },
   spaceTitle: { fontSize: 16, lineHeight: 20, letterSpacing: -0.2 },
   spaceTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -1575,11 +1596,24 @@ const styles = StyleSheet.create({
     backgroundColor: homeColors.ink,
     marginBottom: spacing.sm,
   },
-  sheetRow: {
-    minHeight: 58,
+  sheetSelectRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  sheetSelectButton: {
+    flex: 1,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
+  },
+  sheetLeaveButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetRow: {
+    minHeight: 58,
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: homeColors.border,

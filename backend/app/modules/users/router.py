@@ -7,6 +7,7 @@ from app.modules.auth.apple_lifecycle import attempt_revocations, queue_revocati
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.auth.models import AuthIdentity
 from app.modules.auth.passwords import verify_password
+from app.modules.safety.policy import check_content
 from app.modules.users.deletion import deactivate_user
 from app.modules.users.schemas import (
     AccountDeleteRequest,
@@ -34,6 +35,7 @@ def get_current_user(current_user: CurrentUserDep, session: SessionDep) -> UserR
 def update_current_user(
     data: UserUpdate, current_user: CurrentUserDep, session: SessionDep
 ) -> UserResponse:
+    check_content(data.display_name)
     if data.preferred_language is not None:
         current_user.preferred_language = data.preferred_language
     if data.display_name is not None:

@@ -49,6 +49,46 @@ beforeEach(() => {
 });
 afterEach(() => queryClient.clear());
 
+it('finishes startup without deleting credentials when secure storage is unavailable', async () => {
+  useAuthStore.setState({ user: null, accessToken: null, hydrated: false });
+  jest
+    .mocked(secureStorage.getTokens)
+    .mockRejectedValueOnce(new Error('Keychain unavailable'));
+
+  await expect(useAuthStore.getState().hydrate()).resolves.toBeUndefined();
+
+  expect(useAuthStore.getState()).toMatchObject({
+    user: null,
+    accessToken: null,
+    hydrated: true,
+  });
+  expect(secureStorage.clear).not.toHaveBeenCalled();
+  expect(apiClient).not.toHaveBeenCalled();
+
+  // The initial storage failure must not prevent a subsequent retry.
+  jest.mocked(apiClient).mockResolvedValueOnce(user());
+  await useAuthStore.getState().hydrate();
+  expect(useAuthStore.getState().user?.id).toBe('alice');
+});
+
+it('finishes startup if storage becomes unavailable during session refresh', async () => {
+  useAuthStore.setState({ user: null, accessToken: null, hydrated: false });
+  jest
+    .mocked(secureStorage.getTokens)
+    .mockResolvedValueOnce({
+      accessToken: 'expired-access',
+      refreshToken: 'saved-refresh',
+    })
+    .mockRejectedValueOnce(new Error('Keychain unavailable'));
+  jest.mocked(apiClient).mockRejectedValueOnce(new ApiClientError(401, {}));
+
+  await expect(useAuthStore.getState().hydrate()).resolves.toBeUndefined();
+
+  expect(useAuthStore.getState().hydrated).toBe(true);
+  expect(useAuthStore.getState().user).toBeNull();
+  expect(secureStorage.clear).not.toHaveBeenCalled();
+});
+
 it('rotates one refresh token once when several requests expire together', async () => {
   jest.mocked(apiClient).mockResolvedValue(result);
   await expect(

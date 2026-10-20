@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     google_web_client_id: str = ""
     resend_api_key: SecretStr = SecretStr("")
     support_sender_email: EmailStr = "contact@durangezer.com"
+    moderation_email: EmailStr = "contact@durangezer.com"
+    content_blocked_terms: list[str] = [
+        "kill yourself",
+        "i will kill you",
+        "kendini öldür",
+        "seni öldüreceğim",
+    ]
+    content_blocked_domains: list[str] = ["pornhub.com", "xvideos.com", "xnxx.com"]
     public_invite_base_url: str | None = None
     app_store_url: AnyHttpUrl | None = None
     cors_origins: list[str] = []

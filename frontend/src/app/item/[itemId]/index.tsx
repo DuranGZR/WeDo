@@ -26,6 +26,7 @@ import {
   useRestoreItem,
 } from '@/features/items/hooks';
 import { useLists } from '@/features/lists/hooks';
+import { SafetyActions } from '@/features/safety/SafetyActions';
 
 export default function ItemDetailScreen() {
   useTranslation();
@@ -123,6 +124,12 @@ export default function ItemDetailScreen() {
             </AppText>
           </View>
         </Card>
+        <SafetyActions
+          itemId={value.id}
+          userId={value.created_by}
+          displayName={value.created_by_name}
+          spaceId={value.space_id}
+        />
         <Pressable
           onPress={() => {
             haptic.medium();
@@ -212,7 +219,7 @@ export default function ItemDetailScreen() {
         >
           <Ionicons name="trash-outline" size={18} color={colors.error} />
           <AppText style={styles.deleteText}>
-            {remove.isPending ? 'Siliniyor...' : t('items.deleteItem')}
+            {remove.isPending ? t('safety.deleting') : t('items.deleteItem')}
           </AppText>
         </Pressable>
       </View>

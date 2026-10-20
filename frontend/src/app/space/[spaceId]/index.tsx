@@ -52,6 +52,22 @@ export default function SpaceDetailScreen() {
 
       <View style={styles.content}>
         <AppText variant="pageTitle">{space.name}</AppText>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push(`/space/${spaceId}/leave` as never)}
+          style={styles.primaryBtn}
+        >
+          <Ionicons name="exit-outline" size={19} color={colors.surface} />
+          <AppText style={styles.primaryBtnText}>{t('members.leave')}</AppText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push(`/space/${spaceId}/members` as never)}
+          style={styles.primaryBtn}
+        >
+          <Ionicons name="people-outline" size={19} color={colors.surface} />
+          <AppText style={styles.primaryBtnText}>{t('safety.members')}</AppText>
+        </Pressable>
 
         <Pressable
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}

@@ -21,7 +21,9 @@ from app.modules.notifications.service import (
     create_notification,
     dispatch_pending_pushes,
 )
+from app.modules.safety.service import check_invitation_safety
 from app.modules.spaces.models import SpaceMember
+from app.modules.spaces.permissions import get_space_member
 from app.modules.spaces.repository import space_member_repository, space_repository
 from app.modules.users.models import User
 
@@ -113,6 +115,7 @@ def preview_invitation(session: Session, token: str) -> InvitationPreview:
             detail=message("message.invitationNotFound"),
         )
     _validate(invitation)
+    get_space_member(session, invitation.space_id, invitation.created_by)
     space = space_repository.get_by_id(session, invitation.space_id)
     inviter = session.get(User, invitation.created_by)
     return InvitationPreview(
@@ -135,6 +138,8 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
             detail=message("message.invitationNotFound"),
         )
     _validate(invitation)
+    check_invitation_safety(session, invitation.space_id, user_id)
+    get_space_member(session, invitation.space_id, invitation.created_by)
     existing = space_member_repository.get_by_space_and_user(
         session, invitation.space_id, user_id
     )
@@ -143,9 +148,22 @@ def accept_invitation(session: Session, token: str, user_id: UUID) -> Invitation
             status_code=status.HTTP_409_CONFLICT,
             detail=message("message.youReAlreadyAMemberOfThisSpace"),
         )
-    space_member_repository.create(
-        session, SpaceMember(space_id=invitation.space_id, user_id=user_id)
+    # A removed membership still has a unique (space_id, user_id) row.
+    from sqlalchemy import select
+
+    previous = session.scalar(
+        select(SpaceMember).where(
+            SpaceMember.space_id == invitation.space_id, SpaceMember.user_id == user_id
+        )
     )
+    if previous:
+        previous.removed_at = None
+        previous.role = "member"
+        previous.joined_at = datetime.now(UTC)
+    else:
+        space_member_repository.create(
+            session, SpaceMember(space_id=invitation.space_id, user_id=user_id)
+        )
     create_notification(
         session,
         user_id=invitation.created_by,

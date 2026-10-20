@@ -57,18 +57,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   hydrated: false,
   async hydrate() {
-    const tokens = await secureStorage.getTokens();
-    if (!tokens.accessToken) {
-      set({ hydrated: true });
-      return;
-    }
     try {
-      const user = await apiClient<User>('/api/v1/users/me', {
-        accessToken: tokens.accessToken,
-      });
-      set({ user, accessToken: tokens.accessToken, hydrated: true });
+      const tokens = await secureStorage.getTokens();
+      if (!tokens.accessToken) return;
+      try {
+        const user = await apiClient<User>('/api/v1/users/me', {
+          accessToken: tokens.accessToken,
+        });
+        set({ user, accessToken: tokens.accessToken });
+      } catch {
+        await get().refresh();
+      }
     } catch {
-      await get().refresh();
+      // A temporarily unavailable Keychain must not block startup or erase
+      // persisted credentials. A later hydration/sign-in can retry storage.
+      set({ user: null, accessToken: null });
+    } finally {
       set({ hydrated: true });
     }
   },

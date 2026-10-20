@@ -176,6 +176,8 @@ def list_item_activity_endpoint(
 def get_item_preview_endpoint(item_id: UUID, session: SessionDep) -> Response:
     from app.modules.items.models import ItemPreviewImage
 
+    # A moderated/deleted item's cached preview must also stop being served.
+    get_item(session, item_id)
     preview = session.get(ItemPreviewImage, item_id)
     if preview is not None:
         return Response(

@@ -34,3 +34,4 @@ class SpaceMemberResponse(BaseModel):
     role: SpaceRole
     joined_at: datetime
     display_name: str = ""
+    is_active: bool = True

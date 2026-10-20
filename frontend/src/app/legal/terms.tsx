@@ -26,7 +26,7 @@ export default function LegalTermsScreen() {
           </Pressable>
         </View>
         <AppText muted style={styles.date}>
-          {t('legal.lastUpdated1January2026')}
+          {t('legal.updated20October2026')}
         </AppText>
       </View>
 
@@ -67,6 +67,7 @@ export default function LegalTermsScreen() {
             {t('legal.3ReportsAndModeration')}
           </AppText>
           <AppText style={styles.paragraph}>{t('legal.reportPolicy')}</AppText>
+          <AppText style={styles.paragraph}>{t('legal.blockPolicy')}</AppText>
         </View>
 
         <View style={styles.section}>

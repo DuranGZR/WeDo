@@ -163,5 +163,16 @@
   "web.language": "Dil",
   "apple.serviceUnavailable": "Apple girişi şu anda kullanılamıyor. Lütfen kısa bir süre sonra tekrar dene.",
   "apple.reauthorizeRequired": "Lütfen WeDo’nun güncel sürümünden Apple ile tekrar giriş yap.",
-  "web.savedLinksAndPreviews": "Ortak listelere eklenen bağlantılar, başlıklar, listeler ve bağlantı önizleme görselleri."
+  "web.savedLinksAndPreviews": "Ortak listelere eklenen bağlantılar, başlıklar, listeler ve bağlantı önizleme görselleri.",
+  "safety.contentRejected": "Bu içerik güvenlik kurallarımıza uymuyor. Lütfen düzenle.",
+  "safety.sharingBlocked": "Bu alana katılım bir kullanıcı engeli nedeniyle kapalı.",
+  "safety.cannotBlockSelf": "Kendini engelleyemezsin.",
+  "safety.userUnavailable": "Kullanıcı bulunamadı veya ortak alanınız yok.",
+  "safety.invalidTarget": "Bildirim hedefi bu alanla eşleşmiyor.",
+  "safety.reportLimit": "Günlük bildirim sınırına ulaştın. Daha sonra tekrar dene.",
+  "web.safetyData": "Güvenlik bildirimlerinde bildiren hesap, ilgili kullanıcı/içerik/alan kimlikleri, neden, açıklama, içerik anlık görüntüsü ve inceleme sonucu saklanır. Engelleme kayıtlarında iki hesabın kimlikleri tutulur. Bu bilgiler şikâyet incelemesi ve kötüye kullanımı önlemek için kullanılır; bildirim açıklaması Resend üzerinden destek ekibine iletilir. Şikâyetler diğer alan üyelerine veya bildirilen kişiye açılmaz. Güvenlik kayıtları inceleme ve kötüye kullanımı önleme amacıyla gerekli olduğu sürece tutulabilir; bu kayıtlar hakkındaki taleplerin için contact@durangezer.com adresine başvur.",
+  "web.reportAndBlockPolicy": "İçerik ayrıntısı veya Üyeler ve güvenlik ekranındaki bildirim düğmesini ya da Ayarlar > Yardım bölümündeki formu kullanabilirsin. Ekibimiz bildirimleri 24 saat içinde inceler; uygunsuz içerik kaldırılır ve ihlal eden hesaplar askıya alınabilir. Alternatif iletişim: contact@durangezer.com. Üyeler ve güvenlik ekranından veya içerik ayrıntısından kullanıcı engelleyebilirsin. Engellediğin kişi sana ait ortak alanlardan çıkarılır; sana ait olmayan ortak alanlardan sen ayrılırsın. Önceden kaydedilmiş içerikler alanlarda kalır. Engel varken aynı alana yeniden katılamazsınız. Ayarlar > Engellenen kullanıcılar bölümünden engeli kaldırabilirsin; eski üyelikler otomatik geri gelmez.",
+  "web.updated20October2026": "20 Ekim 2026",
+  "members.chooseSuccessor": "Ayrılmadan önce bu alandaki etkin bir üyeyi yeni sahip olarak seç.",
+  "members.onlyOwnerTransfers": "Alan sahipliğini yalnız alan sahibi devredebilir."
 }

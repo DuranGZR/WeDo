@@ -16,6 +16,7 @@ from app.modules.notifications.service import (
     dispatch_pending_pushes,
     notify_space_members,
 )
+from app.modules.safety.policy import check_content
 from app.modules.users.models import User
 
 
@@ -38,6 +39,7 @@ def response_for_item(session: Session, item: Item) -> ItemResponse:
 
 
 def create_item(session: Session, user_id: UUID, data: ItemCreate) -> ItemResponse:
+    check_content(data.title, data.shared_text, urls=(str(data.original_url or ""),))
     target_list = list_repository.get_by_id(session, data.list_id)
     if target_list is None or target_list.space_id != data.space_id:
         raise HTTPException(
@@ -109,6 +111,7 @@ def list_items(session: Session, list_id: UUID) -> list[ItemResponse]:
 
 
 def update_item(session: Session, item_id: UUID, data: ItemUpdate) -> ItemResponse:
+    check_content(data.title, data.description)
     item = get_item(session, item_id)
     if data.title is not None:
         item.title = data.title.strip()

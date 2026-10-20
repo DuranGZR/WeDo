@@ -26,7 +26,7 @@ export default function LegalPrivacyScreen() {
           </Pressable>
         </View>
         <AppText muted style={styles.date}>
-          {t('legal.lastUpdated15October2026')}
+          {t('legal.updated20October2026')}
         </AppText>
       </View>
 
@@ -68,6 +68,7 @@ export default function LegalPrivacyScreen() {
             • <AppText style={styles.bold}>{t('legal.sharedContent')}</AppText>{' '}
             {t('legal.savedLinksAndPreviews')}
           </AppText>
+          <AppText style={styles.bullet}>{t('legal.safetyData')}</AppText>
           <AppText style={styles.bullet}>
             •{' '}
             <AppText style={styles.bold}>{t('legal.deviceAndNotificationData')}</AppText>{' '}
@@ -79,9 +80,7 @@ export default function LegalPrivacyScreen() {
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
             {t('legal.3LinkPreviews')}
           </AppText>
-          <AppText style={styles.paragraph}>
-            {t('legal.howLinkPreviewsWork')}
-          </AppText>
+          <AppText style={styles.paragraph}>{t('legal.howLinkPreviewsWork')}</AppText>
         </View>
 
         <View style={styles.section}>

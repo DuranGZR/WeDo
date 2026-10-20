@@ -156,6 +156,24 @@ export default function ManageSpacesScreen() {
               </AppText>
 
               <View style={styles.editForm}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.secondaryBtn}
+                  onPress={() => router.push(`/space/${editingSpace.id}/leave` as never)}
+                >
+                  <Ionicons name="exit-outline" size={18} color={mono.ink} />
+                  <AppText style={styles.secondaryBtnText}>{t('members.leave')}</AppText>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.secondaryBtn}
+                  onPress={() =>
+                    router.push(`/space/${editingSpace.id}/members` as never)
+                  }
+                >
+                  <Ionicons name="people-outline" size={18} color={mono.ink} />
+                  <AppText style={styles.secondaryBtnText}>{t('safety.members')}</AppText>
+                </Pressable>
                 <TextField
                   label={t('spaces.spaceName')}
                   value={editName}

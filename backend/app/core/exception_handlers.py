@@ -52,7 +52,13 @@ def register_exception_handlers(application: FastAPI) -> None:
                 "error": {
                     "code": "validation_error",
                     "message": message("message.pleaseCheckTheInformationYouEntered"),
-                    "details": exc.errors(),
+                    # Pydantic model validators may include exception instances in
+                    # ctx. Only expose serializable diagnostics, never raw input
+                    # (which may contain a password or a private report).
+                    "details": [
+                        {key: error[key] for key in ("type", "loc", "msg")}
+                        for error in exc.errors()
+                    ],
                     "request_id": request.state.request_id,
                 }
             },

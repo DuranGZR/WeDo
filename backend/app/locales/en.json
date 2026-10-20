@@ -163,5 +163,16 @@
   "web.language": "Language",
   "apple.serviceUnavailable": "Apple sign-in is temporarily unavailable. Please try again shortly.",
   "apple.reauthorizeRequired": "Please sign in with Apple again using the latest version of WeDo.",
-  "web.savedLinksAndPreviews": "Links, titles, lists and link preview images saved in shared spaces."
+  "web.savedLinksAndPreviews": "Links, titles, lists and link preview images saved in shared spaces.",
+  "safety.contentRejected": "This content does not meet our safety rules. Please edit it.",
+  "safety.sharingBlocked": "Joining this space is unavailable because a user block is active.",
+  "safety.cannotBlockSelf": "You cannot block yourself.",
+  "safety.userUnavailable": "User not found or you do not share a space.",
+  "safety.invalidTarget": "The report target does not match this space.",
+  "safety.reportLimit": "You have reached the daily report limit. Please try again later.",
+  "web.safetyData": "Safety reports store the reporting account, relevant user/content/space IDs, reason, details, a content snapshot and the review outcome. Block records store the two account IDs. These records are used for moderation and abuse prevention; report details are sent to our support team through Resend. Reports are not disclosed to other space members or the reported person. Safety records may be retained as needed for investigation and abuse prevention; contact contact@durangezer.com for requests about these records.",
+  "web.reportAndBlockPolicy": "Use the report button on item details or Members and safety, or the form under Settings > Help. Our team reviews reports within 24 hours; objectionable content is removed and offending accounts may be suspended. You can also contact contact@durangezer.com. You can block a user from Members and safety or an item detail screen. The blocked person is removed from shared spaces you own; you leave shared spaces you do not own. Previously saved content remains in those spaces. You cannot rejoin the same space while a block is active. Remove blocks under Settings > Blocked users; previous memberships are not restored automatically.",
+  "web.updated20October2026": "20 October 2026",
+  "members.chooseSuccessor": "Choose an active member of this space as the next owner before leaving.",
+  "members.onlyOwnerTransfers": "Only the owner can transfer ownership."
 }

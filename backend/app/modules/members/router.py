@@ -6,11 +6,12 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.dependencies import SessionDep
 from app.core.localization import message
 from app.modules.auth.dependencies import CurrentUserDep
-from app.modules.members.schemas import MemberRoleUpdate
+from app.modules.members.schemas import LeaveSpaceRequest, MemberRoleUpdate
+from app.modules.members.service import leave_space as leave_space_service
 from app.modules.spaces.dependencies import SpaceMemberDep
 from app.modules.spaces.enums import SpaceRole
 from app.modules.spaces.models import SpaceMember
-from app.modules.spaces.permissions import get_space_member, require_space_admin
+from app.modules.spaces.permissions import require_space_admin
 
 router = APIRouter()
 
@@ -63,13 +64,11 @@ def remove_member(
 
 @router.post("/spaces/{space_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
 def leave_space(
-    space_id: UUID, session: SessionDep, current_user: CurrentUserDep
+    space_id: UUID,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    data: LeaveSpaceRequest | None = None,
 ) -> None:
-    member = get_space_member(session, space_id, current_user.id)
-    if member.role == SpaceRole.OWNER:
-        raise HTTPException(
-            status_code=400,
-            detail=message("message.onlyTheSpaceOwnerCanDeleteThisSpace"),
-        )
-    member.removed_at = datetime.now(UTC)
-    session.commit()
+    leave_space_service(
+        session, space_id, current_user.id, data.successor_user_id if data else None
+    )

@@ -117,13 +117,9 @@ export default function HelpScreen() {
         </Pressable>
 
         <Pressable
-          accessibilityRole="link"
+          accessibilityRole="button"
           accessibilityLabel={t('settings.reportInappropriateContentOrAUser')}
-          onPress={() =>
-            void Linking.openURL(
-              `mailto:contact@durangezer.com?subject=${encodeURIComponent(t('settings.reportSubject'))}`,
-            )
-          }
+          onPress={() => router.push('/settings/report' as never)}
           style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
         >
           <View style={styles.linkLeft}>

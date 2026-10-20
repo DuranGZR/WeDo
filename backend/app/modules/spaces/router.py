@@ -19,6 +19,7 @@ from app.modules.spaces.service import (
     get_space,
     list_members,
     list_spaces,
+    member_profile,
     update_space,
 )
 
@@ -77,3 +78,10 @@ def list_members_endpoint(
 ) -> PageResponse[SpaceMemberResponse]:
     page, page_size = pagination
     return paginate(list_members(session, space_id), page, page_size)
+
+
+@router.get("/{space_id}/members/{member_id}", response_model=SpaceMemberResponse)
+def get_member_endpoint(
+    space_id: UUID, member_id: UUID, session: SessionDep, member: SpaceMemberDep
+) -> SpaceMemberResponse:
+    return member_profile(session, space_id, member_id)

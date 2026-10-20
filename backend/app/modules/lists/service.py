@@ -13,6 +13,7 @@ from app.modules.lists.schemas import (
     ListResponse,
     ListUpdate,
 )
+from app.modules.safety.policy import check_content
 
 
 def normalize_name(name: str) -> str:
@@ -26,6 +27,7 @@ def _response(item: SpaceList) -> ListResponse:
 def create_list(
     session: Session, space_id: UUID, user_id: UUID, data: ListCreate
 ) -> ListResponse:
+    check_content(data.name)
     normalized_name = normalize_name(data.name)
     if list_repository.get_by_space_and_name(session, space_id, normalized_name):
         raise HTTPException(
@@ -64,6 +66,7 @@ def get_list(session: Session, list_id: UUID) -> SpaceList:
 
 
 def update_list(session: Session, list_id: UUID, data: ListUpdate) -> ListResponse:
+    check_content(data.name)
     item = get_list(session, list_id)
     if data.name is not None:
         normalized_name = normalize_name(data.name)

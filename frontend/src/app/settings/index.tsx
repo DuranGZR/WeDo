@@ -134,6 +134,13 @@ export default function SettingsScreen() {
             description={t('settings.managePartnerAndPhoneNotifications')}
             onPress={() => router.push('/notifications')}
           />
+          <View style={accountStyles.divider} />
+          <AccountRow
+            icon="ban-outline"
+            title={t('safety.blockedUsers')}
+            description={t('safety.manageBlocks')}
+            onPress={() => router.push('/settings/blocked-users' as never)}
+          />
         </AccountCard>
       </View>
 

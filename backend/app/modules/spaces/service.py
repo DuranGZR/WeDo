@@ -1,9 +1,11 @@
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.localization import message
+from app.modules.safety.policy import check_content
 from app.modules.spaces.enums import SpaceRole
 from app.modules.spaces.models import Space, SpaceMember
 from app.modules.spaces.repository import space_member_repository, space_repository
@@ -14,6 +16,30 @@ from app.modules.spaces.schemas import (
     SpaceUpdate,
 )
 from app.modules.users.models import User
+
+
+def member_profile(
+    session: Session, space_id: UUID, member_id: UUID
+) -> SpaceMemberResponse:
+    member = session.scalar(
+        select(SpaceMember).where(
+            SpaceMember.id == member_id,
+            SpaceMember.space_id == space_id,
+            SpaceMember.removed_at.is_(None),
+        )
+    )
+    if member is None:
+        raise HTTPException(status_code=404, detail=message("message.memberNotFound"))
+    user = session.get(User, member.user_id)
+    active = bool(user and user.is_active)
+    return SpaceMemberResponse.model_validate(member, from_attributes=True).model_copy(
+        update={
+            "display_name": user.display_name
+            if active
+            else message("message.deletedUser"),
+            "is_active": active,
+        }
+    )
 
 
 def list_members(session: Session, space_id: UUID) -> list[SpaceMemberResponse]:
@@ -34,7 +60,10 @@ def list_members(session: Session, space_id: UUID) -> list[SpaceMemberResponse]:
         )
         result.append(
             SpaceMemberResponse.model_validate(member, from_attributes=True).model_copy(
-                update={"display_name": name}
+                update={
+                    "display_name": name,
+                    "is_active": bool(user and user.is_active),
+                }
             )
         )
     return result
@@ -53,6 +82,7 @@ def _to_response(session: Session, space: Space) -> SpaceResponse:
 
 
 def create_space(session: Session, user_id: UUID, data: SpaceCreate) -> SpaceResponse:
+    check_content(data.name)
     space = space_repository.create(
         session,
         Space(name=data.name.strip(), type=data.type, created_by=user_id),
@@ -85,6 +115,7 @@ def get_space(session: Session, space_id: UUID) -> SpaceResponse:
 
 
 def update_space(session: Session, space_id: UUID, data: SpaceUpdate) -> SpaceResponse:
+    check_content(data.name)
     space = space_repository.get_by_id(session, space_id)
     if space is None:
         from fastapi import HTTPException, status

@@ -10,6 +10,7 @@ from app.modules.memories.models import Memory
 from app.modules.notifications.models import DevicePushToken, Notification
 from app.modules.plans.models import Plan, PlanReminder
 from app.modules.reactions.models import ItemReaction
+from app.modules.safety.models import ContentReport, UserBlock
 from app.modules.spaces.models import Space, SpaceMember
 from app.modules.uploads.models import Upload
 from app.modules.users.models import User
@@ -18,6 +19,7 @@ __all__ = [
     "Activity",
     "AuthIdentity",
     "Comment",
+    "ContentReport",
     "DevicePushToken",
     "Invitation",
     "Item",
@@ -32,4 +34,5 @@ __all__ = [
     "SpaceMember",
     "Upload",
     "User",
+    "UserBlock",
 ]
