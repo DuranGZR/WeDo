@@ -143,6 +143,22 @@ def notify(client, server, kind, *, when=None, jti=None, **claims):
     )
 
 
+def test_apple_does_not_activate_the_unverified_password(auth_client, apple_server):
+    credentials = {
+        "email": "relay@privaterelay.appleid.com",
+        "password": "Unverified-Password1",
+    }
+    pending = auth_client.post(
+        "/api/v1/auth/sign-up", json={**credentials, "display_name": "Unverified name"}
+    )
+    assert pending.status_code == 201
+    apple_login = login(auth_client, apple_server, display_name="Verified Name")
+    assert apple_login.status_code == 200
+    assert apple_login.json()["user"]["display_name"] == "Verified Name"
+    assert apple_login.json()["user"]["has_password"] is False
+    assert auth_client.post("/api/v1/auth/sign-in", json=credentials).status_code == 401
+
+
 def test_exchange_stores_only_encrypted_refresh_token(auth_client, apple_server):
     response = login(auth_client, apple_server)
     assert response.status_code == 200

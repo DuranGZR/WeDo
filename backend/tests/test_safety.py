@@ -8,6 +8,7 @@ from app.core.mail import EmailDeliveryError
 from app.main import app
 from app.modules.auth.service import _issue_tokens
 from app.modules.items.models import Item, ItemPreviewImage
+from app.modules.items.previews import preview_path
 from app.modules.metadata.service import process_item_metadata
 from app.modules.safety import service
 from app.modules.safety.models import ContentReport, UserBlock
@@ -313,11 +314,15 @@ def test_operator_removes_content_and_preview_or_suspends_account(safety):
 
     iid = UUID(saved["id"])
     session.add(ItemPreviewImage(item_id=iid, data=b"test", content_type="image/jpeg"))
+    session.get(Item, iid).preview_image_url = preview_path(iid)
     session.commit()
-    assert client.get(f"/api/v1/items/{iid}/preview").status_code == 200
+    preview = client.get(f"/api/v1/items/{iid}", headers=bob[1]).json()[
+        "preview_image_url"
+    ]
+    assert client.get(preview).status_code == 200
     review_report(session, report_id, "remove", "Confirmed inappropriate content")
     assert client.get(f"/api/v1/items/{iid}", headers=bob[1]).status_code == 404
-    assert client.get(f"/api/v1/items/{iid}/preview").status_code == 404
+    assert client.get(preview).status_code == 404
     assert session.get(ItemPreviewImage, iid) is None
     with pytest.raises(ValueError):
         review_report(session, report_id, "remove", "Repeated")

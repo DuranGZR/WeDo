@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.localization import current_language, message
-from app.modules.auth.models import AuthIdentity, RefreshSession
+from app.modules.auth.models import AuthIdentity, EmailVerification, RefreshSession
 from app.modules.auth.passwords import hash_password, verify_password
 from app.modules.auth.repository import auth_repository
 from app.modules.auth.schemas import (
@@ -215,7 +215,62 @@ def _verify_apple_token(identity_token: str, apple_user_id: str) -> dict[str, ob
     return verify_token(identity_token)
 
 
-def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
+def _social_account(
+    session: Session,
+    *,
+    email: str,
+    display_name: str,
+    identity: AuthIdentity | None,
+    link_user_id: UUID | None,
+    authoritative_email: bool,
+) -> User:
+    statement = select(User).where(
+        User.id == identity.user_id if identity else User.email == email
+    )
+    user = session.scalar(statement.with_for_update())
+    if link_user_id is not None and (user is None or user.id != link_user_id):
+        raise AuthError(message("auth.socialLinkAccountMismatch"))
+    if user is None:
+        check_content(display_name)
+        return user_repository.create(
+            session,
+            User(
+                email=email,
+                preferred_language=current_language(),
+                display_name=display_name,
+                email_verified=True,
+            ),
+        )
+    if not user.is_active:
+        raise AuthError(message("message.thisAccountIsNotActive"))
+    if identity is not None:
+        return user
+    if not authoritative_email:
+        raise AuthError(message("auth.useExistingSignInMethod"))
+    if user.email_verified:
+        if link_user_id is None:
+            raise AuthError(message("auth.useExistingSignInMethod"))
+        return user
+
+    # Proof from a provider must not activate a password set before verification.
+    check_content(display_name)
+    user.display_name = display_name
+    user.password_hash = None
+    user.email_verified = True
+    session.execute(
+        delete(EmailVerification).where(EmailVerification.user_id == user.id)
+    )
+    session.execute(
+        delete(AuthIdentity).where(
+            AuthIdentity.user_id == user.id, AuthIdentity.provider == "email"
+        )
+    )
+    return user
+
+
+def apple_sign_in(
+    session: Session, data: AppleSignInRequest, *, link_user_id: UUID | None = None
+) -> TokenResponse:
     from app.modules.auth.apple import AppleInvalidToken, exchange_code
 
     claims = _verify_apple_token(data.identity_token, data.apple_user_id)
@@ -254,29 +309,16 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
     else:
         raise AppleInvalidToken()
 
-    if identity:
-        user = user_repository.get_by_id(session, identity.user_id)
-        if not user or not user.is_active:
-            raise AuthError(message("message.thisAccountIsNotActive"))
-    else:
-        user = user_repository.get_by_email(session, email)
-        if not user:
-            display_name = (
-                data.display_name.strip()
-                if data.display_name
-                else email.split("@")[0].capitalize()
-            )
-            check_content(display_name)
-            user = user_repository.create(
-                session,
-                User(
-                    email=email,
-                    preferred_language=current_language(),
-                    display_name=display_name,
-                    password_hash=None,
-                    email_verified=True,
-                ),
-            )
+    user = _social_account(
+        session,
+        email=email,
+        display_name=(data.display_name or "").strip()
+        or email.split("@")[0].capitalize(),
+        identity=identity,
+        link_user_id=link_user_id,
+        authoritative_email=True,
+    )
+    if identity is None:
         identity = auth_repository.create_identity(
             session,
             AuthIdentity(
@@ -290,7 +332,6 @@ def apple_sign_in(session: Session, data: AppleSignInRequest) -> TokenResponse:
     identity.apple_authorized_at = max(authorized_at, identity.apple_authorized_at or 0)
     if encrypted_grant:
         identity.apple_refresh_token = encrypted_grant
-    user.email_verified = True
     response = _issue_tokens(session, user, data.device_id)
     session.commit()
     return response
@@ -320,7 +361,9 @@ def _verify_google_token(id_token: str) -> dict[str, object]:
         ) from error
 
 
-def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse:
+def google_sign_in(
+    session: Session, data: GoogleSignInRequest, *, link_user_id: UUID | None = None
+) -> TokenResponse:
     claims = _verify_google_token(data.id_token)
     google_user_id = claims.get("sub")
     if not isinstance(google_user_id, str) or not google_user_id.strip():
@@ -332,38 +375,18 @@ def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse
     except ValidationError as error:
         raise AuthError(message("message.yourGoogleEmailAddressIsInvalid")) from error
     identity = auth_repository.get_identity(session, "google", google_user_id)
-    if identity:
-        user = user_repository.get_by_id(session, identity.user_id)
-        if not user or not user.is_active:
-            raise AuthError(message("message.thisAccountIsNotActive"))
-    else:
-        user = user_repository.get_by_email(session, email)
-        if user and not user.is_active:
-            raise AuthError(message("message.thisAccountIsNotActive"))
-        # Google is authoritative for Gmail and verified Workspace domains only.
-        # A third-party email's ownership may have changed since Google verified it.
-        if user and not (email.endswith("@gmail.com") or claims.get("hd")):
-            raise AuthError(
-                message("message.pleaseSignInToYourExistingAccountWithYour")
-            )
-        if not user:
-            token_name = claims.get("name")
-            display_name = (
-                token_name.strip()[:80]
-                if isinstance(token_name, str) and token_name.strip()
-                else email.split("@")[0].capitalize()
-            )
-            check_content(display_name)
-            user = user_repository.create(
-                session,
-                User(
-                    email=email,
-                    preferred_language=current_language(),
-                    display_name=display_name,
-                    password_hash=None,
-                    email_verified=True,
-                ),
-            )
+    token_name = claims.get("name")
+    display_name = token_name.strip()[:80] if isinstance(token_name, str) else ""
+    user = _social_account(
+        session,
+        email=email,
+        display_name=display_name or email.split("@")[0].capitalize(),
+        identity=identity,
+        link_user_id=link_user_id,
+        # Google is authoritative for Gmail and managed Workspace addresses.
+        authoritative_email=email.endswith("@gmail.com") or bool(claims.get("hd")),
+    )
+    if identity is None:
         auth_repository.create_identity(
             session,
             AuthIdentity(
@@ -374,7 +397,6 @@ def google_sign_in(session: Session, data: GoogleSignInRequest) -> TokenResponse
             ),
         )
 
-    user.email_verified = True
     response = _issue_tokens(session, user, data.device_id)
     session.commit()
     return response

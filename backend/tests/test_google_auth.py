@@ -1,9 +1,11 @@
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 
 import pytest
+from app.api.dependencies import get_session
 from app.core.config import settings
+from app.main import app
 from app.modules.auth import service
+from app.modules.users.models import User
 
 from tests.helpers import verified_sign_up
 
@@ -94,14 +96,66 @@ def test_google_does_not_link_third_party_email(auth_client, google_token):
     assert response.status_code == 401
 
 
-def test_google_does_not_link_inactive_account(auth_client, google_token, monkeypatch):
-    token = google_token()
-    monkeypatch.setattr(
-        service.user_repository,
-        "get_by_email",
-        lambda *args: SimpleNamespace(is_active=False),
-    )
+def test_google_does_not_link_inactive_account(auth_client, google_token):
+    generator = app.dependency_overrides[get_session]()
+    try:
+        session = next(generator)
+        session.add(
+            User(email="googleuser@gmail.com", display_name="Inactive", is_active=False)
+        )
+        session.commit()
+    finally:
+        generator.close()
     assert (
-        auth_client.post("/api/v1/auth/google", json={"id_token": token}).status_code
+        auth_client.post(
+            "/api/v1/auth/google", json={"id_token": google_token()}
+        ).status_code
         == 401
     )
+
+
+def test_google_does_not_activate_the_unverified_password(auth_client, google_token):
+    login = {"email": "googleuser@gmail.com", "password": "Unverified-Password1"}
+    pending = auth_client.post(
+        "/api/v1/auth/sign-up", json={**login, "display_name": "Unverified name"}
+    )
+    assert pending.status_code == 201
+    google = auth_client.post("/api/v1/auth/google", json={"id_token": google_token()})
+    assert google.status_code == 200
+    assert google.json()["user"]["has_password"] is False
+    assert auth_client.post("/api/v1/auth/sign-in", json=login).status_code == 401
+    assert (
+        auth_client.post(
+            "/api/v1/auth/resend-verification",
+            json={"verification_id": pending.json()["verification_id"]},
+        ).status_code
+        == 400
+    )
+
+
+def test_google_requires_an_authenticated_link_for_verified_accounts(
+    auth_client, google_token
+):
+    login = {"email": "googleuser@gmail.com", "password": "Verified-Password1"}
+    verified_sign_up(
+        auth_client,
+        "/api/v1/auth/sign-up",
+        json={**login, "display_name": "Verified User"},
+    )
+    payload = {"id_token": google_token()}
+    assert auth_client.post("/api/v1/auth/google", json=payload).status_code == 401
+    assert auth_client.post("/api/v1/auth/link/google", json=payload).status_code == 401
+    password_session = auth_client.post("/api/v1/auth/sign-in", json=login).json()
+    headers = {"Authorization": f"Bearer {password_session['access_token']}"}
+    wrong_account = {"id_token": google_token({"email": "someoneelse@gmail.com"})}
+    assert (
+        auth_client.post(
+            "/api/v1/auth/link/google", headers=headers, json=wrong_account
+        ).status_code
+        == 401
+    )
+    linked = auth_client.post("/api/v1/auth/link/google", headers=headers, json=payload)
+    assert linked.status_code == 200
+    assert linked.json()["user"]["id"] == password_session["user"]["id"]
+    assert linked.json()["user"]["has_password"] is True
+    assert auth_client.post("/api/v1/auth/google", json=payload).status_code == 200

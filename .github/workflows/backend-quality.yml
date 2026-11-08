@@ -2,18 +2,16 @@ name: Backend quality
 
 on:
   push:
-    paths:
-      - 'backend/**'
-      - 'compose.yml'
-      - '.github/workflows/backend-quality.yml'
+    branches: [main]
   pull_request:
-    paths:
-      - 'backend/**'
-      - 'compose.yml'
-      - '.github/workflows/backend-quality.yml'
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  quality:
+  backend-checks:
+    name: Backend checks
     runs-on: ubuntu-latest
     defaults:
       run:

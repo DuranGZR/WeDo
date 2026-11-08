@@ -1,13 +1,18 @@
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from types import SimpleNamespace
+from uuid import uuid4
 
+import jwt
 from app.api.dependencies import get_session
+from app.core.config import settings
 from app.main import app
+from app.modules.auth.service import _issue_tokens
 from app.modules.items.enums import MetadataStatus
 from app.modules.items.models import Item, ItemPreviewImage
 from app.modules.lists.models import SpaceList
 from app.modules.metadata.service import process_item_metadata
-from app.modules.spaces.models import Space
+from app.modules.spaces.models import Space, SpaceMember
 from app.modules.users.models import User
 from PIL import Image
 
@@ -24,6 +29,9 @@ def test_instagram_preview_is_resized_and_stored_without_object_storage(auth_cli
         space = Space(name="Saved links", type="personal", created_by=user.id)
         session.add(space)
         session.flush()
+        member = SpaceMember(space_id=space.id, user_id=user.id, role="owner")
+        session.add(member)
+        access_token = _issue_tokens(session, user, None).access_token
         listing = SpaceList(
             space_id=space.id, name="Links", normalized_name="links", created_by=user.id
         )
@@ -61,9 +69,44 @@ def test_instagram_preview_is_resized_and_stored_without_object_storage(auth_cli
         assert item.preview_image_url == f"/api/v1/items/{item.id}/preview"
         with Image.open(BytesIO(preview.data)) as optimized:
             assert max(optimized.size) <= 600
-        response = auth_client.get(item.preview_image_url)
+        assert auth_client.get(item.preview_image_url).status_code == 401
+        assert (
+            auth_client.get(f"{item.preview_image_url}?token=invalid").status_code
+            == 401
+        )
+        headers = {"Authorization": f"Bearer {access_token}"}
+        item_response = auth_client.get(f"/api/v1/items/{item.id}", headers=headers)
+        signed_url = item_response.json()["preview_image_url"]
+        assert signed_url.startswith(f"{item.preview_image_url}?token=")
+        listed = auth_client.get(f"/api/v1/lists/{listing.id}/items", headers=headers)
+        assert listed.json()["data"][0]["preview_image_url"].startswith(
+            f"{item.preview_image_url}?token="
+        )
+        response = auth_client.get(signed_url)
         assert response.status_code == 200
         assert response.headers["content-type"] == "image/jpeg"
+        assert response.headers["cache-control"] == "private, no-store"
         assert response.content == preview.data
+        wrong_item = signed_url.replace(str(item.id), str(uuid4()), 1)
+        assert auth_client.get(wrong_item).status_code == 401
+        expired_token = jwt.encode(
+            {
+                "type": "item_preview",
+                "item_id": str(item.id),
+                "sub": str(user.id),
+                "exp": datetime.now(UTC) - timedelta(seconds=1),
+            },
+            settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm,
+        )
+        assert (
+            auth_client.get(
+                f"{item.preview_image_url}?token={expired_token}"
+            ).status_code
+            == 401
+        )
+        member.removed_at = datetime.now(UTC)
+        session.commit()
+        assert auth_client.get(signed_url).status_code == 403
     finally:
         generator.close()

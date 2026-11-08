@@ -7,6 +7,7 @@ from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.modules.items.enums import MetadataStatus
+from app.modules.items.previews import preview_path
 from app.modules.items.repository import item_repository
 from app.modules.metadata.exceptions import MetadataError
 from app.modules.metadata.fetcher import MetadataFetcher
@@ -118,7 +119,7 @@ def process_item_metadata(
                         preview_record.data = optimized_bytes
                         preview_record.content_type = content_type
 
-                    item.preview_image_url = f"/api/v1/items/{item.id}/preview"
+                    item.preview_image_url = preview_path(item.id)
                 else:
                     item.preview_image_url = raw_image_url
             except Exception:

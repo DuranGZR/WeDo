@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Response, status
-from fastapi.responses import RedirectResponse
+import jwt
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response, status
 
 from app.api.dependencies import SessionDep
 from app.core.config import settings
@@ -11,6 +11,8 @@ from app.modules.activities.schemas import ActivityResponse
 from app.modules.activities.service import list_item_activities
 from app.modules.auth.dependencies import CurrentUserDep
 from app.modules.items.enums import MetadataStatus
+from app.modules.items.models import ItemPreviewImage
+from app.modules.items.previews import preview_viewer
 from app.modules.items.repository import item_repository
 from app.modules.items.schemas import ItemCreate, ItemMove, ItemResponse, ItemUpdate
 from app.modules.items.service import (
@@ -27,6 +29,7 @@ from app.modules.items.service import (
 from app.modules.lists.repository import list_repository
 from app.modules.metadata.service import is_expiring_cdn, run_item_metadata_task
 from app.modules.spaces.permissions import get_space_member
+from app.modules.users.models import User
 
 router = APIRouter()
 
@@ -101,7 +104,7 @@ def list_items_endpoint(
                 item.metadata_status = MetadataStatus.PENDING
                 background_tasks.add_task(run_item_metadata_task, item.id)
             session.commit()
-    return paginate(list_items(session, list_id), page, page_size)
+    return paginate(list_items(session, list_id, current_user.id), page, page_size)
 
 
 @router.get("/items/{item_id}", response_model=ItemResponse)
@@ -109,7 +112,7 @@ def get_item_endpoint(
     item_id: UUID, session: SessionDep, current_user: CurrentUserDep
 ) -> ItemResponse:
     item = _check_item_access(session, item_id, current_user.id)
-    return response_for_item(session, item)
+    return response_for_item(session, item, current_user.id)
 
 
 @router.patch("/items/{item_id}", response_model=ItemResponse)
@@ -117,7 +120,7 @@ def update_item_endpoint(
     item_id: UUID, data: ItemUpdate, session: SessionDep, current_user: CurrentUserDep
 ) -> ItemResponse:
     _check_item_access(session, item_id, current_user.id)
-    return update_item(session, item_id, data)
+    return update_item(session, item_id, data, current_user.id)
 
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -141,7 +144,7 @@ def move_item_endpoint(
             status_code=400,
             detail=message("message.theDestinationListMustBelongToTheSameSpace"),
         )
-    return move_item(session, item_id, data)
+    return move_item(session, item_id, data, current_user.id)
 
 
 @router.post("/items/{item_id}/complete", response_model=ItemResponse)
@@ -149,7 +152,7 @@ def complete_item_endpoint(
     item_id: UUID, session: SessionDep, current_user: CurrentUserDep
 ) -> ItemResponse:
     _check_item_access(session, item_id, current_user.id)
-    return complete_item(session, item_id)
+    return complete_item(session, item_id, current_user.id)
 
 
 @router.post("/items/{item_id}/restore", response_model=ItemResponse)
@@ -157,7 +160,7 @@ def restore_item_endpoint(
     item_id: UUID, session: SessionDep, current_user: CurrentUserDep
 ) -> ItemResponse:
     _check_item_access(session, item_id, current_user.id)
-    return restore_item(session, item_id)
+    return restore_item(session, item_id, current_user.id)
 
 
 @router.get("/items/{item_id}/activity", response_model=PageResponse[ActivityResponse])
@@ -173,28 +176,29 @@ def list_item_activity_endpoint(
 
 
 @router.get("/items/{item_id}/preview")
-def get_item_preview_endpoint(item_id: UUID, session: SessionDep) -> Response:
-    from app.modules.items.models import ItemPreviewImage
-
-    # A moderated/deleted item's cached preview must also stop being served.
-    get_item(session, item_id)
+def get_item_preview_endpoint(
+    item_id: UUID, session: SessionDep, token: str = Query(default="", max_length=1024)
+) -> Response:
+    try:
+        viewer_id = preview_viewer(item_id, token)
+    except (jwt.InvalidTokenError, ValueError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=message("message.invalidAccessToken"),
+        ) from error
+    viewer = session.get(User, viewer_id)
+    if viewer is None or not viewer.is_active or not viewer.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=message("message.userNotFound"),
+        )
+    _check_item_access(session, item_id, viewer_id)
     preview = session.get(ItemPreviewImage, item_id)
     if preview is not None:
         return Response(
             content=preview.data,
             media_type=preview.content_type,
-            headers={"Cache-Control": "public, max-age=31536000, immutable"},
-        )
-
-    # Fallback: check if the item exists and has an external URL
-    item = item_repository.get_by_id(session, item_id)
-    if (
-        item is not None
-        and item.preview_image_url
-        and not item.preview_image_url.endswith("/preview")
-    ):
-        return RedirectResponse(
-            item.preview_image_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT
+            headers={"Cache-Control": "private, no-store"},
         )
 
     raise HTTPException(
