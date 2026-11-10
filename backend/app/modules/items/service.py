@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.localization import message
 from app.modules.items.enums import ItemStatus, MetadataStatus
 from app.modules.items.models import Item
+from app.modules.items.previews import preview_path, signed_preview_url
 from app.modules.items.repository import item_repository
 from app.modules.items.schemas import ItemCreate, ItemMove, ItemResponse, ItemUpdate
 from app.modules.items.validators import url_hash
@@ -20,11 +21,16 @@ from app.modules.safety.policy import check_content
 from app.modules.users.models import User
 
 
-def response_for_item(session: Session, item: Item) -> ItemResponse:
+def response_for_item(session: Session, item: Item, viewer_id: UUID) -> ItemResponse:
     creator = session.get(User, item.created_by)
     response = ItemResponse.model_validate(item, from_attributes=True)
     return response.model_copy(
         update={
+            "preview_image_url": (
+                signed_preview_url(item.id, viewer_id)
+                if item.preview_image_url == preview_path(item.id)
+                else item.preview_image_url
+            ),
             "created_by_name": (
                 (
                     creator.display_name
@@ -33,7 +39,7 @@ def response_for_item(session: Session, item: Item) -> ItemResponse:
                 )
                 if creator
                 else message("message.unknownUser")
-            )
+            ),
         }
     )
 
@@ -93,7 +99,7 @@ def create_item(session: Session, user_id: UUID, data: ItemCreate) -> ItemRespon
     )
     session.commit()
     dispatch_pending_pushes(session)
-    return response_for_item(session, item)
+    return response_for_item(session, item, user_id)
 
 
 def get_item(session: Session, item_id: UUID) -> Item:
@@ -103,14 +109,16 @@ def get_item(session: Session, item_id: UUID) -> Item:
     return item
 
 
-def list_items(session: Session, list_id: UUID) -> list[ItemResponse]:
+def list_items(session: Session, list_id: UUID, viewer_id: UUID) -> list[ItemResponse]:
     return [
-        response_for_item(session, item)
+        response_for_item(session, item, viewer_id)
         for item in item_repository.list_for_list(session, list_id)
     ]
 
 
-def update_item(session: Session, item_id: UUID, data: ItemUpdate) -> ItemResponse:
+def update_item(
+    session: Session, item_id: UUID, data: ItemUpdate, viewer_id: UUID
+) -> ItemResponse:
     check_content(data.title, data.description)
     item = get_item(session, item_id)
     if data.title is not None:
@@ -118,10 +126,12 @@ def update_item(session: Session, item_id: UUID, data: ItemUpdate) -> ItemRespon
     if data.description is not None:
         item.description = data.description
     session.commit()
-    return response_for_item(session, item)
+    return response_for_item(session, item, viewer_id)
 
 
-def move_item(session: Session, item_id: UUID, data: ItemMove) -> ItemResponse:
+def move_item(
+    session: Session, item_id: UUID, data: ItemMove, viewer_id: UUID
+) -> ItemResponse:
     item = get_item(session, item_id)
     target_list = list_repository.get_by_id(session, data.list_id)
     if target_list is None or target_list.space_id != item.space_id:
@@ -130,7 +140,7 @@ def move_item(session: Session, item_id: UUID, data: ItemMove) -> ItemResponse:
         )
     item.list_id = data.list_id
     session.commit()
-    return response_for_item(session, item)
+    return response_for_item(session, item, viewer_id)
 
 
 def delete_item(session: Session, item_id: UUID) -> None:
@@ -139,17 +149,17 @@ def delete_item(session: Session, item_id: UUID) -> None:
     session.commit()
 
 
-def complete_item(session: Session, item_id: UUID) -> ItemResponse:
+def complete_item(session: Session, item_id: UUID, viewer_id: UUID) -> ItemResponse:
     item = get_item(session, item_id)
     item.status = ItemStatus.COMPLETED
     item.completed_at = datetime.now(UTC)
     session.commit()
-    return response_for_item(session, item)
+    return response_for_item(session, item, viewer_id)
 
 
-def restore_item(session: Session, item_id: UUID) -> ItemResponse:
+def restore_item(session: Session, item_id: UUID, viewer_id: UUID) -> ItemResponse:
     item = get_item(session, item_id)
     item.status = ItemStatus.NEW
     item.completed_at = None
     session.commit()
-    return response_for_item(session, item)
+    return response_for_item(session, item, viewer_id)

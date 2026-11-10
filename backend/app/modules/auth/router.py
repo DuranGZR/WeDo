@@ -112,6 +112,26 @@ def google_sign_in_endpoint(
         raise _auth_error(error) from error
 
 
+@router.post("/link/apple", response_model=TokenResponse)
+def link_apple_endpoint(
+    data: AppleSignInRequest, session: SessionDep, current_user: CurrentUserDep
+) -> TokenResponse:
+    try:
+        return apple_sign_in(session, data, link_user_id=current_user.id)
+    except AuthError as error:
+        raise _auth_error(error) from error
+
+
+@router.post("/link/google", response_model=TokenResponse)
+def link_google_endpoint(
+    data: GoogleSignInRequest, session: SessionDep, current_user: CurrentUserDep
+) -> TokenResponse:
+    try:
+        return google_sign_in(session, data, link_user_id=current_user.id)
+    except AuthError as error:
+        raise _auth_error(error) from error
+
+
 @router.post("/refresh", response_model=TokenResponse)
 def refresh_endpoint(data: RefreshRequest, session: SessionDep) -> TokenResponse:
     try:

@@ -163,6 +163,8 @@
   "web.language": "Dil",
   "apple.serviceUnavailable": "Apple girişi şu anda kullanılamıyor. Lütfen kısa bir süre sonra tekrar dene.",
   "apple.reauthorizeRequired": "Lütfen WeDo’nun güncel sürümünden Apple ile tekrar giriş yap.",
+  "auth.useExistingSignInMethod": "Bu e-postayla bir hesap var. Mevcut giriş yöntemini kullan.",
+  "auth.socialLinkAccountMismatch": "Bu giriş yöntemi açık olan hesabınla eşleşmiyor.",
   "web.savedLinksAndPreviews": "Ortak listelere eklenen bağlantılar, başlıklar, listeler ve bağlantı önizleme görselleri.",
   "safety.contentRejected": "Bu içerik güvenlik kurallarımıza uymuyor. Lütfen düzenle.",
   "safety.sharingBlocked": "Bu alana katılım bir kullanıcı engeli nedeniyle kapalı.",

@@ -163,6 +163,8 @@
   "web.language": "Language",
   "apple.serviceUnavailable": "Apple sign-in is temporarily unavailable. Please try again shortly.",
   "apple.reauthorizeRequired": "Please sign in with Apple again using the latest version of WeDo.",
+  "auth.useExistingSignInMethod": "An account already uses this email. Sign in using your existing method.",
+  "auth.socialLinkAccountMismatch": "This sign-in method does not match your signed-in account.",
   "web.savedLinksAndPreviews": "Links, titles, lists and link preview images saved in shared spaces.",
   "safety.contentRejected": "This content does not meet our safety rules. Please edit it.",
   "safety.sharingBlocked": "Joining this space is unavailable because a user block is active.",
