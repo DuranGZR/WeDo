@@ -9,7 +9,11 @@ import {
   type ScrollViewProps,
   type ViewProps,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+  type Edge,
+} from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/design-system';
 
@@ -19,6 +23,7 @@ type ScreenProps = (ScrollViewProps | ViewProps) & {
   backgroundColor?: string;
   keyboardVerticalOffset?: number;
   dismissKeyboardOnTap?: boolean;
+  edges?: Edge[];
 };
 
 export function Screen({
@@ -27,11 +32,14 @@ export function Screen({
   backgroundColor,
   keyboardVerticalOffset = 0,
   dismissKeyboardOnTap = true,
+  edges = ['top', 'bottom'],
   ...props
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const { contentContainerStyle, ...scrollProps } = props as ScrollViewProps;
   const { style: viewStyle, ...viewProps } = props as ViewProps;
+  const adjustsKeyboardInsets =
+    scroll && Platform.OS === 'ios' && scrollProps.automaticallyAdjustKeyboardInsets;
 
   const verticalOffset =
     Platform.OS === 'ios' ? insets.top + keyboardVerticalOffset : keyboardVerticalOffset;
@@ -60,10 +68,11 @@ export function Screen({
   return (
     <SafeAreaView
       style={[styles.safe, backgroundColor && { backgroundColor }]}
-      edges={['top', 'bottom']}
+      edges={edges}
     >
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
+        enabled={!adjustsKeyboardInsets}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={verticalOffset}
       >

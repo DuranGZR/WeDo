@@ -12,6 +12,7 @@ import { NotificationEffects } from './notification-effects';
 import { syncOutbox } from '@/features/sharing/sync';
 import { ToastProvider } from '@/components/feedback/AppToast';
 import { useLanguageStore } from '@/store/language-store';
+import { useSpaceStore } from '@/store/space-store';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '@/api/client/api-client';
 
@@ -28,7 +29,10 @@ export function AppProviders({ children }: PropsWithChildren) {
 
   useEffect(() => {
     initializeDatabase();
-    void useLanguageStore.getState().hydrate().then(hydrate);
+    void Promise.all([
+      useLanguageStore.getState().hydrate(),
+      useSpaceStore.getState().hydrate(),
+    ]).then(hydrate);
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         void syncOutbox();

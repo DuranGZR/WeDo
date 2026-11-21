@@ -6,13 +6,12 @@ import {
   Alert,
   StyleSheet,
   View,
-  Image,
   Platform,
   Pressable,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, Screen, TextField, Card } from '@/components/ui';
+import { AppText, BrandLogo, Screen, TextField, Card } from '@/components/ui';
 import { colors, spacing, radius } from '@/design-system';
 import { useCreateSpace } from '@/features/spaces/hooks';
 import { haptic } from '@/lib/haptics';
@@ -80,11 +79,7 @@ export default function CreateSpaceScreen() {
       <View style={styles.content}>
         {/* Logo and Title */}
         <View style={styles.brandHeader}>
-          <Image
-            source={require('../../../assets/TekLogo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <BrandLogo />
           <AppText variant="pageTitle" style={styles.title}>
             {t('spaces.giveYourSharedSpaceAName')}
           </AppText>
@@ -218,11 +213,6 @@ const styles = StyleSheet.create({
   brandHeader: {
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  logo: {
-    width: 110,
-    height: 32,
-    marginBottom: spacing.xs,
   },
   title: {
     fontSize: 24,

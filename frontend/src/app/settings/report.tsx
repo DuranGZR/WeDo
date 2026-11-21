@@ -33,14 +33,21 @@ export default function ReportScreen() {
   }>();
   const [reason, setReason] = useState<ReportReason>('harassment');
   const [details, setDetails] = useState('');
+  const [detailsTouched, setDetailsTouched] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [receipt, setReceipt] = useState<ReportReceipt | null>(null);
+  const detailsLength = Array.from(details.trim()).length;
+  const detailsError =
+    detailsTouched && detailsLength < 10 ? t('safety.detailsTooShort') : undefined;
   const targetType =
     params.targetType === 'item' || params.targetType === 'user'
       ? params.targetType
       : 'app';
   const submit = async () => {
+    if (pending) return;
+    setDetailsTouched(true);
+    if (detailsLength < 10) return;
     setPending(true);
     setError('');
     try {
@@ -61,7 +68,11 @@ export default function ReportScreen() {
   };
 
   return (
-    <AccountScaffold title={t('safety.report')} subtitle={t('safety.reportDescription')}>
+    <AccountScaffold
+      title={t('safety.report')}
+      subtitle={t('safety.reportDescription')}
+      automaticallyAdjustKeyboardInsets
+    >
       {receipt ? (
         <AccountCard>
           <Ionicons name="checkmark-circle-outline" size={32} color={mono.ink} />
@@ -101,7 +112,13 @@ export default function ReportScreen() {
             multiline
             maxLength={2000}
             value={details}
-            onChangeText={setDetails}
+            onChangeText={(value) => {
+              setDetails(value);
+              setDetailsTouched(true);
+              setError('');
+            }}
+            onBlur={() => setDetailsTouched(true)}
+            error={detailsError}
             editable={!pending}
             style={styles.details}
           />
@@ -116,12 +133,9 @@ export default function ReportScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('safety.sendReport')}
-            disabled={pending || details.trim().length < 10}
+            disabled={pending}
             onPress={() => void submit()}
-            style={[
-              accountStyles.primaryButton,
-              (pending || details.trim().length < 10) && styles.disabled,
-            ]}
+            style={[accountStyles.primaryButton, pending && styles.disabled]}
           >
             {pending ? (
               <ActivityIndicator color={mono.paper} />

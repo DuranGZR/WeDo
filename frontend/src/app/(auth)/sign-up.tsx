@@ -362,6 +362,11 @@ const styles = StyleSheet.create({
   footerLink: { color: authColors.ink, fontWeight: '700' },
   legalNotice: { marginTop: spacing.xs, alignItems: 'center' },
   legalText: { fontSize: 11, lineHeight: 16, textAlign: 'center', color: '#6F6F6D' },
-  legalLink: { color: authColors.ink, fontWeight: '600' },
+  legalLink: {
+    color: authColors.ink,
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
   pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
 });

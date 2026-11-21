@@ -582,6 +582,7 @@ export default function HomeScreen() {
   return (
     <ScreenMotion>
       <Screen
+        edges={['top']}
         backgroundColor={homeColors.background}
         contentContainerStyle={styles.screen}
       >

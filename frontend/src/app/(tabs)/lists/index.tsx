@@ -131,6 +131,7 @@ export default function ListsScreen() {
   return (
     <ScreenMotion>
       <Screen
+        edges={['top']}
         scroll={true}
         backgroundColor={mono.background}
         contentContainerStyle={styles.screen}

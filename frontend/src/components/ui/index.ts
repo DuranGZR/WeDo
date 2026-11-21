@@ -1,5 +1,6 @@
 export * from './AppText';
 export * from './Avatar';
+export * from './BrandLogo';
 export * from './Badge';
 export * from './Button';
 export * from './Card';

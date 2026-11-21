@@ -12,14 +12,20 @@ export function AccountScaffold({
   title,
   subtitle,
   children,
+  automaticallyAdjustKeyboardInsets = false,
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
+  automaticallyAdjustKeyboardInsets?: boolean;
 }) {
   useTranslation();
   return (
-    <Screen scroll backgroundColor={mono.background}>
+    <Screen
+      scroll
+      backgroundColor={mono.background}
+      automaticallyAdjustKeyboardInsets={automaticallyAdjustKeyboardInsets}
+    >
       <View style={styles.contourTop} pointerEvents="none" />
       <View style={styles.contourBottom} pointerEvents="none" />
       <View style={styles.header}>
