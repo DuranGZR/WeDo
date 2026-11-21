@@ -16,7 +16,6 @@ import {
 
 import { useToast } from '@/components/feedback/AppToast';
 import { AppText } from '@/components/ui';
-import { authColors } from '@/components/auth/AuthShell';
 import { useAuthStore } from '@/store/auth-store';
 
 type AppleAuthButtonProps = {
@@ -38,6 +37,12 @@ export function AppleAuthButton({
   const pending = useRef(false);
   const signInWithApple = useAuthStore((state) => state.signInWithApple);
   const { showToast } = useToast();
+  const label =
+    buttonType === AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+      ? t('auth.signUpWithApple')
+      : buttonType === AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+        ? t('auth.signInWithApple')
+        : t('auth.continueWithApple');
 
   useEffect(() => {
     if (Platform.OS === 'ios') {
@@ -111,29 +116,18 @@ export function AppleAuthButton({
   if (loading) {
     return (
       <View style={[styles.loadingContainer, style]}>
-        <ActivityIndicator color={authColors.paper} />
+        <ActivityIndicator color="#FFFFFF" />
       </View>
     );
   }
 
-  // Native Apple Authentication button on supported iOS devices
-  if (Platform.OS === 'ios' && isAvailable) {
-    return (
-      <AppleAuthentication.AppleAuthenticationButton
-        buttonType={buttonType}
-        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-        cornerRadius={12}
-        style={[styles.button, style]}
-        onPress={() => void handleAppleAuth()}
-      />
-    );
-  }
-
-  // Cross-platform fallback button (Web, Android, Simulator)
+  // Render our localized label; the native button follows the device language.
+  // Authentication still uses Apple's native authorization sheet.
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={t('auth.continueWithApple')}
+      accessibilityLabel={label}
+      disabled={Platform.OS === 'ios' && !isAvailable}
       onPress={() => void handleAppleAuth()}
       style={({ pressed }) => [styles.customButton, style, pressed && styles.pressed]}
     >
@@ -142,18 +136,12 @@ export function AppleAuthButton({
         style={styles.iconImage}
         resizeMode="contain"
       />
-      <AppText style={styles.customButtonText}>
-        {t('auth.continueWithApple_e9e92')}
-      </AppText>
+      <AppText style={styles.customButtonText}>{label}</AppText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    width: '100%',
-    height: 48,
-  },
   customButton: {
     width: '100%',
     height: 48,

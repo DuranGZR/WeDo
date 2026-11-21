@@ -6,7 +6,6 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Platform,
   Pressable,
   Share,
@@ -14,7 +13,7 @@ import {
   View,
 } from 'react-native';
 
-import { AppText, Card, Screen } from '@/components/ui';
+import { AppText, BrandLogo, Card, Screen } from '@/components/ui';
 import { mono, spacing } from '@/design-system';
 import { collaborationApi } from '@/features/collaboration/api';
 import { useSpaceStore } from '@/store/space-store';
@@ -86,11 +85,7 @@ export default function InviteMemberScreen() {
       </Pressable>
       <View style={styles.content}>
         <View style={styles.heading}>
-          <Image
-            source={require('../../../assets/TekLogo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <BrandLogo />
           <AppText variant="pageTitle" style={styles.title}>
             {t('onboarding.inviteYourPartner')}
           </AppText>
@@ -174,7 +169,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.huge,
   },
   heading: { alignItems: 'center', gap: spacing.xs },
-  logo: { width: 110, height: 32 },
   title: { fontSize: 25, fontWeight: '800', color: mono.ink, textAlign: 'center' },
   subtitle: { textAlign: 'center', lineHeight: 20, color: mono.muted },
   card: {

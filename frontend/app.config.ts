@@ -72,7 +72,7 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.durangezer.wedo',
-    buildNumber: '1',
+    buildNumber: '14',
     usesAppleSignIn: true,
     infoPlist: {
       CFBundleDevelopmentRegion: 'en',

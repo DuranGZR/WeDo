@@ -12,7 +12,9 @@ export function Avatar({ name, size = 44 }: { name?: string | null; size?: numbe
       accessibilityLabel={t('home.avatarForValue', { value0: name ?? t('common.user') })}
       style={[styles.base, { width: size, height: size, borderRadius: size / 2 }]}
     >
-      <AppText style={[styles.text, { fontSize: size * 0.4 }]}>
+      <AppText
+        style={[styles.text, { fontSize: size * 0.4, lineHeight: Math.ceil(size * 0.5) }]}
+      >
         {name?.trim().charAt(0).toLocaleUpperCase(formatLocale()) ?? 'W'}
       </AppText>
     </View>
@@ -24,5 +26,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primaryText,
   },
-  text: { color: colors.surface, fontWeight: '700' },
+  text: { color: colors.surface, fontWeight: '700', textAlign: 'center' },
 });

@@ -19,7 +19,6 @@ let refreshInFlight: Promise<boolean> | null = null;
 function clearAccountCache() {
   void queryClient.cancelQueries();
   queryClient.clear();
-  useSpaceStore.getState().setSelectedSpaceId(undefined);
 }
 
 type AuthState = {
@@ -220,5 +219,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 // Query keys and the selected space belong to one account, never to the device.
 useAuthStore.subscribe((state, previous) => {
-  if (state.user?.id !== previous.user?.id) clearAccountCache();
+  if (state.user?.id !== previous.user?.id) {
+    clearAccountCache();
+    const restoringSession =
+      !previous.hydrated && previous.user === null && state.user !== null;
+    if (!restoringSession) useSpaceStore.getState().setSelectedSpaceId(undefined);
+  }
 });

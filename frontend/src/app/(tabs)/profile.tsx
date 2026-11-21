@@ -76,7 +76,7 @@ export default function ProfileScreen() {
 
   return (
     <ScreenMotion>
-      <Screen scroll backgroundColor={mono.background}>
+      <Screen scroll edges={['top']} backgroundColor={mono.background}>
         <View style={styles.contourTop} pointerEvents="none" />
         <View style={styles.contourBottom} pointerEvents="none" />
         <View style={styles.content}>
