@@ -36,6 +36,8 @@ frontend/ios/
 *.pem
 *.key
 *.p8
+credentials.json
+*.mobileprovision
 
 # Editors and operating systems
 .DS_Store
@@ -43,6 +45,18 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Local caches, exports, and media output
+.cache/
+output/
+tmp/
+
+# Local notes and internal store submission drafts
+WeDo.md
 Wedo.md
 FrontendMimarisi.md
 BackendMimarisi.md
+docs/APP_REVIEW_EN.md
+docs/APP_REVIEW_TR.md
+docs/APP_REVIEW_READINESS.md
+docs/APP_STORE_EN.md
+docs/APP_STORE_TR.md
