@@ -1,23 +1,27 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Platform, Pressable } from 'react-native';
+import { Alert, Platform, StyleSheet, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
-import { AppText } from '@/components/ui';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { AppText, Button, Skeleton, SkeletonCard } from '@/components/ui';
+import { colors, radius, spacing } from '@/design-system';
 import {
   AccountCard,
   AccountScaffold,
-  accountStyles,
 } from '@/features/account/components/AccountScaffold';
 import { collaborationApi } from '@/features/collaboration/api';
 import { useSpaces } from '@/features/spaces/hooks';
+import { formatLocale, t } from '@/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { useSpaceStore } from '@/store/space-store';
-import { t } from '@/i18n';
 
 export default function LeaveSpaceScreen() {
   useTranslation();
+  const locale = formatLocale();
   const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
   const ownId = useAuthStore((state) => state.user?.id);
   const spaces = useSpaces();
@@ -81,73 +85,165 @@ export default function LeaveSpaceScreen() {
   return (
     <AccountScaffold title={t('members.leave')} subtitle={t('members.leaveDescription')}>
       {members.isPending ? (
-        <ActivityIndicator />
+        <SkeletonCard style={styles.skeletonCard}>
+          <Skeleton width="50%" height={20} borderRadius={8} />
+          <Skeleton width="100%" height={48} borderRadius={16} />
+          <Skeleton width="100%" height={50} borderRadius={radius.pill} />
+        </SkeletonCard>
       ) : members.isError ? (
         <AccountCard>
           <AppText accessibilityRole="alert">{members.error.message}</AppText>
-          <Pressable
-            accessibilityRole="button"
+          <Button
+            variant="secondary"
+            label={t('common.retry')}
             onPress={() => void members.refetch()}
-            style={accountStyles.secondaryButton}
-          >
-            <AppText>{t('common.retry')}</AppText>
-          </Pressable>
+          />
         </AccountCard>
       ) : (
-        <AccountCard>
+        <AccountCard danger>
           {spaceName ? <AppText variant="sectionTitle">{spaceName}</AppText> : null}
           {needsSuccessor ? (
             <>
               <AppText>{t('members.chooseSuccessor')}</AppText>
-              {candidates.map((candidate) => (
-                <Pressable
-                  key={candidate.id}
-                  accessibilityRole="radio"
-                  accessibilityLabel={candidate.display_name}
-                  accessibilityState={{ checked: selected?.id === candidate.id }}
-                  disabled={pending}
-                  onPress={() => setSuccessorId(candidate.user_id)}
-                  style={
-                    selected?.id === candidate.id
-                      ? accountStyles.primaryButton
-                      : accountStyles.secondaryButton
-                  }
-                >
-                  <AppText
-                    style={
-                      selected?.id === candidate.id
-                        ? accountStyles.primaryButtonText
-                        : accountStyles.secondaryButtonText
-                    }
-                  >
-                    {candidate.display_name}
-                  </AppText>
-                </Pressable>
-              ))}
+              <View style={styles.candidates}>
+                {candidates.map((candidate) => {
+                  const isSelected = selected?.id === candidate.id;
+                  const initial = candidate.display_name
+                    .trim()
+                    .charAt(0)
+                    .toLocaleUpperCase(locale);
+                  return (
+                    <SpringPressable
+                      key={candidate.id}
+                      accessibilityRole="radio"
+                      accessibilityLabel={candidate.display_name}
+                      accessibilityState={{ checked: isSelected }}
+                      disabled={pending}
+                      pressScale={0.98}
+                      haptic="selection"
+                      onPress={() => setSuccessorId(candidate.user_id)}
+                      style={[
+                        styles.candidateCard,
+                        isSelected && styles.candidateCardActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.candidateAvatar,
+                          isSelected && styles.candidateAvatarActive,
+                        ]}
+                      >
+                        <AppText
+                          style={[
+                            styles.candidateInitial,
+                            isSelected && styles.candidateInitialActive,
+                          ]}
+                        >
+                          {initial}
+                        </AppText>
+                      </View>
+                      <AppText
+                        style={[
+                          styles.candidateName,
+                          isSelected && styles.candidateNameActive,
+                        ]}
+                      >
+                        {candidate.display_name}
+                      </AppText>
+                      {isSelected ? (
+                        <Animated.View entering={ZoomIn.duration(180)}>
+                          <Ionicons name="checkmark-circle" size={20} color="#9E7F60" />
+                        </Animated.View>
+                      ) : (
+                        <View style={styles.radioCircle} />
+                      )}
+                    </SpringPressable>
+                  );
+                })}
+              </View>
             </>
           ) : (
             <AppText>{warning}</AppText>
           )}
           {selected ? <AppText>{warning}</AppText> : null}
-          {error ? <AppText accessibilityRole="alert">{error}</AppText> : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('members.leave')}
+          {error ? (
+            <AppText accessibilityRole="alert" style={styles.errorText}>
+              {error}
+            </AppText>
+          ) : null}
+          <Button
+            variant="danger"
+            label={t('members.leave')}
+            loading={pending}
             disabled={pending || !ownMember || (needsSuccessor && !selected)}
             onPress={confirm}
-            style={[
-              accountStyles.secondaryButton,
-              accountStyles.dangerButton,
-              (pending || !ownMember || (needsSuccessor && !selected)) && {
-                opacity: 0.5,
-              },
-            ]}
-          >
-            {pending ? <ActivityIndicator /> : null}
-            <AppText style={accountStyles.dangerButtonText}>{t('members.leave')}</AppText>
-          </Pressable>
+          />
         </AccountCard>
       )}
     </AccountScaffold>
   );
 }
+
+const styles = StyleSheet.create({
+  skeletonCard: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  candidates: {
+    gap: spacing.sm,
+  },
+  candidateCard: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  candidateCardActive: {
+    borderColor: '#9E7F60',
+    backgroundColor: '#FAF5EE',
+  },
+  candidateAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(17, 17, 16, 0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  candidateAvatarActive: {
+    backgroundColor: '#9E7F60',
+  },
+  candidateInitial: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primaryText,
+  },
+  candidateInitialActive: {
+    color: '#FFFFFF',
+  },
+  candidateName: {
+    flex: 1,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
+  candidateNameActive: {
+    color: '#5F4932',
+    fontWeight: '700',
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.borderFocus,
+  },
+  errorText: {
+    color: colors.error,
+  },
+});

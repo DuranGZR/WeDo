@@ -2,8 +2,9 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText } from '@/components/ui';
 import {
   AccountCard,
@@ -11,7 +12,7 @@ import {
   AccountScaffold,
   accountStyles,
 } from '@/features/account/components/AccountScaffold';
-import { mono, spacing } from '@/design-system';
+import { colors, spacing } from '@/design-system';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function SecurityScreen() {
@@ -40,7 +41,7 @@ export default function SecurityScreen() {
       <AccountCard>
         <View style={styles.securityLead}>
           <View style={styles.iconCircle}>
-            <Ionicons name="shield-checkmark" size={24} color={mono.paper} />
+            <Ionicons name="shield-checkmark" size={24} color={colors.onAccent} />
           </View>
           <View style={styles.leadCopy}>
             <AppText variant="sectionTitle">
@@ -69,20 +70,18 @@ export default function SecurityScreen() {
         <AppText muted style={accountStyles.note}>
           {t('settings.lostYourPhoneOrSignedInOnASharedDevice')}
         </AppText>
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('home.signOutOfAllDevices')}
+          haptic="warning"
           onPress={signOutEverywhere}
-          style={({ pressed }) => [
-            accountStyles.secondaryButton,
-            pressed && accountStyles.pressed,
-          ]}
+          style={accountStyles.secondaryButton}
         >
-          <Ionicons name="log-out-outline" size={18} color={mono.ink} />
+          <Ionicons name="log-out-outline" size={18} color={colors.primaryText} />
           <AppText style={accountStyles.secondaryButtonText}>
             {t('home.signOutOfAllDevices')}
           </AppText>
-        </Pressable>
+        </SpringPressable>
       </AccountCard>
     </AccountScaffold>
   );
@@ -93,8 +92,8 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 52,
     height: 52,
-    borderRadius: 16,
-    backgroundColor: mono.ink,
+    borderRadius: 26,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },

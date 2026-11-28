@@ -3,17 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useToast } from '@/components/feedback/AppToast';
-import { AppText, TextField } from '@/components/ui';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { AppText, HapticsToggle, TextField } from '@/components/ui';
 import {
   AccountCard,
   AccountRow,
   AccountScaffold,
   accountStyles,
 } from '@/features/account/components/AccountScaffold';
-import { mono, spacing } from '@/design-system';
+import { colors, spacing } from '@/design-system';
 import { useAuthStore } from '@/store/auth-store';
 import { LanguagePicker } from '@/components/ui/LanguagePicker';
 
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
   const saveProfile = async () => {
     if (displayName.trim().length < 2) {
       showToast({
+        type: 'warning',
         title: t('settings.checkYourName'),
         message: t('settings.yourDisplayNameMustBeAtLeast2Characters'),
       });
@@ -39,11 +41,13 @@ export default function SettingsScreen() {
     try {
       await updateProfile({ displayName });
       showToast({
+        type: 'success',
         title: t('settings.profileUpdated'),
         message: t('settings.yourDisplayNameHasBeenSaved'),
       });
     } catch (error) {
       showToast({
+        type: 'error',
         title: t('settings.couldnTSave'),
         message: error instanceof Error ? error.message : t('settings.pleaseTryAgain'),
       });
@@ -59,6 +63,8 @@ export default function SettingsScreen() {
     >
       <AccountCard>
         <LanguagePicker />
+        <View style={accountStyles.divider} />
+        <HapticsToggle />
         <View style={styles.identityHeader}>
           <View style={styles.initialAvatar}>
             <AppText style={styles.initialText}>
@@ -83,7 +89,7 @@ export default function SettingsScreen() {
           returnKeyType="done"
         />
         <View style={styles.emailBox}>
-          <Ionicons name="mail-outline" size={18} color={mono.ink} />
+          <Ionicons name="mail-outline" size={18} color={colors.secondaryText} />
           <View style={styles.emailCopy}>
             <AppText variant="caption" muted>
               {t('settings.emailAddress')}
@@ -94,26 +100,26 @@ export default function SettingsScreen() {
         {user?.apple_email_forwarding_enabled === false && (
           <AppText muted>{t('settings.appleEmailForwardingDisabled')}</AppText>
         )}
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.saveProfileChanges')}
           disabled={!isDirty || saving}
+          haptic="medium"
           onPress={() => void saveProfile()}
-          style={({ pressed }) => [
+          style={[
             accountStyles.primaryButton,
             (!isDirty || saving) && styles.disabledButton,
-            (pressed || saving) && accountStyles.pressed,
           ]}
         >
           {saving ? (
-            <ActivityIndicator color={mono.paper} />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
-            <Ionicons name="checkmark" size={19} color={mono.paper} />
+            <Ionicons name="checkmark" size={19} color={colors.onAccent} />
           )}
           <AppText style={accountStyles.primaryButtonText}>
             {isDirty ? t('settings.saveChanges') : t('settings.changesSaved')}
           </AppText>
-        </Pressable>
+        </SpringPressable>
       </AccountCard>
 
       <View style={styles.sectionGroup}>
@@ -189,11 +195,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: mono.ink,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  initialText: { color: mono.paper, fontSize: 22, fontWeight: '800' },
+  initialText: { color: colors.onAccent, fontSize: 22, fontWeight: '700' },
   identityCopy: { flex: 1, gap: 2 },
   identityHint: { fontSize: 12, lineHeight: 17 },
   emailBox: {
@@ -202,10 +208,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: mono.line,
-    backgroundColor: mono.soft,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSecondary,
   },
   emailCopy: { flex: 1, gap: 1 },
   disabledButton: { opacity: 0.48 },

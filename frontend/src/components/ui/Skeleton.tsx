@@ -1,17 +1,24 @@
 import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import {
-  Animated,
   type DimensionValue,
-  Platform,
   type StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
 } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
-import { colors, mono, radius, spacing } from '@/design-system';
+import { colors, radius, shadows, spacing } from '@/design-system';
 
 export function Skeleton({
   height = 18,
@@ -25,41 +32,34 @@ export function Skeleton({
   style?: StyleProp<ViewStyle>;
 }) {
   useTranslation();
-  const pulseAnim = useRef(new Animated.Value(0.35)).current;
+  const reducedMotion = useReducedMotion();
+  const pulse = useSharedValue(reducedMotion ? 0.55 : 0.35);
 
   useEffect(() => {
-    const useNativeDriver = Platform.OS !== 'web';
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 0.85,
-          duration: 800,
-          useNativeDriver,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0.35,
-          duration: 800,
-          useNativeDriver,
-        }),
-      ]),
+    if (reducedMotion) {
+      pulse.set(0.55);
+      return;
+    }
+    pulse.set(
+      withRepeat(
+        withSequence(
+          withTiming(0.84, { duration: 820, easing: Easing.inOut(Easing.cubic) }),
+          withTiming(0.36, { duration: 820, easing: Easing.inOut(Easing.cubic) }),
+        ),
+        -1,
+        false,
+      ),
     );
-    animation.start();
-    return () => animation.stop();
-  }, [pulseAnim]);
+  }, [pulse, reducedMotion]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: pulse.get(),
+  }));
 
   return (
     <Animated.View
       accessibilityLabel={t('common.loading')}
-      style={[
-        styles.base,
-        {
-          height,
-          width,
-          borderRadius,
-          opacity: pulseAnim,
-        },
-        style,
-      ]}
+      style={[styles.base, { height, width, borderRadius }, style, pulseStyle]}
     />
   );
 }
@@ -82,22 +82,25 @@ export function HomeScreenSkeleton() {
       {/* Top Bar Skeleton */}
       <View style={styles.topBarSkeleton}>
         <View style={styles.spaceSelectorSkeleton}>
-          <Skeleton width={38} height={38} borderRadius={12} />
+          <Skeleton width={36} height={36} borderRadius={18} />
           <View style={{ gap: 6 }}>
-            <Skeleton width={110} height={16} borderRadius={4} />
-            <Skeleton width={70} height={12} borderRadius={4} />
+            <Skeleton width={110} height={15} borderRadius={6} />
+            <Skeleton width={70} height={11} borderRadius={6} />
           </View>
         </View>
-        <Skeleton width={40} height={40} borderRadius={20} />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Skeleton width={44} height={44} borderRadius={22} />
+          <Skeleton width={44} height={44} borderRadius={22} />
+        </View>
       </View>
 
       {/* Hero / Stat Card Skeleton */}
       <SkeletonCard style={{ gap: 12, padding: spacing.lg }}>
-        <Skeleton width="45%" height={14} />
-        <Skeleton width="85%" height={24} />
+        <Skeleton width="45%" height={14} borderRadius={6} />
+        <Skeleton width="85%" height={24} borderRadius={8} />
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-          <Skeleton width={80} height={28} borderRadius={radius.pill} />
-          <Skeleton width={100} height={28} borderRadius={radius.pill} />
+          <Skeleton width={88} height={30} borderRadius={radius.pill} />
+          <Skeleton width={108} height={30} borderRadius={radius.pill} />
         </View>
       </SkeletonCard>
 
@@ -109,18 +112,18 @@ export function HomeScreenSkeleton() {
           alignItems: 'center',
         }}
       >
-        <Skeleton width={90} height={20} />
-        <Skeleton width={50} height={16} />
+        <Skeleton width={90} height={20} borderRadius={6} />
+        <Skeleton width={50} height={16} borderRadius={6} />
       </View>
 
       {/* List Cards */}
       <View style={{ gap: spacing.md }}>
         {[1, 2, 3].map((key) => (
           <SkeletonCard key={key} style={styles.listCardSkeleton}>
-            <Skeleton width={44} height={44} borderRadius={14} />
+            <Skeleton width={44} height={44} borderRadius={16} />
             <View style={{ flex: 1, gap: 6 }}>
-              <Skeleton width="60%" height={16} />
-              <Skeleton width="35%" height={12} />
+              <Skeleton width="60%" height={16} borderRadius={6} />
+              <Skeleton width="35%" height={12} borderRadius={6} />
             </View>
             <Skeleton width={20} height={20} borderRadius={10} />
           </SkeletonCard>
@@ -136,32 +139,32 @@ export function ListDetailSkeleton() {
     <View style={styles.skeletonContainer}>
       {/* Header bar */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Skeleton width={40} height={40} borderRadius={20} />
-        <Skeleton width={72} height={36} borderRadius={18} />
+        <Skeleton width={44} height={44} borderRadius={22} />
+        <Skeleton width={76} height={38} borderRadius={radius.pill} />
       </View>
 
       {/* Identity Card */}
       <View style={{ alignItems: 'center', gap: 10, paddingVertical: spacing.lg }}>
         <Skeleton width={64} height={64} borderRadius={32} />
-        <Skeleton width={160} height={24} borderRadius={6} />
-        <Skeleton width={90} height={18} borderRadius={radius.pill} />
+        <Skeleton width={160} height={24} borderRadius={8} />
+        <Skeleton width={90} height={20} borderRadius={radius.pill} />
       </View>
 
       {/* Action buttons */}
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Skeleton width="48%" height={46} borderRadius={radius.md} />
-        <Skeleton width="48%" height={46} borderRadius={radius.md} />
+        <Skeleton width="48%" height={46} borderRadius={radius.pill} />
+        <Skeleton width="48%" height={46} borderRadius={radius.pill} />
       </View>
 
       {/* Items list */}
       <View style={{ gap: spacing.md, marginTop: spacing.sm }}>
         {[1, 2, 3, 4].map((key) => (
           <SkeletonCard key={key} style={styles.itemRowSkeleton}>
-            <Skeleton width={72} height={72} borderRadius={12} />
+            <Skeleton width={74} height={74} borderRadius={16} />
             <View style={{ flex: 1, gap: 8 }}>
-              <Skeleton width="30%" height={12} borderRadius={radius.pill} />
-              <Skeleton width="80%" height={16} />
-              <Skeleton width="50%" height={12} />
+              <Skeleton width="30%" height={14} borderRadius={radius.pill} />
+              <Skeleton width="80%" height={16} borderRadius={6} />
+              <Skeleton width="50%" height={12} borderRadius={6} />
             </View>
           </SkeletonCard>
         ))}
@@ -175,10 +178,10 @@ export function ItemDetailSkeleton() {
   return (
     <View style={styles.skeletonContainer}>
       {/* Top Back */}
-      <Skeleton width={40} height={40} borderRadius={20} />
+      <Skeleton width={44} height={44} borderRadius={22} />
 
       {/* Main Cover Image */}
-      <Skeleton width="100%" height={240} borderRadius={18} />
+      <Skeleton width="100%" height={240} borderRadius={24} />
 
       {/* Item info card */}
       <SkeletonCard style={{ gap: 14, padding: spacing.lg }}>
@@ -186,20 +189,20 @@ export function ItemDetailSkeleton() {
           <Skeleton width={64} height={22} borderRadius={radius.pill} />
           <Skeleton width={90} height={22} borderRadius={radius.pill} />
         </View>
-        <Skeleton width="90%" height={26} />
-        <Skeleton width="100%" height={16} />
-        <Skeleton width="75%" height={16} />
-        <View style={{ height: 1, backgroundColor: '#E7E7E5', marginVertical: 4 }} />
+        <Skeleton width="90%" height={26} borderRadius={8} />
+        <Skeleton width="100%" height={16} borderRadius={6} />
+        <Skeleton width="75%" height={16} borderRadius={6} />
+        <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 4 }} />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Skeleton width={110} height={14} />
-          <Skeleton width={70} height={14} />
+          <Skeleton width={110} height={14} borderRadius={6} />
+          <Skeleton width={70} height={14} borderRadius={6} />
         </View>
       </SkeletonCard>
 
       {/* Reactions bar */}
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <Skeleton width="48%" height={48} borderRadius={radius.md} />
-        <Skeleton width="48%" height={48} borderRadius={radius.md} />
+        <Skeleton width="48%" height={50} borderRadius={radius.pill} />
+        <Skeleton width="48%" height={50} borderRadius={radius.pill} />
       </View>
     </View>
   );
@@ -209,23 +212,23 @@ export function ShareComposeSkeleton() {
   useTranslation();
   return (
     <View style={styles.skeletonContainer}>
-      <Skeleton width={40} height={40} borderRadius={20} />
+      <Skeleton width={44} height={44} borderRadius={22} />
       <View style={{ gap: 6, marginVertical: spacing.sm }}>
-        <Skeleton width={180} height={28} />
-        <Skeleton width={240} height={16} />
+        <Skeleton width={180} height={28} borderRadius={8} />
+        <Skeleton width={240} height={16} borderRadius={6} />
       </View>
 
       <SkeletonCard style={{ gap: 16, padding: spacing.lg }}>
-        <Skeleton width="100%" height={56} borderRadius={12} />
+        <Skeleton width="100%" height={56} borderRadius={16} />
         <View style={{ gap: 8 }}>
-          <Skeleton width={80} height={14} />
+          <Skeleton width={80} height={14} borderRadius={6} />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Skeleton width={90} height={36} borderRadius={radius.pill} />
             <Skeleton width={110} height={36} borderRadius={radius.pill} />
           </View>
         </View>
         <View style={{ gap: 8 }}>
-          <Skeleton width={80} height={14} />
+          <Skeleton width={80} height={14} borderRadius={6} />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Skeleton width={100} height={36} borderRadius={radius.pill} />
             <Skeleton width={120} height={36} borderRadius={radius.pill} />
@@ -235,8 +238,8 @@ export function ShareComposeSkeleton() {
 
       <Skeleton
         width="100%"
-        height={52}
-        borderRadius={radius.md}
+        height={50}
+        borderRadius={radius.pill}
         style={{ marginTop: spacing.md }}
       />
     </View>
@@ -245,7 +248,7 @@ export function ShareComposeSkeleton() {
 
 const styles = StyleSheet.create({
   base: {
-    backgroundColor: '#C5C5C3',
+    backgroundColor: '#E5DFD6',
   },
   skeletonContainer: {
     gap: spacing.lg,
@@ -267,15 +270,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    backgroundColor: mono.paper,
-    borderRadius: 16,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: '#090909',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 0,
-    elevation: 3,
+    borderColor: colors.border,
+    ...shadows.card,
   },
   listCardSkeleton: {
     flexDirection: 'row',
@@ -286,7 +285,7 @@ const styles = StyleSheet.create({
   itemRowSkeleton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.sm,
+    padding: spacing.sm + 2,
     gap: spacing.md,
   },
 });

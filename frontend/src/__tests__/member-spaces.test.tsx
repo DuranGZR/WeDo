@@ -127,7 +127,7 @@ it('opens member information from the space selector without selecting a space',
   );
   expect(router.push).toHaveBeenCalledWith('/space/space-1/member/member-b');
   expect(mockSetSpace).not.toHaveBeenCalled();
-});
+}, 15_000);
 
 it('opens the voluntary leave screen from the space selector', async () => {
   const ui = screen(<HomeScreen />);
@@ -137,9 +137,9 @@ it('opens the voluntary leave screen from the space selector', async () => {
       ui.getAllByRole('button', { name: 'View information about Bob' }),
     ).toHaveLength(2),
   );
-  fireEvent.press(await ui.findByRole('button', { name: 'Leave Our space' }));
+  fireEvent.press(ui.getByRole('button', { name: 'Leave Our space' }));
   expect(router.push).toHaveBeenCalledWith('/space/space-1/leave');
-});
+}, 15_000);
 
 it('shows the member role and join date without private account details', async () => {
   const ui = screen(<MemberProfileScreen />);

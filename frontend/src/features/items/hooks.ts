@@ -49,6 +49,24 @@ export function useCreateItem() {
   });
 }
 
+export function useUpdateItem(itemId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { title?: string; description?: string }) =>
+      itemsApi.update(itemId, body),
+    onSuccess: (item) => {
+      haptic.success();
+      void client.invalidateQueries({ queryKey: queryKeys.item(itemId) });
+      if (item?.list_id) {
+        void client.invalidateQueries({ queryKey: queryKeys.items(item.list_id) });
+      } else {
+        void client.invalidateQueries({ queryKey: ['items'] });
+      }
+      void client.invalidateQueries({ queryKey: ['lists'] });
+    },
+  });
+}
+
 export function useMoveItem(itemId: string, sourceListId: string, spaceId: string) {
   const client = useQueryClient();
   return useMutation({
@@ -68,7 +86,7 @@ export function useCompleteItem(itemId: string) {
   return useMutation({
     mutationFn: () => itemsApi.complete(itemId),
     onSuccess: (item) => {
-      haptic.medium();
+      haptic.success();
       void client.invalidateQueries({ queryKey: queryKeys.item(itemId) });
       if (item?.list_id) {
         void client.invalidateQueries({ queryKey: queryKeys.items(item.list_id) });
@@ -102,7 +120,7 @@ export function useDeleteItem(itemId: string, listId: string) {
   return useMutation({
     mutationFn: () => itemsApi.remove(itemId),
     onSuccess: () => {
-      haptic.heavy();
+      haptic.success();
       if (listId) {
         void client.invalidateQueries({ queryKey: queryKeys.items(listId) });
       }

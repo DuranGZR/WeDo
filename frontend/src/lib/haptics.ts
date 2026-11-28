@@ -2,20 +2,43 @@ import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
 const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
+const PRESS_COOLDOWN_MS = 32;
+const OUTCOME_COOLDOWN_MS = 60;
+
+let hapticsEnabled = true;
+let lastPressAt = 0;
+let lastOutcomeAt = 0;
 
 export type HapticStyle =
-  | 'light'
-  | 'medium'
-  | 'heavy'
-  | 'selection'
-  | 'success'
-  | 'warning'
-  | 'error'
-  | 'none';
+  'light' | 'medium' | 'heavy' | 'selection' | 'success' | 'warning' | 'error' | 'none';
+
+export function isHapticsEnabled(): boolean {
+  return hapticsEnabled;
+}
+
+export function setHapticsEnabled(enabled: boolean): void {
+  hapticsEnabled = enabled;
+}
+
+function canFirePress(): boolean {
+  if (!isNative || !hapticsEnabled) return false;
+  const now = Date.now();
+  if (now >= lastPressAt && now - lastPressAt < PRESS_COOLDOWN_MS) return false;
+  lastPressAt = now;
+  return true;
+}
+
+function canFireOutcome(): boolean {
+  if (!isNative || !hapticsEnabled) return false;
+  const now = Date.now();
+  if (now >= lastOutcomeAt && now - lastOutcomeAt < OUTCOME_COOLDOWN_MS) return false;
+  lastOutcomeAt = now;
+  return true;
+}
 
 export const haptic = {
   selection() {
-    if (!isNative) return;
+    if (!canFirePress()) return;
     try {
       void Haptics.selectionAsync();
     } catch {
@@ -24,7 +47,7 @@ export const haptic = {
   },
 
   light() {
-    if (!isNative) return;
+    if (!canFirePress()) return;
     try {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {
@@ -33,7 +56,7 @@ export const haptic = {
   },
 
   medium() {
-    if (!isNative) return;
+    if (!canFirePress()) return;
     try {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {
@@ -42,7 +65,7 @@ export const haptic = {
   },
 
   heavy() {
-    if (!isNative) return;
+    if (!canFirePress()) return;
     try {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch {
@@ -51,7 +74,7 @@ export const haptic = {
   },
 
   success() {
-    if (!isNative) return;
+    if (!canFireOutcome()) return;
     try {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
@@ -60,7 +83,7 @@ export const haptic = {
   },
 
   warning() {
-    if (!isNative) return;
+    if (!canFireOutcome()) return;
     try {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch {
@@ -69,7 +92,7 @@ export const haptic = {
   },
 
   error() {
-    if (!isNative) return;
+    if (!canFireOutcome()) return;
     try {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } catch {

@@ -36,7 +36,7 @@ const config: ExpoConfig = {
       {
         image: './assets/TekLogo.png',
         resizeMode: 'contain',
-        backgroundColor: '#F7F6F2',
+        backgroundColor: '#F6F4F0',
       },
     ],
     'expo-font',
@@ -45,11 +45,20 @@ const config: ExpoConfig = {
       'expo-notifications',
       {
         icon: './assets/notification-icon.png',
-        color: '#2B2B28',
+        color: '#9E7F60',
       },
     ],
     'expo-sqlite',
     'expo-apple-authentication',
+    'expo-image',
+    [
+      'expo-calendar',
+      {
+        calendarPermission:
+          'WeDo adds your planned ideas to your calendar when you choose to save a date.',
+      },
+    ],
+    '@react-native-community/datetimepicker',
     ...googlePlugins,
     [
       'expo-share-intent',
@@ -77,6 +86,11 @@ const config: ExpoConfig = {
     infoPlist: {
       CFBundleDevelopmentRegion: 'en',
       ITSAppUsesNonExemptEncryption: false,
+      NSCalendarsUsageDescription:
+        'WeDo saves planned dates to your calendar when you choose to add a reminder.',
+      NSCalendarsFullAccessUsageDescription:
+        'WeDo saves planned dates to your calendar when you choose to add a reminder.',
+      LSApplicationQueriesSchemes: ['comgooglemaps'],
     },
   },
   android: {
@@ -84,7 +98,7 @@ const config: ExpoConfig = {
     versionCode: 1,
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#F7F6F2',
+      backgroundColor: '#A48362',
       monochromeImage: './assets/notification-icon.png',
     },
     permissions: ['RECEIVE_BOOT_COMPLETED', 'POST_NOTIFICATIONS'],

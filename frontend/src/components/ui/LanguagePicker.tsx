@@ -1,17 +1,23 @@
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { AppText } from './AppText';
+
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { colors, radius, shadows } from '@/design-system';
 import { t } from '@/i18n';
 import { type LanguagePreference } from '@/i18n/locale';
 import { useLanguageStore } from '@/store/language-store';
+import { AppText } from './AppText';
+
 const options: LanguagePreference[] = ['system', 'tr', 'en'];
+
 export function LanguagePicker() {
   useTranslation();
   const { preference, hydrated, setPreference } = useLanguageStore();
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
+
   async function select(value: LanguagePreference) {
     if (pending.current) return;
     pending.current = true;
@@ -26,6 +32,7 @@ export function LanguagePicker() {
       setBusy(false);
     }
   }
+
   return (
     <View style={styles.container}>
       <AppText style={styles.label}>{t('language.label')}</AppText>
@@ -35,7 +42,7 @@ export function LanguagePicker() {
         style={styles.options}
       >
         {options.map((value) => (
-          <Pressable
+          <SpringPressable
             key={value}
             accessibilityRole="radio"
             accessibilityState={{
@@ -43,17 +50,21 @@ export function LanguagePicker() {
               disabled: busy || !hydrated,
             }}
             disabled={busy || !hydrated}
+            pressScale={0.95}
+            haptic="selection"
             onPress={() => void select(value)}
             style={[styles.option, value === preference && styles.selected]}
           >
-            <AppText style={value === preference ? styles.selectedText : undefined}>
+            <AppText
+              style={value === preference ? styles.selectedText : styles.optionText}
+            >
               {value === 'system'
                 ? t('language.system')
                 : value === 'tr'
                   ? 'Türkçe'
                   : 'English'}
             </AppText>
-          </Pressable>
+          </SpringPressable>
         ))}
       </View>
       {error ? (
@@ -62,19 +73,26 @@ export function LanguagePicker() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: { gap: 10, paddingVertical: 12 },
   label: { fontWeight: '600' },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   option: {
-    minHeight: 44,
-    paddingHorizontal: 14,
+    minHeight: 42,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: '#8D8D8B',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
   },
-  selected: { backgroundColor: '#090909', borderColor: '#090909' },
-  selectedText: { color: '#FFFFFF' },
+  selected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+    ...shadows.glass,
+  },
+  optionText: { color: colors.primaryText, fontWeight: '500' },
+  selectedText: { color: colors.onAccent, fontWeight: '600' },
 });

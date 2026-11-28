@@ -2,11 +2,12 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
-import { AppText, Avatar, Screen } from '@/components/ui';
 import { ScreenMotion } from '@/components/motion/ScreenMotion';
-import { colors, mono, spacing } from '@/design-system';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { AppText, Avatar, Screen } from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { useSpaces } from '@/features/spaces/hooks';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -28,14 +29,20 @@ function MenuRow({
   useTranslation();
   const danger = tone === 'danger';
   return (
-    <Pressable
+    <SpringPressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      pressScale={0.985}
+      haptic="selection"
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={styles.row}
     >
       <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
-        <Ionicons name={icon} size={19} color={danger ? mono.danger : mono.ink} />
+        <Ionicons
+          name={icon}
+          size={19}
+          color={danger ? colors.error : colors.primaryText}
+        />
       </View>
       <View style={styles.rowCopy}>
         <AppText style={danger && styles.dangerText}>{label}</AppText>
@@ -48,9 +55,9 @@ function MenuRow({
       <Ionicons
         name="chevron-forward"
         size={18}
-        color={danger ? mono.danger : colors.tertiaryText}
+        color={danger ? colors.error : colors.tertiaryText}
       />
-    </Pressable>
+    </SpringPressable>
   );
 }
 
@@ -76,12 +83,10 @@ export default function ProfileScreen() {
 
   return (
     <ScreenMotion>
-      <Screen scroll edges={['top']} backgroundColor={mono.background}>
-        <View style={styles.contourTop} pointerEvents="none" />
-        <View style={styles.contourBottom} pointerEvents="none" />
+      <Screen scroll edges={['top']}>
         <View style={styles.content}>
           <View style={styles.pageHeader}>
-            <AppText variant="pageTitle" style={styles.title}>
+            <AppText variant="largeTitle" style={styles.title}>
               {t('common.profile')}
             </AppText>
             <AppText muted style={styles.subtitle}>
@@ -89,13 +94,15 @@ export default function ProfileScreen() {
             </AppText>
           </View>
 
-          <Pressable
+          <SpringPressable
             accessibilityRole="button"
             accessibilityLabel={t('home.editProfile')}
+            pressScale={0.98}
+            haptic="selection"
             onPress={() => router.push('/settings')}
-            style={({ pressed }) => [styles.profileCard, pressed && styles.pressed]}
+            style={styles.profileCard}
           >
-            <Avatar name={user?.display_name} size={66} />
+            <Avatar name={user?.display_name} size={62} />
             <View style={styles.identity}>
               <AppText variant="sectionTitle">
                 {user?.display_name ?? t('home.wedoUser')}
@@ -104,16 +111,16 @@ export default function ProfileScreen() {
                 {user?.email}
               </AppText>
               <View style={styles.profileStatus}>
-                <Ionicons name="person-outline" size={13} color={mono.ink} />
+                <Ionicons name="person-outline" size={13} color={colors.secondaryText} />
                 <AppText style={styles.profileStatusText}>
                   {t('home.initialAvatar')}
                 </AppText>
               </View>
             </View>
             <View style={styles.editIcon}>
-              <Ionicons name="pencil" size={16} color={mono.paper} />
+              <Ionicons name="pencil" size={16} color={colors.primaryText} />
             </View>
-          </Pressable>
+          </SpringPressable>
 
           <View style={styles.section}>
             <AppText variant="caption" style={styles.sectionLabel}>
@@ -193,28 +200,6 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  contourTop: {
-    position: 'absolute',
-    top: -165,
-    right: -165,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.7,
-  },
-  contourBottom: {
-    position: 'absolute',
-    bottom: -180,
-    left: -190,
-    width: 360,
-    height: 360,
-    borderRadius: 180,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.5,
-  },
   content: {
     flex: 1,
     gap: spacing.lg,
@@ -222,63 +207,69 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: spacing.sm,
-    paddingBottom: 126,
+    paddingBottom: 108,
   },
   pageHeader: { gap: spacing.xs, paddingTop: spacing.xs },
-  title: { fontWeight: '800' },
-  subtitle: { fontSize: 14 },
+  title: { fontWeight: '700' },
+  subtitle: { fontSize: 14, color: colors.secondaryText },
   profileCard: {
-    minHeight: 104,
+    minHeight: 98,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: 18,
+    borderRadius: radius.cardLg,
     borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
-    ...Platform.select({ web: { boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)' } }),
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    ...shadows.card,
   },
   identity: { flex: 1, gap: 3 },
   profileStatus: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  profileStatusText: { fontSize: 11, fontWeight: '700' },
+  profileStatusText: { fontSize: 11, fontWeight: '600', color: colors.secondaryText },
   editIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.ink,
+    backgroundColor: colors.glassElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.glass,
   },
   section: { gap: spacing.sm },
   sectionLabel: {
     marginLeft: spacing.xs,
-    color: mono.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
+    color: colors.secondaryText,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.6,
   },
   menuCard: {
     paddingHorizontal: spacing.lg,
-    borderRadius: 16,
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
-    ...Platform.select({ web: { boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)' } }),
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    ...shadows.card,
   },
-  row: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  row: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowIcon: {
     width: 38,
     height: 38,
-    borderRadius: 11,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.soft,
+    backgroundColor: colors.surfaceSecondary,
   },
-  rowIconDanger: { backgroundColor: '#F4E1DF' },
+  rowIconDanger: { backgroundColor: colors.errorSoft },
   rowCopy: { flex: 1, gap: 2 },
-  rowDescription: { fontSize: 11, lineHeight: 15 },
-  divider: { height: 1, backgroundColor: mono.line, opacity: 0.3 },
-  dangerText: { color: mono.danger },
-  pressed: { opacity: 0.84, transform: [{ scale: 0.985 }] },
+  rowDescription: { fontSize: 12, lineHeight: 16 },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(17, 17, 16, 0.06)',
+    marginLeft: 38 + spacing.md,
+  },
+  dangerText: { color: colors.error },
 });

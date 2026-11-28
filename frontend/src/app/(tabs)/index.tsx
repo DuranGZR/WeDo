@@ -1,64 +1,59 @@
-import { formatRelativeTime, formatLocale, t } from '@/i18n';
+import { formatLocale, formatRelativeTime, t } from '@/i18n';
 
-import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   Alert,
-  Image,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 
+import {
+  getItemFallbackImage,
+  getItemPreviewImage,
+  getItemSourceLabel,
+} from '@/components/domain/ItemCard';
+import { useToast } from '@/components/feedback/AppToast';
+import { ScreenMotion } from '@/components/motion/ScreenMotion';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING, ENTER_EASING } from '@/components/motion/springs';
 import {
   AppText,
   Button,
   Card,
   EmptyState,
+  GlassSurface,
   HomeScreenSkeleton,
   Screen,
+  SmartImage,
 } from '@/components/ui';
-import { ScreenMotion } from '@/components/motion/ScreenMotion';
-import { useToast } from '@/components/feedback/AppToast';
-import { colors, mono, radius, spacing } from '@/design-system';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { collaborationApi } from '@/features/collaboration/api';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
 import { itemsApi } from '@/features/items/api';
 import { metadataRefreshInterval } from '@/features/items/hooks';
 import type { Item } from '@/features/items/types';
+import { haptic } from '@/lib/haptics';
+import { getListAppearance } from '@/features/lists/appearance';
 import { useCreateList, useLists } from '@/features/lists/hooks';
 import type { List } from '@/features/lists/types';
+import { OutboxStatusBanner } from '@/features/sharing/OutboxStatusBanner';
+import { syncOutbox } from '@/features/sharing/sync';
+import { UpcomingPlansSection } from '@/features/plans/UpcomingPlansSection';
 import { useSpaces } from '@/features/spaces/hooks';
 import { MemberLinks } from '@/features/spaces/MemberLinks';
+import { SpaceHeaderBar } from '@/features/spaces/SpaceHeaderBar';
 import { useAuthStore } from '@/store/auth-store';
 import { useSpaceStore } from '@/store/space-store';
-import {
-  getItemPreviewImage,
-  getItemSourceLabel,
-  getItemFallbackImage,
-} from '@/components/domain/ItemCard';
-
-const homeColors = {
-  background: '#CFCFCD',
-  ink: '#090909',
-  paper: '#FFFFFF',
-  line: '#8D8D8B',
-  border: '#090909',
-  borderSubtle: 'rgba(9, 9, 9, 0.12)',
-  muted: '#5F5F5D',
-  subtle: '#8D8D8B',
-  soft: '#E7E7E5',
-} as const;
 
 const listTemplates = [
   {
@@ -66,30 +61,40 @@ const listTemplates = [
       return t('onboarding.placesToVisit');
     },
     icon: 'map-outline',
-    color: '#E7E7E5',
+    color: '#EFECE6',
   },
   {
     get name() {
       return t('common.watchlist');
     },
     icon: 'film-outline',
-    color: '#D9D9D7',
+    color: '#E9E2D7',
   },
   {
     get name() {
       return t('common.shopping');
     },
     icon: 'cart-outline',
-    color: '#EDEDEC',
+    color: '#F3F0EA',
   },
   {
     get name() {
       return t('onboarding.toDo');
     },
     icon: 'checkbox-outline',
-    color: '#D1D1CF',
+    color: '#E5DFD4',
   },
 ] as const;
+
+function splitEditorialHeadline(text: string): { leading: string; accent: string } {
+  const trimmed = text.trim();
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace <= 0) return { leading: '', accent: trimmed };
+  return {
+    leading: trimmed.slice(0, lastSpace),
+    accent: trimmed.slice(lastSpace + 1),
+  };
+}
 
 function Preview({
   item,
@@ -101,7 +106,6 @@ function Preview({
   height?: number;
 }) {
   useTranslation();
-  const [imageError, setImageError] = useState(false);
   const previewStyle = [
     styles.preview,
     compact && styles.previewCompact,
@@ -110,27 +114,35 @@ function Preview({
 
   if (item) {
     const rawUrl = getItemPreviewImage(item);
-    const imageUrl = imageError ? getItemFallbackImage(item) : rawUrl;
+    const pending =
+      (item.metadata_status === 'pending' || item.metadata_status === 'processing') &&
+      !item.preview_image_url;
     return (
-      <Image
-        source={{ uri: imageUrl }}
+      <SmartImage
+        uri={rawUrl}
+        fallbackUri={getItemFallbackImage(item)}
+        pending={pending}
+        compact={compact}
         style={previewStyle}
-        resizeMode="cover"
-        onError={() => setImageError(true)}
       />
     );
   }
 
   return (
     <View style={[previewStyle, styles.fallbackPreview]}>
-      <Ionicons name="bookmark-outline" size={compact ? 20 : 24} color={homeColors.ink} />
+      <Ionicons
+        name="bookmark-outline"
+        size={compact ? 20 : 24}
+        color={colors.primaryText}
+      />
       <AppText variant="caption" style={styles.previewLabel} numberOfLines={1}>
         WeDo
       </AppText>
     </View>
   );
 }
-function PendingAvatar({ size = 26 }: { size?: number }) {
+
+function PendingAvatar({ size = 22 }: { size?: number }) {
   useTranslation();
   return (
     <View
@@ -138,7 +150,7 @@ function PendingAvatar({ size = 26 }: { size?: number }) {
       accessibilityLabel={t('home.partnerAvatarInvitationPending')}
       style={[
         styles.pendingAvatar,
-        size !== 26 && { width: size, height: size, borderRadius: size / 2 },
+        { width: size, height: size, borderRadius: size / 2 },
       ]}
     >
       <AppText style={[styles.pendingInitial, { fontSize: Math.max(8, size * 0.42) }]}>
@@ -151,19 +163,22 @@ function PendingAvatar({ size = 26 }: { size?: number }) {
 function MonoAvatar({
   name,
   size = 28,
-  radius,
+  radius: cornerRadius,
 }: {
   name?: string | null;
   size?: number;
   radius?: number;
 }) {
   useTranslation();
-  const borderRadius = radius !== undefined ? radius : size / 2;
+  const resolvedRadius = cornerRadius !== undefined ? cornerRadius : size / 2;
   return (
     <View
       accessible
       accessibilityLabel={t('home.avatarForValue', { value0: name ?? t('common.user') })}
-      style={[styles.monoAvatar, { width: size, height: size, borderRadius }]}
+      style={[
+        styles.monoAvatar,
+        { width: size, height: size, borderRadius: resolvedRadius },
+      ]}
     >
       <AppText style={[styles.monoAvatarText, { fontSize: Math.max(9, size * 0.4) }]}>
         {name?.trim().charAt(0).toLocaleUpperCase(formatLocale()) ?? 'W'}
@@ -183,100 +198,81 @@ function getDailyMessage(items: Item[]) {
   return t('home.howAboutAddingSomethingToYourEveningPlans');
 }
 
-function getHomeListStyle(name: string) {
-  const lower = name.toLocaleLowerCase('tr-TR');
-  if (
-    lower.includes('izle') ||
-    ['watch', 'movie', 'series'].some((word) => lower.includes(word)) ||
-    lower.includes('film') ||
-    lower.includes('dizi')
-  ) {
-    return {
-      icon: 'film-outline' as const,
-      backgroundColor: '#D9D9D7',
-      color: homeColors.ink,
-    };
-  }
-  if (
-    lower.includes('alın') ||
-    lower.includes('alışveriş') ||
-    ['shop', 'buy', 'grocer'].some((word) => lower.includes(word)) ||
-    lower.includes('market')
-  ) {
-    return {
-      icon: 'cart-outline' as const,
-      backgroundColor: '#EDEDEC',
-      color: homeColors.ink,
-    };
-  }
-  if (
-    lower.includes('yap') ||
-    ['todo', 'goal', 'to-do'].some((word) => lower.includes(word)) ||
-    lower.includes('hedef')
-  ) {
-    return {
-      icon: 'checkbox-outline' as const,
-      backgroundColor: '#D1D1CF',
-      color: homeColors.ink,
-    };
-  }
-  return {
-    icon: 'map-outline' as const,
-    backgroundColor: '#E7E7E5',
-    color: homeColors.ink,
-  };
-}
-
 function QuickSaveCard() {
   useTranslation();
   const contentTypes = [
-    { label: t('home.video'), icon: 'videocam-outline', color: '#F4F4F5' },
-    { label: t('home.place'), icon: 'location-outline', color: '#F4F4F5' },
-    { label: t('home.product'), icon: 'cube-outline', color: '#F4F4F5' },
-    { label: t('home.event'), icon: 'calendar-outline', color: '#F4F4F5' },
+    { label: t('home.video'), icon: 'videocam-outline' },
+    { label: t('home.place'), icon: 'location-outline' },
+    { label: t('home.product'), icon: 'cube-outline' },
+    { label: t('home.event'), icon: 'calendar-outline' },
   ] as const;
+
   return (
     <View style={styles.quickSaveWrap}>
-      <Card style={styles.quickSave}>
-        <View style={styles.typeRow}>
-          {contentTypes.map((type) => (
-            <View
-              key={type.label}
-              style={[styles.typeTile, { backgroundColor: type.color }]}
-            >
-              <Ionicons name={type.icon} size={18} color={homeColors.ink} />
-              <AppText variant="caption">{type.label}</AppText>
-            </View>
-          ))}
-        </View>
-        <AppText style={styles.quickSaveTitle}>
-          {t('home.saveYourFirstItemTogether')}
-        </AppText>
-        <AppText style={styles.quickSaveDescription}>
-          {t('home.tapShareOnSomethingYouLikeThenChooseWedo')}
-        </AppText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('home.howToSave')}
-          onPress={() => router.push('/(onboarding)/share-tutorial')}
-          style={({ pressed }) => [styles.monoPrimaryButton, pressed && styles.pressed]}
+      <View style={styles.heroCardWrap}>
+        <LinearGradient
+          colors={['#C4AA8E', '#A48567', '#86694E']}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0.12, y: 0 }}
+          end={{ x: 0.88, y: 1 }}
+          style={styles.heroCard}
         >
-          <AppText style={styles.monoPrimaryButtonText}>
-            {t('home.howDoISaveSomething')}
-          </AppText>
-          <Ionicons name="arrow-forward" size={17} color={homeColors.paper} />
-        </Pressable>
-      </Card>
-      <Pressable
+          <View style={styles.typeRow}>
+            {contentTypes.map((type) => (
+              <View key={type.label} style={styles.heroTypeTile}>
+                <Ionicons name={type.icon} size={18} color={colors.onAccent} />
+                <AppText variant="caption" style={styles.heroTypeTileLabel}>
+                  {type.label}
+                </AppText>
+              </View>
+            ))}
+          </View>
+          <View style={styles.heroCopy}>
+            <AppText style={styles.quickSaveTitle}>
+              {t('home.saveYourFirstItemTogether')}
+            </AppText>
+            <AppText style={styles.quickSaveDescription}>
+              {t('home.tapShareOnSomethingYouLikeThenChooseWedo')}
+            </AppText>
+          </View>
+          <SpringPressable
+            accessibilityRole="button"
+            accessibilityLabel={t('home.howToSave')}
+            onPress={() => router.push('/(onboarding)/share-tutorial')}
+            pressScale={0.965}
+            haptic="light"
+            style={styles.heroCtaPressable}
+          >
+            <GlassSurface
+              pointerEvents="none"
+              interactive
+              tintColor="rgba(255, 255, 255, 0.20)"
+              fallbackBackgroundColor="rgba(255, 255, 255, 0.24)"
+              blurIntensity={28}
+              style={styles.heroCtaPill}
+            >
+              <View style={styles.heroCtaSpacer} />
+              <AppText style={styles.heroCtaText}>
+                {t('home.howDoISaveSomething')}
+              </AppText>
+              <View style={styles.heroCtaArrowCircle}>
+                <Ionicons name="arrow-forward" size={17} color={colors.primaryText} />
+              </View>
+            </GlassSurface>
+          </SpringPressable>
+        </LinearGradient>
+      </View>
+      <SpringPressable
         accessibilityRole="button"
         accessibilityLabel={t('home.addALinkManually')}
         onPress={() => router.push('/item/create')}
-        style={styles.manualLink}
+        pressScale={0.955}
+        haptic="light"
+        style={styles.manualLinkPill}
       >
-        <AppText variant="caption" style={styles.manualLinkText}>
-          {t('home.addALinkManually')}
-        </AppText>
-      </Pressable>
+        <Ionicons name="link-outline" size={16} color={colors.primaryText} />
+        <AppText style={styles.manualLinkText}>{t('home.addALinkManually')}</AppText>
+      </SpringPressable>
     </View>
   );
 }
@@ -287,9 +283,9 @@ function InviteCard({ spaceId }: { spaceId: string }) {
     <View style={styles.inviteCard}>
       <View style={styles.inviteContent}>
         <View style={styles.inviteAvatarWrap}>
-          <PendingAvatar size={34} />
+          <PendingAvatar size={30} />
           <View style={styles.plusBadge}>
-            <Ionicons name="add" size={10} color="#FFFFFF" />
+            <Ionicons name="add" size={10} color={colors.onAccent} />
           </View>
         </View>
         <View style={styles.inviteBody}>
@@ -302,20 +298,22 @@ function InviteCard({ spaceId }: { spaceId: string }) {
           <AppText style={styles.inviteCardTitle}>
             {t('onboarding.inviteYourPartner')}
           </AppText>
-          <AppText variant="caption" style={styles.inviteCardDesc}>
+          <AppText variant="caption" style={styles.inviteCardDesc} numberOfLines={1}>
             {t('home.decideWhatToDoWithYourSavedIdeas')}
           </AppText>
         </View>
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('home.invite')}
           onPress={() => router.push(`/(onboarding)/invite-member?spaceId=${spaceId}`)}
-          style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}
+          pressScale={0.94}
+          haptic="medium"
+          style={styles.inviteButton}
         >
           <AppText variant="caption" style={styles.inviteButtonText}>
             {t('home.invite')}
           </AppText>
-        </Pressable>
+        </SpringPressable>
       </View>
     </View>
   );
@@ -353,23 +351,18 @@ function ListTemplates({
       ) : (
         <>
           <View style={styles.templateSectionHeader}>
-            <View style={styles.homeSectionTitleWrap}>
-              <View style={styles.sectionHeaderIconBadge}>
-                <Ionicons name="albums" size={13} color={homeColors.paper} />
-              </View>
-              <AppText style={styles.templateSectionTitle}>
-                {t('home.sharedLists')}
-              </AppText>
-            </View>
-            <Pressable
+            <AppText style={styles.templateSectionTitle}>{t('home.sharedLists')}</AppText>
+            <SpringPressable
               accessibilityRole="button"
               accessibilityLabel={t('home.createANewList')}
               onPress={() => router.push(`/list/create?spaceId=${spaceId}`)}
+              pressScale={0.94}
+              haptic="light"
               style={styles.templateAddAction}
             >
-              <Ionicons name="add" size={16} color={homeColors.ink} />
+              <Ionicons name="add" size={16} color={colors.primaryText} />
               <AppText style={styles.templateAddActionText}>{t('home.newList')}</AppText>
-            </Pressable>
+            </SpringPressable>
           </View>
           <AppText style={styles.templateIntro}>
             {t('home.chooseATemplateToGetStarted')}
@@ -383,41 +376,45 @@ function ListTemplates({
         contentContainerStyle={styles.templateRow}
       >
         {availableTemplates.map((template) => (
-          <Pressable
+          <SpringPressable
             key={template.name}
             accessibilityRole="button"
             accessibilityLabel={t('home.createAValueList', { value0: template.name })}
             onPress={() => createList(template.name)}
-            style={({ pressed }) => [
-              styles.templateCard,
-              { backgroundColor: template.color },
-              pressed && styles.pressed,
-            ]}
+            pressScale={0.95}
+            haptic="selection"
+            style={styles.templateCard}
           >
             <View style={styles.templateHeader}>
-              <Ionicons name={template.icon} size={20} color={colors.primaryText} />
+              <View style={styles.templateIconBadge}>
+                <Ionicons name={template.icon} size={17} color={colors.primaryText} />
+              </View>
               <View style={styles.templatePlusBadge}>
-                <Ionicons name="add" size={10} color={colors.primaryText} />
+                <Ionicons name="add" size={12} color={colors.primaryText} />
               </View>
             </View>
             <AppText variant="caption" style={styles.templateCardName}>
               {template.name}
             </AppText>
-          </Pressable>
+          </SpringPressable>
         ))}
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('home.createYourOwn')}
           onPress={() => router.push(`/list/create?spaceId=${spaceId}`)}
-          style={({ pressed }) => [styles.customTemplate, pressed && styles.pressed]}
+          pressScale={0.95}
+          haptic="light"
+          style={styles.customTemplate}
         >
           <View style={styles.templateHeader}>
-            <Ionicons name="add-outline" size={20} color={homeColors.ink} />
+            <View style={styles.templateIconBadge}>
+              <Ionicons name="add-outline" size={18} color={colors.primaryText} />
+            </View>
           </View>
           <AppText variant="caption" style={styles.customTemplateText}>
             {t('home.createYourOwn')}
           </AppText>
-        </Pressable>
+        </SpringPressable>
       </ScrollView>
     </View>
   );
@@ -435,50 +432,80 @@ function ListRow({
   onPress: () => void;
 }) {
   useTranslation();
-  const listStyle = getHomeListStyle(list.name);
+  const listStyle = getListAppearance(list.name, list.is_default, list.icon);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t('home.openValue', { value0: list.name })}
-      onPress={onPress}
-      style={({ pressed }) => [styles.listRowPressable, pressed && styles.listRowPressed]}
-    >
-      <View style={styles.listRow}>
-        <View style={[styles.listIcon, { backgroundColor: listStyle.backgroundColor }]}>
-          <Ionicons name={listStyle.icon} size={16} color={listStyle.color} />
-        </View>
-        <View style={styles.listBody}>
-          <AppText style={styles.homeListName}>{list.name}</AppText>
-          <AppText style={styles.homeListCount}>
-            {t('common.itemCount', { count })}
-          </AppText>
-        </View>
-        {memberNames.length >= 2 ? (
-          <View style={styles.memberStack}>
-            {memberNames.slice(0, 2).map((name, index) => (
-              <View
-                key={`${name}-${index}`}
-                style={[styles.memberStackItem, index > 0 && styles.memberStackOverlap]}
-              >
-                <MonoAvatar name={name} size={20} />
-              </View>
-            ))}
+    <Animated.View layout={LAYOUT_SPRING}>
+      <SpringPressable
+        accessibilityRole="button"
+        accessibilityLabel={t('home.openValue', { value0: list.name })}
+        onPress={onPress}
+        pressScale={0.975}
+        haptic="light"
+        style={styles.listRowCard}
+      >
+        <View style={styles.listRow}>
+          <View style={[styles.listIcon, { backgroundColor: listStyle.backgroundColor }]}>
+            <Ionicons name={listStyle.icon} size={18} color={listStyle.color} />
           </View>
-        ) : null}
-        <Ionicons name="chevron-forward" size={14} color={homeColors.ink} />
-      </View>
-    </Pressable>
+          <View style={styles.listBody}>
+            <AppText style={styles.homeListName}>{list.name}</AppText>
+            <AppText style={styles.homeListCount}>
+              {t('common.itemCount', { count })}
+            </AppText>
+          </View>
+          {memberNames.length >= 2 ? (
+            <View style={styles.memberStack}>
+              {memberNames.slice(0, 2).map((name, index) => (
+                <View
+                  key={`${name}-${index}`}
+                  style={[styles.memberStackItem, index > 0 && styles.memberStackOverlap]}
+                >
+                  <MonoAvatar name={name} size={20} />
+                </View>
+              ))}
+            </View>
+          ) : null}
+          <Ionicons name="chevron-forward" size={15} color={colors.tertiaryText} />
+        </View>
+      </SpringPressable>
+    </Animated.View>
+  );
+}
+
+function SharedListStack({
+  lists,
+  itemQueries,
+  memberNames,
+}: {
+  lists: List[];
+  itemQueries: ({ data?: { data?: Item[] } } | undefined)[];
+  memberNames: string[];
+}) {
+  return (
+    <View style={styles.listStack}>
+      {lists.map((list, index) => (
+        <ListRow
+          key={list.id}
+          list={list}
+          count={itemQueries[index]?.data?.data?.length ?? 0}
+          memberNames={memberNames}
+          onPress={() => router.push(`/list/${list.id}`)}
+        />
+      ))}
+    </View>
   );
 }
 
 export default function HomeScreen() {
   useTranslation();
+  const client = useQueryClient();
   const { showToast } = useToast();
   const user = useAuthStore((state) => state.user);
   const spaces = useSpaces();
   const selectedSpaceId = useSpaceStore((state) => state.selectedSpaceId);
   const setSelectedSpaceId = useSpaceStore((state) => state.setSelectedSpaceId);
   const [spaceSheetOpen, setSpaceSheetOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const space =
     spaces.data?.data.find((entry) => entry.id === selectedSpaceId) ??
     spaces.data?.data[0];
@@ -524,24 +551,21 @@ export default function HomeScreen() {
   );
   const hasContent = allItems.length > 0;
   const isContentLoading = itemQueries.some((query) => query.isLoading);
-  const needsInvite = Boolean(
-    space && members.isSuccess && (members.data?.data.length ?? 0) < 2,
-  );
-  const memberNames = (members.data?.data ?? []).map((member) => member.display_name);
-  const spaceLabel = space?.name ?? t('spaces.sharedSpace');
+  const memberEntries = members.data?.data ?? [];
+  const needsInvite = Boolean(space && members.isSuccess && memberEntries.length < 2);
+  const memberNames = memberEntries.map((member) => member.display_name);
   const dailyMessage = getDailyMessage(allItems);
+  const heroHeadline = splitEditorialHeadline(t('home.whatAreWePlanning'));
   const { width: windowWidth } = useWindowDimensions();
   const recentCardWidth = useMemo(() => {
-    if (windowWidth > 640) return 168;
-    // Show 2 full cards and ~40-50% peek of the 3rd card on mobile
-    return Math.min(160, Math.max(130, Math.floor((windowWidth - 44) / 2.45)));
+    if (windowWidth > 640) return 244;
+    return Math.min(238, Math.max(212, Math.round(windowWidth * 0.59)));
   }, [windowWidth]);
-  const recentImageHeight = recentCardWidth < 155 ? 94 : 104;
+  const recentImageHeight = Math.round(recentCardWidth * 0.62);
 
   const createTemplateList = (name: string) => {
     createList.mutate(name, {
       onSuccess: (list) => {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         showToast({
           title: t('home.listCreated'),
           message: t('home.yourValueListIsReady', { value0: name }),
@@ -549,8 +573,10 @@ export default function HomeScreen() {
           onAction: () => router.push(`/list/${list.id}`),
         });
       },
-      onError: (error: any) => {
-        const isConflict = error?.message?.includes('409') || error?.status === 409;
+      onError: (error: unknown) => {
+        haptic.error();
+        const err = error as { message?: string; status?: number } | undefined;
+        const isConflict = err?.message?.includes('409') || err?.status === 409;
         Alert.alert(
           t('home.couldnTCreateList'),
           isConflict ? t('lists.nameAlreadyExists') : t('common.tryAgain'),
@@ -559,16 +585,27 @@ export default function HomeScreen() {
     });
   };
 
-  if (spaces.isLoading || (Boolean(space?.id) && lists.isLoading))
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await syncOutbox();
+      await client.invalidateQueries();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [client]);
+
+  if (spaces.isLoading || (Boolean(space?.id) && lists.isLoading)) {
     return (
-      <Screen backgroundColor={homeColors.background}>
+      <Screen>
         <HomeScreenSkeleton />
       </Screen>
     );
+  }
 
-  if (spaces.isError && !spaces.data)
+  if (spaces.isError && !spaces.data) {
     return (
-      <Screen backgroundColor={homeColors.background}>
+      <Screen>
         <EmptyState
           icon="cloud-offline-outline"
           title={t('home.connectionFailed')}
@@ -578,82 +615,44 @@ export default function HomeScreen() {
         />
       </Screen>
     );
+  }
 
   return (
     <ScreenMotion>
       <Screen
         edges={['top']}
-        backgroundColor={homeColors.background}
+        ambient="hero"
+        refreshing={refreshing}
+        onRefresh={() => void handleRefresh()}
         contentContainerStyle={styles.screen}
       >
-        {/* Top Bar Header */}
-        <View style={styles.topBar}>
-          <View style={styles.spaceSelector}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('home.switchSpace')}
-              onPress={() => setSpaceSheetOpen(true)}
-              style={styles.spaceCover}
-            >
-              <Ionicons name="sparkles" size={17} color={mono.paper} />
-            </Pressable>
-            <View style={styles.spaceSelectorBody}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('home.switchSpace')}
-                onPress={() => setSpaceSheetOpen(true)}
-                style={styles.spaceTitleRow}
-              >
-                <AppText
-                  variant="cardTitle"
-                  numberOfLines={1}
-                  style={[styles.spaceTitle, { flex: 1 }]}
-                >
-                  {space?.name ?? t('spaces.sharedSpace')}
-                </AppText>
-                <Ionicons name="chevron-down" size={16} color={mono.ink} />
-              </Pressable>
-              <View style={styles.memberRow}>
-                {space ? (
-                  <MemberLinks
-                    avatars
-                    spaceId={space.id}
-                    members={(members.data?.data ?? []).slice(0, 2)}
-                  />
-                ) : null}
-                {needsInvite ? <PendingAvatar /> : null}
-              </View>
-            </View>
-          </View>
-          <View style={styles.topActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('common.notifications')}
-              onPress={() => router.push('/notifications')}
-              style={styles.headerIconButton}
-            >
-              <Ionicons name="notifications-outline" size={21} color={mono.ink} />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('common.profile')}
-              onPress={() => router.push('/profile')}
-            >
-              <MonoAvatar
-                name={
-                  user?.display_name || user?.email?.split('@')[0] || t('common.user')
-                }
-                size={40}
-              />
-            </Pressable>
-          </View>
-        </View>
+        <SpaceHeaderBar
+          spaceId={space?.id}
+          spaceName={space?.name}
+          fallbackUserName={user?.display_name}
+          members={memberEntries}
+          needsInvite={needsInvite}
+          onOpenSpaceSwitcher={() => setSpaceSheetOpen(true)}
+          onPressAdd={() => router.push('/item/create')}
+          addLabel={t('items.addItem')}
+        />
+        <OutboxStatusBanner />
+
         <View style={styles.greeting}>
-          <AppText style={styles.greetingSub}>
+          <AppText variant="eyebrow" style={styles.greetingSub}>
             {t('home.hello')}{' '}
             {user?.display_name || user?.email?.split('@')[0] || t('common.user')}
           </AppText>
-          <AppText style={styles.heroTitle}>{t('home.whatAreWePlanning')}</AppText>
+          <AppText style={styles.heroLine}>
+            {heroHeadline.leading ? (
+              <AppText variant="editorialHero" style={styles.heroLeading}>
+                {heroHeadline.leading}{' '}
+              </AppText>
+            ) : null}
+            <AppText variant="editorialAccent" style={styles.heroAccent}>
+              {heroHeadline.accent}
+            </AppText>
+          </AppText>
           <AppText style={styles.dailyMessage}>{dailyMessage}</AppText>
         </View>
 
@@ -668,51 +667,35 @@ export default function HomeScreen() {
             />
           </Card>
         ) : !hasContent && !isContentLoading ? (
-          <>
+          <Animated.View entering={FadeIn.duration(220)} layout={LAYOUT_SPRING}>
             <QuickSaveCard />
             {needsInvite && <InviteCard spaceId={space.id} />}
 
             {listEntries.length > 0 && (
-              <View style={{ marginBottom: spacing.lg }}>
+              <View style={styles.sectionBlock}>
                 <View style={styles.templateSectionHeader}>
-                  <View style={styles.homeSectionTitleWrap}>
-                    <View style={styles.sectionHeaderIconBadge}>
-                      <Ionicons name="albums" size={13} color={homeColors.paper} />
-                    </View>
-                    <AppText style={styles.templateSectionTitle}>
-                      {t('home.sharedLists')}
-                    </AppText>
-                  </View>
-                  <Pressable
+                  <AppText style={styles.templateSectionTitle}>
+                    {t('home.sharedLists')}
+                  </AppText>
+                  <SpringPressable
                     accessibilityRole="button"
                     accessibilityLabel={t('home.createANewList')}
                     onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
+                    pressScale={0.94}
+                    haptic="light"
                     style={styles.templateAddAction}
                   >
-                    <Ionicons name="add" size={16} color={homeColors.ink} />
+                    <Ionicons name="add" size={16} color={colors.primaryText} />
                     <AppText style={styles.templateAddActionText}>
                       {t('home.newList')}
                     </AppText>
-                  </Pressable>
+                  </SpringPressable>
                 </View>
-                <View style={styles.listCard}>
-                  {listEntries.map((list, index) => {
-                    const query = itemQueries[index];
-                    const count = query?.data?.data?.length ?? 0;
-                    const isLast = index === listEntries.length - 1;
-                    return (
-                      <View key={list.id}>
-                        <ListRow
-                          list={list}
-                          count={count}
-                          memberNames={memberNames}
-                          onPress={() => router.push(`/list/${list.id}`)}
-                        />
-                        {!isLast && <View style={styles.listDivider} />}
-                      </View>
-                    );
-                  })}
-                </View>
+                <SharedListStack
+                  lists={listEntries}
+                  itemQueries={itemQueries}
+                  memberNames={memberNames}
+                />
               </View>
             )}
 
@@ -721,45 +704,43 @@ export default function HomeScreen() {
               createList={createTemplateList}
               existingLists={listEntries}
             />
-          </>
+          </Animated.View>
         ) : (
-          <>
+          <Animated.View entering={FadeIn.duration(220)} layout={LAYOUT_SPRING}>
+            <UpcomingPlansSection spaceId={space.id} items={allItems} />
+
             <View style={styles.homeSectionHeader}>
-              <View style={styles.homeSectionTitleWrap}>
-                <View style={styles.sectionHeaderIconBadge}>
-                  <Ionicons name="time-outline" size={18} color={homeColors.ink} />
-                </View>
-                <AppText style={styles.homeSectionTitle}>
-                  {t('home.recentlyAdded')}
-                </AppText>
-              </View>
-              <Pressable
+              <AppText style={styles.homeSectionTitle}>{t('home.recentlyAdded')}</AppText>
+              <SpringPressable
                 onPress={() => router.push('/lists')}
+                pressScale={0.94}
+                haptic="selection"
                 style={styles.homeSectionAction}
               >
                 <AppText style={styles.homeSectionActionText}>{t('home.seeAll')}</AppText>
-                <Ionicons name="chevron-forward" size={13} color={homeColors.muted} />
-              </Pressable>
+                <Ionicons name="chevron-forward" size={13} color={colors.secondaryText} />
+              </SpringPressable>
             </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
+              snapToInterval={recentCardWidth + 12}
+              snapToAlignment="start"
+              decelerationRate="fast"
               style={styles.horizontalScrollView}
               contentContainerStyle={styles.horizontalList}
             >
               {recentItems.map((item) => (
-                <Pressable
+                <SpringPressable
                   key={item.id}
                   accessibilityRole="button"
                   accessibilityLabel={t('home.openValue_98d3f', {
                     value0: item.title ?? t('home.item'),
                   })}
                   onPress={() => router.push(`/item/${item.id}`)}
-                  style={({ pressed }) => [
-                    styles.recentCardWrapper,
-                    { width: recentCardWidth },
-                    pressed && styles.pressed,
-                  ]}
+                  pressScale={0.968}
+                  haptic="light"
+                  style={[styles.recentCardWrapper, { width: recentCardWidth }]}
                 >
                   <View style={styles.recentCard}>
                     <View
@@ -784,21 +765,17 @@ export default function HomeScreen() {
                         >
                           {item.created_by_name} · {formatRelativeTime(item.created_at)}
                         </AppText>
-                        <MonoAvatar name={item.created_by_name} size={18} />
+                        <MonoAvatar name={item.created_by_name} size={20} />
                       </View>
                     </View>
                   </View>
-                </Pressable>
+                </SpringPressable>
               ))}
             </ScrollView>
+
             <View style={styles.homeSectionHeader}>
-              <View style={styles.homeSectionTitleWrap}>
-                <View style={styles.sectionHeaderIconBadge}>
-                  <Ionicons name="albums-outline" size={18} color={homeColors.ink} />
-                </View>
-                <AppText style={styles.homeSectionTitle}>{t('home.sharedLists')}</AppText>
-              </View>
-              <Pressable
+              <AppText style={styles.homeSectionTitle}>{t('home.sharedLists')}</AppText>
+              <SpringPressable
                 onPress={() =>
                   router.push(
                     listEntries.length >= 2
@@ -806,6 +783,8 @@ export default function HomeScreen() {
                       : `/list/create?spaceId=${space.id}`,
                   )
                 }
+                pressScale={0.94}
+                haptic="selection"
                 style={styles.homeSectionAction}
               >
                 <AppText style={styles.homeSectionActionText}>
@@ -814,47 +793,38 @@ export default function HomeScreen() {
                 <Ionicons
                   name={listEntries.length >= 2 ? 'chevron-forward' : 'add'}
                   size={14}
-                  color={homeColors.muted}
+                  color={colors.secondaryText}
                 />
-              </Pressable>
+              </SpringPressable>
             </View>
-            <View style={styles.listCard}>
-              {listEntries.slice(0, 4).map((list, index) => {
-                const query = itemQueries[index];
-                const count = query?.data?.data?.length ?? 0;
-                const isLast = index === Math.min(listEntries.length, 4) - 1;
-                return (
-                  <View key={list.id}>
-                    <ListRow
-                      list={list}
-                      count={count}
-                      memberNames={memberNames}
-                      onPress={() => router.push(`/list/${list.id}`)}
-                    />
-                    {!isLast && <View style={styles.listDivider} />}
-                  </View>
-                );
-              })}
-            </View>
+            <SharedListStack
+              lists={listEntries.slice(0, 4)}
+              itemQueries={itemQueries}
+              memberNames={memberNames}
+            />
             {needsInvite && <InviteCard spaceId={space.id} />}
-          </>
+          </Animated.View>
         )}
 
         <Modal
           visible={spaceSheetOpen}
           transparent
-          animationType="slide"
+          animationType="fade"
           onRequestClose={() => setSpaceSheetOpen(false)}
         >
           <Pressable
             style={styles.modalBackdrop}
             onPress={() => setSpaceSheetOpen(false)}
           >
-            <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+            <Animated.View
+              entering={SlideInDown.duration(220).easing(ENTER_EASING)}
+              style={styles.sheet}
+              onStartShouldSetResponder={() => true}
+            >
               <View style={styles.sheetHandle} />
               <View style={styles.sheetHeading}>
                 <View style={styles.sheetHeadingIcon}>
-                  <Ionicons name="sparkles" size={18} color={homeColors.paper} />
+                  <Ionicons name="layers-outline" size={18} color={colors.onAccent} />
                 </View>
                 <View>
                   <AppText style={styles.sheetTitle}>{t('home.switchSpace')}</AppText>
@@ -864,8 +834,8 @@ export default function HomeScreen() {
                 </View>
               </View>
               <ScrollView
-                style={{ maxHeight: 360 }}
-                contentContainerStyle={{ gap: spacing.sm }}
+                style={styles.sheetScroll}
+                contentContainerStyle={styles.sheetScrollContent}
               >
                 {(spaces.data?.data ?? []).map((entry, index) => {
                   const memberQuery = spaceMemberQueries[index];
@@ -879,25 +849,24 @@ export default function HomeScreen() {
                       ]}
                     >
                       <View style={styles.sheetSelectRow}>
-                        <Pressable
+                        <SpringPressable
                           accessibilityRole="button"
                           accessibilityLabel={t('home.chooseValue', {
                             value0: entry.name,
                           })}
+                          pressScale={0.98}
+                          haptic="selection"
                           onPress={() => {
                             setSelectedSpaceId(entry.id);
                             setSpaceSheetOpen(false);
                           }}
-                          style={({ pressed }) => [
-                            styles.sheetSelectButton,
-                            pressed && styles.pressed,
-                          ]}
+                          style={styles.sheetSelectButton}
                         >
                           <View style={styles.sheetRowIcon}>
                             <Ionicons
                               name="people-outline"
-                              size={19}
-                              color={homeColors.paper}
+                              size={18}
+                              color={colors.onAccent}
                             />
                           </View>
                           <AppText
@@ -910,23 +879,25 @@ export default function HomeScreen() {
                             <Ionicons
                               name="checkmark-circle"
                               size={21}
-                              color={homeColors.ink}
+                              color={colors.primaryText}
                             />
                           ) : null}
-                        </Pressable>
-                        <Pressable
+                        </SpringPressable>
+                        <SpringPressable
                           accessibilityRole="button"
                           accessibilityLabel={t('members.leaveNamed', {
                             name: entry.name,
                           })}
+                          pressScale={0.9}
+                          haptic="light"
                           onPress={() => {
                             setSpaceSheetOpen(false);
                             router.push(`/space/${entry.id}/leave` as never);
                           }}
                           style={styles.sheetLeaveButton}
                         >
-                          <Ionicons name="exit-outline" size={21} color={mono.danger} />
-                        </Pressable>
+                          <Ionicons name="exit-outline" size={20} color={colors.error} />
+                        </SpringPressable>
                       </View>
                       {entryMembers.length ? (
                         <MemberLinks
@@ -947,23 +918,22 @@ export default function HomeScreen() {
                   );
                 })}
               </ScrollView>
-              <Pressable
+              <SpringPressable
                 accessibilityRole="button"
                 onPress={() => {
                   setSpaceSheetOpen(false);
                   router.push('/space/create');
                 }}
-                style={({ pressed }) => [
-                  styles.sheetCreateButton,
-                  pressed && styles.pressed,
-                ]}
+                pressScale={0.965}
+                haptic="medium"
+                style={styles.sheetCreateButton}
               >
-                <Ionicons name="add" size={19} color={homeColors.paper} />
+                <Ionicons name="add" size={19} color={colors.onAccent} />
                 <AppText style={styles.sheetCreateText}>
                   {t('home.createANewSpace')}
                 </AppText>
-              </Pressable>
-            </Pressable>
+              </SpringPressable>
+            </Animated.View>
           </Pressable>
         </Modal>
       </Screen>
@@ -972,160 +942,152 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  contourTop: {
-    display: 'none',
-  },
-  contourBottom: {
-    display: 'none',
-  },
   screen: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 120,
+    paddingTop: 14,
+    paddingBottom: 136,
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
-    gap: spacing.sm,
-  },
-  spaceSelector: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: 58,
-    padding: 6,
-    paddingRight: spacing.md,
-    borderRadius: 18,
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
-  },
-  spaceCover: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.ink,
-  },
-  spaceSelectorBody: { gap: 2, flex: 1, minWidth: 0 },
-  spaceTitle: { fontSize: 16, lineHeight: 20, letterSpacing: -0.2 },
-  spaceTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   pendingAvatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.paper,
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: mono.ink,
+    borderColor: colors.borderFocus,
   },
-  pendingInitial: { color: mono.ink, fontSize: 11, fontWeight: '600' },
+  pendingInitial: { color: colors.primaryText, fontSize: 11, fontWeight: '600' },
   monoAvatar: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.ink,
+    backgroundColor: colors.accent,
   },
-  monoAvatarText: { color: mono.paper, fontWeight: '800' },
-  headerIconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
-  },
-  topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  greeting: { gap: 4, marginBottom: 22, marginTop: 4 },
+  monoAvatarText: { color: colors.onAccent, fontWeight: '700' },
+  greeting: { gap: 4, marginBottom: 22, marginTop: 2 },
   greetingSub: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: homeColors.muted,
+    color: colors.secondaryText,
     letterSpacing: -0.1,
   },
-  heroTitle: {
-    color: homeColors.ink,
-    fontSize: 24,
-    lineHeight: 30,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+  heroLine: {
+    lineHeight: 36,
   },
-  dailyMessage: { color: homeColors.muted, fontSize: 13, lineHeight: 18 },
+  heroLeading: {
+    color: colors.secondaryText,
+  },
+  heroAccent: {
+    color: colors.primaryText,
+  },
+  dailyMessage: {
+    color: colors.secondaryText,
+    fontSize: 13.5,
+    lineHeight: 19,
+    marginTop: 2,
+  },
   noSpace: { gap: spacing.md },
-  quickSaveWrap: { marginBottom: spacing.xl },
-  quickSave: {
-    gap: spacing.md,
-    borderRadius: 16,
-    padding: spacing.lg,
+  sectionBlock: { marginBottom: spacing.lg },
+  quickSaveWrap: { marginBottom: spacing.lg, gap: 12 },
+  heroCardWrap: {
+    borderRadius: 28,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: homeColors.border,
-    backgroundColor: homeColors.paper,
-    ...Platform.select({ web: { boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)' } }),
+    borderColor: 'rgba(255, 255, 255, 0.34)',
+    ...shadows.elevated,
+  },
+  heroCard: {
+    padding: 18,
+    gap: 16,
   },
   typeRow: { flexDirection: 'row', gap: 8 },
-  typeTile: {
+  heroTypeTile: {
     flex: 1,
-    minHeight: 60,
-    borderRadius: 10,
+    minHeight: 62,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
+    gap: 5,
   },
-  manualLink: {
-    alignSelf: 'center',
-    minHeight: 36,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  manualLinkText: {
-    color: homeColors.ink,
+  heroTypeTileLabel: {
+    color: colors.onAccent,
+    fontSize: 11.5,
     fontWeight: '600',
-    textDecorationLine: 'underline',
+  },
+  heroCopy: {
+    gap: 6,
   },
   quickSaveTitle: {
-    color: homeColors.ink,
-    fontSize: 18,
-    lineHeight: 23,
+    color: colors.onAccent,
+    fontSize: 20,
+    lineHeight: 25,
     fontWeight: '700',
+    letterSpacing: -0.4,
   },
-  quickSaveDescription: { color: homeColors.muted, fontSize: 13, lineHeight: 19 },
-  monoPrimaryButton: {
-    minHeight: 46,
-    borderRadius: 10,
-    paddingHorizontal: spacing.lg,
+  quickSaveDescription: {
+    color: 'rgba(255, 252, 248, 0.88)',
+    fontSize: 13.5,
+    lineHeight: 19,
+  },
+  heroCtaPressable: {
+    borderRadius: radius.pill,
+  },
+  heroCtaPill: {
+    minHeight: 52,
+    borderRadius: radius.pill,
+    paddingLeft: 14,
+    paddingRight: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.34)',
+  },
+  heroCtaSpacer: {
+    width: 38,
+  },
+  heroCtaText: {
+    color: colors.onAccent,
+    fontSize: 14.5,
+    fontWeight: '600',
+  },
+  heroCtaArrowCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualLinkPill: {
+    alignSelf: 'center',
+    minHeight: 42,
+    paddingHorizontal: 18,
+    borderRadius: radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: homeColors.ink,
-  },
-  monoPrimaryButtonText: { color: homeColors.paper, fontSize: 14, fontWeight: '700' },
-  inviteCard: {
-    padding: 16,
-    borderRadius: 16,
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.84)',
     borderWidth: 1,
-    borderColor: homeColors.border,
-    backgroundColor: homeColors.paper,
+    borderColor: 'rgba(255, 255, 255, 0.94)',
+    ...shadows.glass,
+  },
+  manualLinkText: {
+    color: colors.primaryText,
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  inviteCard: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.84)',
+    marginTop: 4,
     marginBottom: spacing.xl,
-    ...Platform.select({
-      web: { boxShadow: '0px 5px 0px rgba(0, 0, 0, 0.12)' },
-      default: {
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.12,
-        shadowRadius: 0,
-      },
-    }),
+    ...shadows.card,
   },
   inviteStatus: {
     flexDirection: 'row',
@@ -1137,15 +1099,15 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.warning,
   },
-  inviteStatusText: { color: homeColors.muted, fontSize: 11, fontWeight: '600' },
+  inviteStatusText: { color: colors.secondaryText, fontSize: 11, fontWeight: '600' },
   inviteContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   inviteAvatarWrap: {
     position: 'relative',
     padding: 3,
     borderRadius: 20,
-    backgroundColor: homeColors.soft,
+    backgroundColor: colors.surfaceSecondary,
   },
   plusBadge: {
     position: 'absolute',
@@ -1156,31 +1118,32 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: homeColors.ink,
+    backgroundColor: colors.accent,
     borderWidth: 1.5,
-    borderColor: homeColors.paper,
+    borderColor: colors.surface,
   },
-  inviteBody: { flex: 1, gap: 2 },
+  inviteBody: { flex: 1, gap: 1 },
   inviteCardTitle: {
     fontSize: 14,
     lineHeight: 18,
     fontWeight: '600',
-    color: homeColors.ink,
+    color: colors.primaryText,
   },
   inviteCardDesc: {
     fontSize: 11,
     lineHeight: 15,
-    color: homeColors.muted,
+    color: colors.secondaryText,
   },
   inviteButton: {
     height: 36,
-    paddingHorizontal: 14,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: homeColors.ink,
+    backgroundColor: colors.accent,
+    ...shadows.glass,
   },
-  inviteButtonText: { color: homeColors.paper, fontSize: 12, fontWeight: '600' },
+  inviteButtonText: { color: colors.onAccent, fontSize: 12, fontWeight: '600' },
   templateSection: { marginBottom: spacing.xl },
   templateSectionHeader: {
     flexDirection: 'row',
@@ -1189,35 +1152,43 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   templateSectionTitle: {
-    color: homeColors.ink,
-    fontSize: 20,
-    lineHeight: 25,
+    color: colors.primaryText,
+    fontSize: 19,
+    lineHeight: 24,
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   templateAddAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingVertical: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255, 255, 255, 0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.92)',
   },
-  templateAddActionText: { color: homeColors.ink, fontSize: 12, fontWeight: '700' },
-  templateIntro: { color: homeColors.muted, fontSize: 13, marginBottom: spacing.md },
+  templateAddActionText: { color: colors.primaryText, fontSize: 12, fontWeight: '600' },
+  templateIntro: { color: colors.secondaryText, fontSize: 13, marginBottom: spacing.md },
   templateIntroHeader: {
     fontSize: 13,
     fontWeight: '600',
-    color: homeColors.muted,
+    color: colors.secondaryText,
     marginBottom: spacing.sm,
     marginTop: spacing.xs,
   },
-  templateRow: { paddingHorizontal: 20, gap: spacing.sm, paddingBottom: spacing.xs },
+  templateRow: { paddingHorizontal: 20, gap: 10, paddingBottom: spacing.xs },
   templateCard: {
-    width: 132,
-    minHeight: 88,
-    borderRadius: 12,
-    padding: spacing.md,
+    width: 138,
+    minHeight: 96,
+    borderRadius: 22,
+    padding: 14,
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: homeColors.ink,
+    borderColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.86)',
+    ...shadows.card,
   },
   templateHeader: {
     flexDirection: 'row',
@@ -1225,378 +1196,203 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
+  templateIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   templatePlusBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: homeColors.paper,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   templateCardName: {
-    fontWeight: '700',
-    color: homeColors.ink,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryText,
     marginTop: spacing.xs,
   },
   customTemplate: {
-    width: 132,
-    minHeight: 88,
-    borderRadius: 12,
-    padding: spacing.md,
+    width: 138,
+    minHeight: 96,
+    borderRadius: 22,
+    padding: 14,
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: homeColors.ink,
-    backgroundColor: homeColors.paper,
+    borderColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.78)',
+    ...shadows.glass,
   },
-  customTemplateText: { color: homeColors.ink, fontWeight: '600' },
-  guideCard: {
-    padding: spacing.lg,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: colors.primaryText,
-    backgroundColor: colors.surface,
-    marginBottom: spacing.section,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0px 8px 24px rgba(20, 20, 18, 0.04)',
-      },
-    }),
-  },
-  guideHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  guideTitle: {
-    fontWeight: '700',
-    color: colors.primaryText,
-  },
-  guideSteps: {
-    gap: 2,
-  },
-  guideStepRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  guideStepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  guideStepNumberText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.accent,
-  },
-  guideStepBody: {
-    flex: 1,
-    gap: 2,
-  },
-  guideStepTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primaryText,
-  },
-  guideStepDesc: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.secondaryText,
-  },
-  guideConnector: {
-    width: 2,
-    height: 12,
-    backgroundColor: colors.border,
-    marginLeft: 11,
-    marginVertical: 2,
-  },
+  customTemplateText: { fontSize: 13, color: colors.primaryText, fontWeight: '600' },
   homeSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: spacing.xl,
-    marginBottom: 10,
+    marginTop: spacing.md,
+    marginBottom: 12,
   },
-  homeSectionTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   homeSectionTitle: {
-    color: homeColors.ink,
-    fontSize: 18,
-    lineHeight: 23,
+    color: colors.primaryText,
+    fontSize: 19,
+    lineHeight: 24,
     fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  sectionHeaderIconBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
+    letterSpacing: -0.35,
   },
   homeSectionAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
     paddingVertical: 4,
+    paddingHorizontal: 6,
   },
-  homeSectionActionText: { color: homeColors.muted, fontSize: 13, fontWeight: '600' },
+  homeSectionActionText: { color: colors.secondaryText, fontSize: 13, fontWeight: '600' },
   horizontalScrollView: {
     marginHorizontal: -20,
   },
   horizontalList: {
     paddingHorizontal: 20,
     gap: 12,
-    paddingBottom: 8,
+    paddingBottom: 16,
   },
-  decisionCard: { width: 196, padding: spacing.md, gap: spacing.sm, borderRadius: 18 },
   preview: {
     width: '100%',
-    height: 124,
-    borderRadius: radius.md,
+    height: 140,
+    borderRadius: 20,
     backgroundColor: colors.surfaceSecondary,
   },
   previewCompact: { width: 84, height: 84 },
   fallbackPreview: { alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  previewLabel: { color: homeColors.muted },
+  previewLabel: { color: colors.secondaryText },
   sourceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    marginTop: 2,
   },
-  decisionActions: { flexDirection: 'row', gap: spacing.sm },
-  wantButton: {
-    minHeight: 38,
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.accentSoft,
-  },
-  wantText: { color: colors.accent, fontWeight: '700' },
-  passButton: {
-    minHeight: 38,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  glassEmptyCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-    gap: spacing.xs,
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.primaryText,
-    backgroundColor: colors.surface,
-    marginBottom: spacing.lg,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0px 8px 24px rgba(20, 20, 18, 0.04)',
-      },
-    }),
-  },
-  emptyIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primaryText,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.secondaryText,
-    textAlign: 'center',
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  emptyActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-    paddingHorizontal: spacing.lg,
-    height: 38,
-    borderRadius: radius.md,
-    marginTop: spacing.xs,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 4px 12px rgba(200, 103, 75, 0.15)',
-      },
-    }),
-  },
-  emptyActionBtnText: {
-    color: colors.surface,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  btnPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
-  },
-  planCard: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: 18,
-    marginBottom: spacing.lg,
-  },
-  planBody: { flex: 1, gap: spacing.xs },
   recentCardWrapper: {
-    width: 142,
+    width: 224,
+  },
+  cardPressed: {
+    transform: [{ scale: 0.978 }],
+    opacity: 0.93,
   },
   recentCard: {
-    padding: 0,
-    borderRadius: 14,
+    padding: 7,
+    borderRadius: 26,
     borderWidth: 1,
-    borderColor: homeColors.ink,
-    backgroundColor: homeColors.paper,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 6px 0px rgba(0, 0, 0, 0.12)',
-      },
-      default: {
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.12,
-        shadowRadius: 0,
-      },
-    }),
+    borderColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: 'rgba(255, 255, 255, 0.90)',
+    ...shadows.card,
   },
-  recentCardContent: {
-    gap: 3,
-    padding: 9,
-  },
-  recentCardTitle: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
-    color: homeColors.ink,
-  },
-  recentMeta: { color: homeColors.muted, fontSize: 11, lineHeight: 15 },
   recentPreviewWrap: {
     position: 'relative',
     width: '100%',
-    height: 104,
-    backgroundColor: homeColors.soft,
+    height: 140,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceSecondary,
   },
   sourceBadge: {
     position: 'absolute',
-    right: 7,
-    top: 7,
-    borderRadius: 9,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    backgroundColor: 'rgba(9, 9, 9, 0.85)',
+    right: 9,
+    top: 9,
+    borderRadius: radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(17, 17, 16, 0.56)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
   },
   sourceBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    color: colors.onAccent,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
-  listCard: {
-    padding: 0,
-    borderRadius: 14,
-    marginBottom: spacing.md,
-    backgroundColor: homeColors.paper,
+  recentCardContent: {
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  recentCardTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+    color: colors.primaryText,
+  },
+  recentMeta: { color: colors.secondaryText, fontSize: 11.5, lineHeight: 16 },
+  listStack: {
+    gap: 10,
+    marginBottom: spacing.lg,
+  },
+  listRowCard: {
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.90)',
     borderWidth: 1,
-    borderColor: homeColors.ink,
+    borderColor: 'rgba(255, 255, 255, 0.94)',
     overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 5px 0px rgba(0, 0, 0, 0.12)',
-      },
-      default: {
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.12,
-        shadowRadius: 0,
-      },
-    }),
-  },
-  listRowPressable: {
-    flex: 1,
-  },
-  listRowPressed: {
-    backgroundColor: homeColors.soft,
+    ...shadows.card,
   },
   listRow: {
-    minHeight: 46,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   listIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  listBody: { flex: 1, gap: 1 },
+  listBody: { flex: 1, gap: 2 },
   homeListName: {
-    fontSize: 13,
-    lineHeight: 17,
-    fontWeight: '700',
-    color: homeColors.ink,
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '600',
+    color: colors.primaryText,
   },
-  homeListCount: { fontSize: 11, lineHeight: 14, color: homeColors.muted },
-  listDivider: {
-    height: 1,
-    backgroundColor: homeColors.borderSubtle,
-    marginLeft: 52,
-    marginRight: 12,
-  },
+  homeListCount: { fontSize: 12, lineHeight: 16, color: colors.secondaryText },
   memberStack: { flexDirection: 'row', alignItems: 'center', marginRight: 2 },
   memberStackItem: { borderRadius: 11, borderWidth: 1.5, borderColor: colors.surface },
   memberStackOverlap: { marginLeft: -7 },
-  countText: { color: colors.secondaryText },
-  pressed: { opacity: 0.75 },
+  pressed: { opacity: 0.8 },
   modalBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(24,24,23,0.28)',
+    backgroundColor: 'rgba(17, 17, 16, 0.30)',
   },
   sheet: {
     gap: spacing.md,
     padding: spacing.xxl,
     paddingBottom: spacing.section,
-    backgroundColor: homeColors.paper,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: homeColors.border,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    ...shadows.elevated,
   },
   sheetHandle: {
     alignSelf: 'center',
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: homeColors.ink,
-    marginBottom: spacing.sm,
+    backgroundColor: 'rgba(17, 17, 16, 0.16)',
+    marginBottom: spacing.xs,
   },
+  sheetScroll: { maxHeight: 360 },
+  sheetScrollContent: { gap: spacing.sm },
   sheetSelectRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   sheetSelectButton: {
     flex: 1,
@@ -1614,13 +1410,17 @@ const styles = StyleSheet.create({
   sheetRow: {
     minHeight: 58,
     gap: spacing.xs,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,
+    backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: homeColors.border,
-    borderRadius: 14,
+    borderColor: colors.border,
+    borderRadius: 18,
   },
-  sheetRowActive: { backgroundColor: homeColors.soft },
+  sheetRowActive: {
+    backgroundColor: colors.surfaceSecondary,
+    borderColor: colors.borderFocus,
+  },
   sheetHeading: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1630,32 +1430,37 @@ const styles = StyleSheet.create({
   sheetHeadingIcon: {
     width: 38,
     height: 38,
-    borderRadius: 10,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: homeColors.ink,
+    backgroundColor: colors.accent,
   },
-  sheetTitle: { fontSize: 20, lineHeight: 25, fontWeight: '800', color: homeColors.ink },
-  sheetSubtitle: { fontSize: 12, lineHeight: 16, color: homeColors.muted },
+  sheetTitle: {
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '700',
+    color: colors.primaryText,
+  },
+  sheetSubtitle: { fontSize: 12, lineHeight: 16, color: colors.secondaryText },
   sheetRowIcon: {
     width: 34,
     height: 34,
-    borderRadius: 9,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: homeColors.ink,
+    backgroundColor: colors.accent,
   },
-  sheetRowBody: { flex: 1, gap: 1 },
-  sheetRowTitle: { color: homeColors.ink },
-  sheetRowMeta: { fontSize: 11, color: homeColors.muted },
+  sheetRowTitle: { color: colors.primaryText },
+  sheetRowMeta: { fontSize: 11.5, color: colors.secondaryText },
   sheetCreateButton: {
-    minHeight: 52,
-    borderRadius: 12,
-    backgroundColor: homeColors.ink,
+    minHeight: 50,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
+    ...shadows.pillAction,
   },
-  sheetCreateText: { color: homeColors.paper, fontSize: 14, fontWeight: '800' },
+  sheetCreateText: { color: colors.onAccent, fontSize: 14, fontWeight: '600' },
 });

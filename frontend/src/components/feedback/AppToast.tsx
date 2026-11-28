@@ -10,17 +10,27 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { SHEET_SPRING } from '@/components/motion/springs';
 import { AppText } from '@/components/ui';
+import { colors, radius, shadows } from '@/design-system';
 import { haptic } from '@/lib/haptics';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 export type ToastInput = {
   title: string;
-  message: string;
+  message?: string;
   type?: ToastType;
   actionLabel?: string;
   onAction?: () => void;
@@ -33,18 +43,30 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 function getToastIconConfig(type: ToastType = 'success') {
   switch (type) {
     case 'error':
-      return { icon: 'alert-circle' as const, iconColor: '#FFFFFF', wrapBg: '#E5484D' };
+      return {
+        icon: 'alert-circle' as const,
+        iconColor: colors.onAccent,
+        wrapBg: colors.error,
+      };
     case 'warning':
       return {
         icon: 'cloud-offline-outline' as const,
-        iconColor: '#090909',
-        wrapBg: '#F5D90A',
+        iconColor: colors.primaryText,
+        wrapBg: colors.warning,
       };
     case 'info':
-      return { icon: 'information' as const, iconColor: '#090909', wrapBg: '#E7E7E5' };
+      return {
+        icon: 'information' as const,
+        iconColor: colors.primaryText,
+        wrapBg: colors.surfaceSecondary,
+      };
     case 'success':
     default:
-      return { icon: 'checkmark' as const, iconColor: '#090909', wrapBg: '#FFFFFF' };
+      return {
+        icon: 'checkmark' as const,
+        iconColor: colors.primaryText,
+        wrapBg: colors.surface,
+      };
   }
 }
 
@@ -57,18 +79,30 @@ function ToastViewport({
 }) {
   useTranslation();
   const insets = useSafeAreaInsets();
-  const progress = useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
+  const progress = useSharedValue(0);
 
   useEffect(() => {
-    if (!toast) return;
-    progress.setValue(0);
-    Animated.spring(progress, {
-      toValue: 1,
-      speed: 18,
-      bounciness: 5,
-      useNativeDriver: Platform.OS !== 'web',
-    }).start();
-  }, [progress, toast]);
+    if (!toast) {
+      progress.set(0);
+      return;
+    }
+    if (reducedMotion) {
+      progress.set(1);
+      return;
+    }
+    cancelAnimation(progress);
+    progress.set(0);
+    progress.set(withSpring(1, SHEET_SPRING));
+  }, [progress, reducedMotion, toast]);
+
+  const viewportAnimStyle = useAnimatedStyle(() => {
+    const val = progress.get();
+    return {
+      opacity: val,
+      transform: [{ translateY: (1 - val) * 28 }],
+    };
+  });
 
   if (!toast) return null;
 
@@ -77,21 +111,7 @@ function ToastViewport({
   return (
     <Animated.View
       pointerEvents="box-none"
-      style={[
-        styles.viewport,
-        {
-          bottom: insets.bottom + 86,
-          opacity: progress,
-          transform: [
-            {
-              translateY: progress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [28, 0],
-              }),
-            },
-          ],
-        },
-      ]}
+      style={[styles.viewport, { bottom: insets.bottom + 92 }, viewportAnimStyle]}
     >
       <View accessibilityLiveRegion="polite" style={styles.toast}>
         <View style={[styles.iconWrap, { backgroundColor: iconConfig.wrapBg }]}>
@@ -99,38 +119,40 @@ function ToastViewport({
         </View>
         <View style={styles.copy}>
           <AppText style={styles.title}>{toast.title}</AppText>
-          <AppText style={styles.message} numberOfLines={2}>
-            {toast.message}
-          </AppText>
+          {toast.message ? (
+            <AppText style={styles.message} numberOfLines={2}>
+              {toast.message}
+            </AppText>
+          ) : null}
         </View>
         <View style={styles.actions}>
           {toast.actionLabel && toast.onAction ? (
-            <Pressable
+            <SpringPressable
               accessibilityRole="button"
               accessibilityLabel={toast.actionLabel}
+              pressScale={0.95}
+              haptic="light"
               onPress={() => {
-                haptic.light();
                 toast.onAction?.();
                 onDismiss();
               }}
-              style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+              style={styles.actionButton}
             >
               <AppText style={styles.actionText}>{toast.actionLabel}</AppText>
               <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
-            </Pressable>
+            </SpringPressable>
           ) : null}
-          <Pressable
+          <SpringPressable
             accessibilityRole="button"
             accessibilityLabel={t('common.dismissNotification')}
-            onPress={() => {
-              haptic.light();
-              onDismiss();
-            }}
+            pressScale={0.9}
+            haptic="light"
+            onPress={onDismiss}
             hitSlop={8}
-            style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+            style={styles.closeButton}
           >
             <Ionicons name="close" size={18} color="#FFFFFF" />
-          </Pressable>
+          </SpringPressable>
         </View>
       </View>
     </Animated.View>
@@ -191,47 +213,48 @@ export function useToast() {
   return context;
 }
 
+/** Optional toast hook for standalone views or tests without ToastProvider. */
+export function useOptionalToast() {
+  return useContext(ToastContext);
+}
+
 const styles = StyleSheet.create({
   viewport: { position: 'absolute', left: 16, right: 16, zIndex: 100 },
   toast: {
-    minHeight: 72,
+    minHeight: 70,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 16,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: '#090909',
-    backgroundColor: '#090909',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    elevation: 10,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: colors.accent,
+    ...shadows.elevated,
   },
   iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
   copy: { flex: 1, gap: 2 },
-  title: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  message: { color: '#D7D7D5', fontSize: 12, lineHeight: 17 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  title: { color: colors.onAccent, fontSize: 14, fontWeight: '700' },
+  message: { color: '#DAD5CD', fontSize: 12, lineHeight: 17 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionButton: {
     minHeight: 36,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingHorizontal: 9,
-    borderRadius: 9,
-    backgroundColor: '#262625',
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
   },
-  actionText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
-  closeButton: { width: 30, height: 36, alignItems: 'center', justifyContent: 'center' },
-  pressed: { opacity: 0.7 },
+  actionText: { color: colors.onAccent, fontSize: 11, fontWeight: '700' },
+  closeButton: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,84 +1,176 @@
-import { formatRelativeTime, formatLocale, t } from '@/i18n';
-
-import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { useQueries } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  View,
-  Platform,
-  Dimensions,
-} from 'react-native';
-import { AppText, Button, Card, EmptyState, Screen } from '@/components/ui';
+  formatPlanDateLabel,
+  formatPlanDateTime,
+  formatPlanTimeLabel,
+  formatPlanWeekdayLabel,
+  formatRelativeTime,
+  t,
+} from '@/i18n';
+
+import { Ionicons } from '@expo/vector-icons';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
+
+import { queryKeys } from '@/api/query-keys';
+import { getItemFallbackImage, getItemPreviewImage } from '@/components/domain/ItemCard';
+import { useOptionalToast } from '@/components/feedback/AppToast';
 import { ScreenMotion } from '@/components/motion/ScreenMotion';
-import { colors, mono, radius, spacing } from '@/design-system';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { ENTER_EASING, LAYOUT_SPRING } from '@/components/motion/springs';
+import {
+  AppText,
+  Card,
+  EmptyState,
+  GlassSurface,
+  Screen,
+  SegmentedControl,
+  Skeleton,
+  SkeletonCard,
+  SmartImage,
+} from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
+import { collaborationApi, type Plan } from '@/features/collaboration/api';
 import { useSpaceMembers } from '@/features/collaboration/hooks';
-import { collaborationApi } from '@/features/collaboration/api';
-import { useLists } from '@/features/lists/hooks';
-import { useSpaces } from '@/features/spaces/hooks';
-import { useAuthStore } from '@/store/auth-store';
-import { useSpaceStore } from '@/store/space-store';
 import { itemsApi } from '@/features/items/api';
 import { metadataRefreshInterval } from '@/features/items/hooks';
 import type { Item } from '@/features/items/types';
-import { getItemPreviewImage } from '@/components/domain/ItemCard';
+import { getListAppearance } from '@/features/lists/appearance';
+import { useLists } from '@/features/lists/hooks';
+import { usePlanAction, useSpacePlans } from '@/features/plans/hooks';
+import { PlanSheet } from '@/features/plans/PlanSheet';
+import { OutboxStatusBanner } from '@/features/sharing/OutboxStatusBanner';
+import { syncOutbox } from '@/features/sharing/sync';
+import { useSpaces } from '@/features/spaces/hooks';
+import { SpaceHeaderBar } from '@/features/spaces/SpaceHeaderBar';
+import { addPlanToDeviceCalendar, openInGoogleCalendar } from '@/lib/external-apps';
+import { haptic } from '@/lib/haptics';
+import { useAuthStore } from '@/store/auth-store';
+import { useSpaceStore } from '@/store/space-store';
 
-const { width } = Dimensions.get('window');
-
-function PendingAvatar() {
-  useTranslation();
-  return (
-    <View
-      accessible
-      accessibilityLabel={t('home.partnerAvatarInvitationPending')}
-      style={styles.pendingAvatar}
-    >
-      <AppText style={styles.pendingInitial}>?</AppText>
-    </View>
-  );
+function splitHeadline(text: string): { leading: string; accent: string } {
+  const trimmed = text.trim();
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace <= 0) return { leading: '', accent: trimmed };
+  return {
+    leading: trimmed.slice(0, lastSpace),
+    accent: trimmed.slice(lastSpace + 1),
+  };
 }
 
-function MemberAvatar({
-  member,
-  fallback,
-  size = 28,
+function CollageImage({
+  item,
+  style,
 }: {
-  member?: any;
-  fallback?: string;
-  size?: number;
+  item: Item;
+  style: Record<string, unknown> | Record<string, unknown>[];
 }) {
-  useTranslation();
+  const uri = getItemPreviewImage(item);
+  const pending =
+    (item.metadata_status === 'pending' || item.metadata_status === 'processing') &&
+    !item.preview_image_url;
   return (
-    <MonoAvatar name={member?.display_name ?? fallback ?? t('common.user')} size={size} />
+    <SmartImage
+      uri={uri}
+      fallbackUri={getItemFallbackImage(item)}
+      pending={pending}
+      compact
+      style={style as never}
+    />
   );
 }
 
-function MonoAvatar({ name, size = 28 }: { name?: string; size?: number }) {
-  useTranslation();
+/** Adaptive cover preview that avoids empty placeholder bookmark grids. */
+function ListCoverPreview({
+  listName,
+  isDefault,
+  customIcon,
+  items,
+}: {
+  listName: string;
+  isDefault?: boolean;
+  customIcon?: string | null;
+  items: Item[];
+}) {
+  const visual = getListAppearance(listName, Boolean(isDefault), customIcon);
+  const previews = items.slice(0, 4);
+
+  if (previews.length === 0) {
+    return (
+      <View
+        style={[
+          styles.previewBox,
+          styles.emptyPreviewCanvas,
+          { backgroundColor: visual.backgroundColor },
+        ]}
+      >
+        <View style={styles.emptyPreviewBadge}>
+          <Ionicons name={visual.icon} size={22} color={colors.primaryText} />
+        </View>
+      </View>
+    );
+  }
+
+  if (previews.length === 1) {
+    return (
+      <View style={styles.previewBox}>
+        <CollageImage item={previews[0]!} style={styles.previewSingle} />
+      </View>
+    );
+  }
+
+  if (previews.length === 2) {
+    return (
+      <View style={[styles.previewBox, styles.previewSplitRow]}>
+        <CollageImage item={previews[0]!} style={styles.previewHalf} />
+        <CollageImage item={previews[1]!} style={styles.previewHalf} />
+      </View>
+    );
+  }
+
+  if (previews.length === 3) {
+    return (
+      <View style={[styles.previewBox, styles.previewSplitRow]}>
+        <CollageImage item={previews[0]!} style={styles.previewFeaturedLeft} />
+        <View style={styles.previewRightColumn}>
+          <CollageImage item={previews[1]!} style={styles.previewRightHalf} />
+          <CollageImage item={previews[2]!} style={styles.previewRightHalf} />
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View
-      style={[styles.monoAvatar, { width: size, height: size, borderRadius: size / 2 }]}
-    >
-      <AppText style={[styles.monoAvatarText, { fontSize: Math.max(10, size * 0.42) }]}>
-        {name?.trim().charAt(0).toLocaleUpperCase(formatLocale()) || '?'}
-      </AppText>
+    <View style={[styles.previewBox, styles.previewQuad]}>
+      {previews.map((item) => (
+        <CollageImage key={item.id} item={item} style={styles.previewTile} />
+      ))}
     </View>
   );
 }
 
 export default function ListsScreen() {
   useTranslation();
+  const client = useQueryClient();
+  const toast = useOptionalToast();
   const user = useAuthStore((state) => state.user);
   const spaces = useSpaces();
   const selectedSpaceId = useSpaceStore((state) => state.selectedSpaceId);
   const setSelectedSpaceId = useSpaceStore((state) => state.setSelectedSpaceId);
   const [spaceSheetOpen, setSpaceSheetOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeSection, setActiveSection] = useState<'lists' | 'plans'>('lists');
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderingPending, setReorderingPending] = useState(false);
+  const [editingPlanTarget, setEditingPlanTarget] = useState<{
+    plan: Plan;
+    item: Item;
+  } | null>(null);
+  const [mountCutoffMs] = useState(() => Date.now() - 24 * 60 * 60 * 1000);
   const space =
     spaces.data?.data.find((entry) => entry.id === selectedSpaceId) ??
     spaces.data?.data[0];
@@ -90,8 +182,10 @@ export default function ListsScreen() {
   }, [spaces.isSuccess, spaces.data?.data, selectedSpaceId]);
 
   const lists = useLists(space?.id ?? '');
-  const entries = lists.data?.data ?? [];
+  const entries = useMemo(() => lists.data?.data ?? [], [lists.data?.data]);
   const members = useSpaceMembers(space?.id ?? '');
+  const plansQuery = useSpacePlans(space?.id ?? '');
+  const planAction = usePlanAction(space?.id ?? '');
   const spaceMemberQueries = useQueries({
     queries: spaceSheetOpen
       ? (spaces.data?.data ?? []).map((entry) => ({
@@ -111,99 +205,161 @@ export default function ListsScreen() {
     })),
   });
 
-  const needsInvite = Boolean(
-    space && members.isSuccess && (members.data?.data.length ?? 0) < 2,
-  );
+  const memberEntries = members.data?.data ?? [];
+  const needsInvite = Boolean(space && members.isSuccess && memberEntries.length < 2);
   const allItems = itemQueries.flatMap((query) => query.data?.data ?? []);
+  const itemContextMap = useMemo(() => {
+    const map = new Map<string, { item: Item; listName: string }>();
+    entries.forEach((list, idx) => {
+      const listItems = itemQueries[idx]?.data?.data ?? [];
+      for (const entry of listItems) {
+        map.set(entry.id, { item: entry, listName: list.name });
+      }
+    });
+    return map;
+  }, [entries, itemQueries]);
+
+  const plansCutoffMs =
+    typeof plansQuery.dataUpdatedAt === 'number' && plansQuery.dataUpdatedAt > 0
+      ? plansQuery.dataUpdatedAt - 24 * 60 * 60 * 1000
+      : mountCutoffMs;
+
+  const activePlans = useMemo(() => {
+    return (plansQuery.data?.data ?? [])
+      .filter(
+        (plan) =>
+          (plan.status === 'proposed' || plan.status === 'approved') &&
+          new Date(plan.scheduled_at).getTime() >= plansCutoffMs,
+      )
+      .sort(
+        (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+      );
+  }, [plansQuery.data?.data, plansCutoffMs]);
+
   const today = new Date().toDateString();
   const newItemsToday = allItems.filter(
     (item) => new Date(item.created_at).toDateString() === today,
   ).length;
   const activitySummary = `${t('lists.listCount', { count: entries.length })} · ${t('lists.newItemCount', { count: newItemsToday })}`;
+  const headline = splitHeadline(t('lists.whatSHappeningInYourSpaceToday'));
 
-  const memberLabel = needsInvite
-    ? t('home.invitationPending')
-    : (members.data?.data ?? [])
-        .slice(0, 2)
-        .map((member) => member.display_name)
-        .join(' · ');
+  const currentUserId = user?.id;
+  const currentUserName =
+    user?.display_name || user?.email?.split('@')[0] || t('common.user');
+
+  const formatReminderText = (minutes?: number | null) => {
+    if (!minutes) return null;
+    if (minutes === 15) return t('plans.reminder15');
+    if (minutes === 60) return t('plans.reminder60');
+    if (minutes === 1440) return t('plans.reminder1440');
+    return null;
+  };
+
+  const buildFallbackPlanItem = (plan: Plan): Item => ({
+    id: plan.item_id,
+    space_id: plan.space_id,
+    list_id: '',
+    created_by: plan.created_by,
+    created_by_name: t('common.someone'),
+    client_item_id: null,
+    type: 'link',
+    status: 'planned',
+    title: t('common.savedItem'),
+    description: null,
+    preview_image_url: null,
+    original_url: null,
+    canonical_url: null,
+    source_domain: null,
+    source_app: null,
+    shared_text: null,
+    metadata_status: 'ready',
+    completed_at: null,
+    created_at: plan.created_at,
+    updated_at: plan.updated_at,
+  });
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await syncOutbox();
+      await client.invalidateQueries();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [client]);
+
+  const moveListOrder = useCallback(
+    async (index: number, direction: -1 | 1) => {
+      if (!space?.id || reorderingPending) return;
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= entries.length) return;
+      const next = [...entries];
+      const [moved] = next.splice(index, 1);
+      if (!moved) return;
+      next.splice(targetIndex, 0, moved);
+      const nextIds = next.map((entry) => entry.id);
+
+      haptic.selection();
+      setReorderingPending(true);
+      try {
+        const reordered = await collaborationApi.reorderLists(space.id, nextIds);
+        if (Array.isArray(reordered) && reordered.length > 0) {
+          client.setQueryData(queryKeys.lists(space.id), {
+            data: reordered,
+            pagination: { page: 1, page_size: reordered.length, has_more: false },
+          });
+        } else {
+          await client.invalidateQueries({ queryKey: queryKeys.lists(space.id) });
+        }
+        toast?.showToast({ type: 'success', title: t('lists.orderUpdated') });
+      } catch {
+        toast?.showToast({ type: 'error', title: t('common.tryAgainShort') });
+      } finally {
+        setReorderingPending(false);
+      }
+    },
+    [client, entries, reorderingPending, space, toast],
+  );
 
   return (
     <ScreenMotion>
       <Screen
         edges={['top']}
+        ambient="hero"
         scroll={true}
-        backgroundColor={mono.background}
+        refreshing={refreshing}
+        onRefresh={() => void handleRefresh()}
         contentContainerStyle={styles.screen}
       >
-        <View style={styles.contourTop} pointerEvents="none" />
-        {/* Top Bar Header */}
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('home.switchSpace')}
-            onPress={() => setSpaceSheetOpen(true)}
-            style={styles.spaceSelector}
-          >
-            <View style={styles.spaceCover}>
-              <Ionicons name="sparkles" size={17} color={mono.paper} />
-            </View>
-            <View style={styles.spaceSelectorBody}>
-              <View style={styles.spaceTitleRow}>
-                <AppText variant="cardTitle" style={styles.spaceTitle}>
-                  {space?.name ?? t('spaces.sharedSpace')}
-                </AppText>
-                <Ionicons name="chevron-down" size={16} color={mono.ink} />
-              </View>
-              <View style={styles.memberRow}>
-                <MonoAvatar
-                  name={
-                    user?.display_name || user?.email?.split('@')[0] || t('common.user')
-                  }
-                  size={26}
-                />
-                {(() => {
-                  const partner = members.data?.data?.find((m) => m.user_id !== user?.id);
-                  return partner ? (
-                    <MemberAvatar member={partner} size={26} />
-                  ) : (
-                    <PendingAvatar />
-                  );
-                })()}
-                <AppText variant="caption" muted>
-                  {memberLabel}
-                </AppText>
-              </View>
-            </View>
-          </Pressable>
-          <View style={styles.topActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('common.notifications')}
-              onPress={() => router.push('/notifications')}
-              style={styles.headerIconButton}
-            >
-              <Ionicons name="notifications-outline" size={21} color={mono.ink} />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('common.profile')}
-              onPress={() => router.push('/profile')}
-            >
-              <MonoAvatar
-                name={
-                  user?.display_name || user?.email?.split('@')[0] || t('common.user')
-                }
-                size={40}
-              />
-            </Pressable>
-          </View>
-        </View>
+        <SpaceHeaderBar
+          spaceId={space?.id}
+          spaceName={space?.name}
+          fallbackUserName={currentUserName}
+          members={memberEntries}
+          needsInvite={needsInvite}
+          onOpenSpaceSwitcher={() => setSpaceSheetOpen(true)}
+          onPressAdd={() =>
+            router.push(space ? `/list/create?spaceId=${space.id}` : '/space/create')
+          }
+          addLabel={space ? t('home.createANewList') : t('home.createSpace')}
+        />
+        <OutboxStatusBanner />
 
-        {/* Loader for first fetch */}
         {spaces.isLoading || lists.isLoading ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={mono.ink} />
+          <View style={styles.skeletonGroup}>
+            <Skeleton width={110} height={14} borderRadius={6} />
+            <Skeleton width="78%" height={30} borderRadius={8} />
+            <View style={{ gap: spacing.md, marginTop: spacing.md }}>
+              {[1, 2, 3].map((key) => (
+                <SkeletonCard key={key} style={styles.skeletonListCard}>
+                  <Skeleton width={46} height={46} borderRadius={16} />
+                  <View style={{ flex: 1, gap: 8 }}>
+                    <Skeleton width="55%" height={16} borderRadius={6} />
+                    <Skeleton width="35%" height={12} borderRadius={6} />
+                  </View>
+                </SkeletonCard>
+              ))}
+            </View>
           </View>
         ) : !space ? (
           <EmptyState
@@ -214,139 +370,624 @@ export default function ListsScreen() {
           />
         ) : (
           <>
-            {/* Dashboard Premium Space Banner Card */}
-            <Card style={styles.bannerCard}>
-              <View style={styles.bannerGlow} />
-
-              <View style={styles.bannerTop}>
-                <View style={styles.spaceBadge}>
-                  <Ionicons name="shapes-outline" size={14} color={mono.paper} />
-                  <AppText style={styles.spaceBadgeText}>{space.name}</AppText>
-                </View>
-                <AppText style={styles.bannerTitle}>
-                  {t('lists.whatSHappeningInYourSpaceToday')}
-                </AppText>
-              </View>
-
-              <AppText style={styles.bannerDescription}>{activitySummary}</AppText>
-
-              <Pressable
-                onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
-                style={({ pressed }) => [
-                  styles.bannerButton,
-                  pressed && styles.bannerButtonPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={t('home.createANewList')}
-              >
-                <Ionicons name="add" size={16} color={mono.paper} />
-                <AppText style={styles.bannerButtonText}>{t('lists.addNewList')}</AppText>
-              </Pressable>
-            </Card>
-
-            {/* Section Header */}
-            <View style={styles.sectionHeader}>
-              <AppText style={styles.sectionTitleText}>
-                {t('lists.yourActiveLists')}
+            <View style={styles.editorialHeader}>
+              <AppText variant="eyebrow" style={styles.summaryEyebrow}>
+                {activitySummary}
               </AppText>
-              <View style={styles.badgeCount}>
-                <AppText style={styles.badgeCountText}>{entries.length}</AppText>
-              </View>
+              <AppText style={styles.editorialLine}>
+                {headline.leading ? (
+                  <AppText variant="editorialHero" style={styles.headlineLeading}>
+                    {headline.leading}{' '}
+                  </AppText>
+                ) : null}
+                <AppText variant="editorialAccent" style={styles.headlineAccent}>
+                  {headline.accent}
+                </AppText>
+              </AppText>
             </View>
 
-            {/* Lists Entries */}
-            {entries.length === 0 ? (
-              <Card style={styles.emptyCard}>
-                <View style={styles.emptyIconCircle}>
-                  <Ionicons name="albums-outline" size={32} color={mono.paper} />
-                  <View style={styles.emptyBadge} />
+            <SegmentedControl
+              style={styles.sectionSwitch}
+              options={[
+                {
+                  value: 'lists',
+                  label:
+                    entries.length > 0
+                      ? `${t('plans.listsTabTitle')} (${entries.length})`
+                      : t('plans.listsTabTitle'),
+                },
+                {
+                  value: 'plans',
+                  label:
+                    activePlans.length > 0
+                      ? `${t('plans.tabTitle')} (${activePlans.length})`
+                      : t('plans.tabTitle'),
+                },
+              ]}
+              value={activeSection}
+              onChange={(next) => {
+                setActiveSection(next);
+                if (next === 'plans') setIsReordering(false);
+              }}
+            />
+
+            {activeSection === 'lists' && activePlans.length > 0 ? (
+              <SpringPressable
+                accessibilityRole="button"
+                accessibilityLabel={t('plans.tabTitle')}
+                pressScale={0.98}
+                haptic="selection"
+                onPress={() => setActiveSection('plans')}
+                style={styles.nextPlanBanner}
+              >
+                <View style={styles.nextPlanIconWrap}>
+                  <Ionicons name="calendar" size={16} color="#9E7F60" />
                 </View>
-                <AppText variant="sectionTitle" style={styles.emptyTitle}>
-                  {t('lists.createYourFirstList')}
-                </AppText>
-                <AppText muted style={styles.emptySubtitle}>
-                  {t('lists.makeAListOfPlacesToVisitMoviesToWatch')}
-                </AppText>
-                {space ? (
-                  <Button
-                    label={t('lists.createAList')}
-                    onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
-                    style={{ marginTop: spacing.md }}
-                  />
-                ) : null}
-              </Card>
-            ) : (
-              <View style={styles.listContainer}>
-                {entries.map((list, index) => {
-                  const items = itemQueries[index]?.data?.data ?? [];
-                  const previews = items.slice(0, 4);
-                  const latestItem = items[0];
-                  return (
-                    <View key={list.id} style={styles.cardPressable}>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t('home.openValue', { value0: list.name })}
-                        onPress={() => router.push(`/list/${list.id}`)}
-                        style={({ pressed }) => [pressed && styles.cardPressed]}
-                      >
-                        <Card style={styles.card}>
-                          <View style={styles.previewGrid}>
-                            {Array.from({ length: 4 }).map((_, previewIndex) => {
-                              const item = previews[previewIndex];
-                              return item ? (
-                                <Image
-                                  key={item.id}
-                                  source={{ uri: getItemPreviewImage(item) }}
-                                  style={styles.previewTile}
-                                  resizeMode="cover"
-                                />
-                              ) : (
-                                <View
-                                  key={`empty-${previewIndex}`}
-                                  style={[styles.previewTile, styles.emptyPreviewTile]}
-                                />
-                              );
-                            })}
-                          </View>
-                          <View style={styles.body}>
-                            <AppText variant="cardTitle" style={styles.cardName}>
-                              {list.name}
-                            </AppText>
-                            <AppText
-                              muted
-                              numberOfLines={1}
-                              ellipsizeMode="tail"
-                              style={styles.cardMeta}
+                <View style={styles.nextPlanCopy}>
+                  <AppText style={styles.nextPlanTitle} numberOfLines={1}>
+                    {itemContextMap.get(activePlans[0]!.item_id)?.item.title ??
+                      t('plans.tabTitle')}
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    style={styles.nextPlanDate}
+                    numberOfLines={1}
+                  >
+                    {t('plans.nextPlanHint', {
+                      date: formatPlanDateTime(activePlans[0]!.scheduled_at),
+                    })}
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#7A5E42" />
+              </SpringPressable>
+            ) : null}
+
+            {activeSection === 'plans' ? (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleGroup}>
+                    <AppText style={styles.sectionTitleText}>
+                      {t('plans.scheduledSectionTitle')}
+                    </AppText>
+                    <View style={styles.badgeCount}>
+                      <AppText style={styles.badgeCountText}>
+                        {activePlans.length}
+                      </AppText>
+                    </View>
+                  </View>
+                </View>
+
+                {activePlans.length === 0 ? (
+                  <Card style={styles.emptyPlansCard}>
+                    <View style={styles.emptyPlansIcon}>
+                      <Ionicons name="calendar-outline" size={28} color="#9E7F60" />
+                    </View>
+                    <AppText variant="sectionTitle" style={styles.emptyPlansTitle}>
+                      {t('plans.noPlansTitle')}
+                    </AppText>
+                    <AppText muted style={styles.emptyPlansSubtitle}>
+                      {t('plans.noPlansSubtitle')}
+                    </AppText>
+                  </Card>
+                ) : (
+                  <View style={styles.plansStack}>
+                    {activePlans.map((plan) => {
+                      const ctx = itemContextMap.get(plan.item_id);
+                      const linkedItem = ctx?.item ?? buildFallbackPlanItem(plan);
+                      const planTitle = ctx?.item.title ?? t('common.savedItem');
+                      const approved = plan.status === 'approved';
+                      const createdByOther = Boolean(
+                        plan.created_by && plan.created_by !== currentUserId,
+                      );
+                      const reminderText = formatReminderText(
+                        plan.reminder_minutes_before,
+                      );
+
+                      return (
+                        <Card key={plan.id} style={styles.planCard}>
+                          <SpringPressable
+                            accessibilityRole="button"
+                            accessibilityLabel={planTitle}
+                            pressScale={0.985}
+                            haptic="light"
+                            onPress={() => router.push(`/item/${plan.item_id}`)}
+                            style={styles.planTopRow}
+                          >
+                            <SmartImage
+                              uri={getItemPreviewImage(linkedItem)}
+                              fallbackUri={getItemFallbackImage(linkedItem)}
+                              compact
+                              style={styles.planThumb}
+                            />
+                            <View style={styles.planHeaderCopy}>
+                              <AppText style={styles.planItemTitle} numberOfLines={2}>
+                                {planTitle}
+                              </AppText>
+                              {ctx?.listName ? (
+                                <AppText
+                                  variant="caption"
+                                  style={styles.planListBadge}
+                                  numberOfLines={1}
+                                >
+                                  {t('lists.inList', { list: ctx.listName })}
+                                </AppText>
+                              ) : null}
+                            </View>
+                            <View
+                              style={[
+                                styles.planStatusBadge,
+                                approved && styles.planStatusApproved,
+                              ]}
                             >
-                              {latestItem
-                                ? t('lists.lastAdded', {
-                                    name:
-                                      latestItem.created_by_name ?? t('common.someone'),
-                                    time: formatRelativeTime(latestItem.created_at),
+                              <AppText
+                                style={[
+                                  styles.planStatusText,
+                                  approved && styles.planStatusTextApproved,
+                                ]}
+                              >
+                                {approved
+                                  ? t('plans.statusApproved')
+                                  : t('plans.statusProposed')}
+                              </AppText>
+                            </View>
+                          </SpringPressable>
+
+                          <View style={styles.planScheduleRow}>
+                            <View style={styles.planDateChip}>
+                              <Ionicons
+                                name="calendar-outline"
+                                size={14}
+                                color="#7A5E42"
+                              />
+                              <AppText style={styles.planDateChipText}>
+                                {`${formatPlanDateLabel(plan.scheduled_at)} · ${formatPlanWeekdayLabel(plan.scheduled_at)}`}
+                              </AppText>
+                            </View>
+                            <View style={styles.planTimeChip}>
+                              <Ionicons name="time-outline" size={14} color="#7A5E42" />
+                              <AppText style={styles.planTimeChipText}>
+                                {formatPlanTimeLabel(plan.scheduled_at)}
+                              </AppText>
+                            </View>
+                            {reminderText ? (
+                              <View style={styles.planReminderChip}>
+                                <Ionicons
+                                  name="notifications-outline"
+                                  size={13}
+                                  color={colors.secondaryText}
+                                />
+                                <AppText style={styles.planReminderChipText}>
+                                  {reminderText}
+                                </AppText>
+                              </View>
+                            ) : null}
+                          </View>
+
+                          <View style={styles.planActionsRow}>
+                            <SpringPressable
+                              accessibilityRole="button"
+                              accessibilityLabel={`${t('plans.editAction')} · ${planTitle}`}
+                              pressScale={0.95}
+                              haptic="selection"
+                              onPress={() =>
+                                setEditingPlanTarget({ plan, item: linkedItem })
+                              }
+                              style={styles.planEditPill}
+                            >
+                              <Ionicons name="create-outline" size={14} color="#5F4932" />
+                              <AppText style={styles.planMiniPillText}>
+                                {t('plans.editAction')}
+                              </AppText>
+                            </SpringPressable>
+                            {Platform.OS !== 'web' ? (
+                              <SpringPressable
+                                accessibilityRole="button"
+                                pressScale={0.95}
+                                haptic="selection"
+                                onPress={() =>
+                                  void addPlanToDeviceCalendar({
+                                    itemId: plan.item_id,
+                                    scheduledAt: plan.scheduled_at,
+                                    reminderMinutesBefore: plan.reminder_minutes_before,
+                                  }).then((res) => {
+                                    toast?.showToast({
+                                      type:
+                                        res.status === 'saved' ? 'success' : 'warning',
+                                      title:
+                                        res.status === 'saved'
+                                          ? t('plans.addedToCalendar')
+                                          : t('plans.calendarPermissionDenied'),
+                                    });
                                   })
-                                : t('lists.0Items')}
-                            </AppText>
+                                }
+                                style={styles.planMiniPill}
+                              >
+                                <Ionicons
+                                  name="calendar-outline"
+                                  size={14}
+                                  color="#5F4932"
+                                />
+                                <AppText style={styles.planMiniPillText}>
+                                  {t('plans.addToAppleCalendar')}
+                                </AppText>
+                              </SpringPressable>
+                            ) : null}
+                            <SpringPressable
+                              accessibilityRole="button"
+                              pressScale={0.95}
+                              haptic="selection"
+                              onPress={() =>
+                                void openInGoogleCalendar({
+                                  itemId: plan.item_id,
+                                  scheduledAt: plan.scheduled_at,
+                                })
+                              }
+                              style={styles.planMiniPill}
+                            >
+                              <Ionicons name="logo-google" size={13} color="#5F4932" />
+                              <AppText style={styles.planMiniPillText}>
+                                {t('plans.addToGoogleCalendar')}
+                              </AppText>
+                            </SpringPressable>
+                          </View>
+
+                          <View style={styles.planDecisionRow}>
+                            {plan.status === 'proposed' && createdByOther ? (
+                              <>
+                                <SpringPressable
+                                  accessibilityRole="button"
+                                  pressScale={0.95}
+                                  haptic="medium"
+                                  disabled={planAction.isPending}
+                                  onPress={() =>
+                                    planAction.mutate(
+                                      { planId: plan.id, action: 'approve' },
+                                      {
+                                        onSuccess: () =>
+                                          toast?.showToast({
+                                            type: 'success',
+                                            title: t('plans.planUpdated'),
+                                          }),
+                                      },
+                                    )
+                                  }
+                                  style={styles.planApproveBtn}
+                                >
+                                  <Ionicons
+                                    name="checkmark"
+                                    size={14}
+                                    color={colors.onAccent}
+                                  />
+                                  <AppText style={styles.planApproveText}>
+                                    {t('plans.approve')}
+                                  </AppText>
+                                </SpringPressable>
+                                <SpringPressable
+                                  accessibilityRole="button"
+                                  pressScale={0.95}
+                                  haptic="warning"
+                                  disabled={planAction.isPending}
+                                  onPress={() =>
+                                    planAction.mutate({
+                                      planId: plan.id,
+                                      action: 'reject',
+                                    })
+                                  }
+                                  style={styles.planDeclineBtn}
+                                >
+                                  <AppText style={styles.planDeclineText}>
+                                    {t('plans.decline')}
+                                  </AppText>
+                                </SpringPressable>
+                              </>
+                            ) : plan.status === 'proposed' ? (
+                              <SpringPressable
+                                accessibilityRole="button"
+                                pressScale={0.95}
+                                haptic="warning"
+                                disabled={planAction.isPending}
+                                onPress={() =>
+                                  planAction.mutate(
+                                    { planId: plan.id, action: 'cancel' },
+                                    {
+                                      onSuccess: () =>
+                                        toast?.showToast({
+                                          type: 'info',
+                                          title: t('plans.cancelledToast'),
+                                        }),
+                                    },
+                                  )
+                                }
+                                style={styles.planDeclineBtn}
+                              >
+                                <AppText style={styles.planDeclineText}>
+                                  {t('plans.cancelPlan')}
+                                </AppText>
+                              </SpringPressable>
+                            ) : (
+                              <SpringPressable
+                                accessibilityRole="button"
+                                pressScale={0.95}
+                                haptic="medium"
+                                disabled={planAction.isPending}
+                                onPress={() =>
+                                  planAction.mutate(
+                                    { planId: plan.id, action: 'complete' },
+                                    {
+                                      onSuccess: () =>
+                                        toast?.showToast({
+                                          type: 'success',
+                                          title: t('plans.planUpdated'),
+                                        }),
+                                    },
+                                  )
+                                }
+                                style={styles.planApproveBtn}
+                              >
+                                <Ionicons
+                                  name="checkmark-done"
+                                  size={14}
+                                  color={colors.onAccent}
+                                />
+                                <AppText style={styles.planApproveText}>
+                                  {t('plans.complete')}
+                                </AppText>
+                              </SpringPressable>
+                            )}
                           </View>
                         </Card>
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t('lists.addAnItemToValue', {
-                          value0: list.name,
-                        })}
-                        hitSlop={8}
-                        onPress={() => router.push(`/item/create?listId=${list.id}`)}
-                        style={({ pressed }) => [
-                          styles.quickAddButton,
-                          pressed && styles.quickAddButtonPressed,
-                        ]}
-                      >
-                        <Ionicons name="add" size={18} color={mono.paper} />
-                      </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleGroup}>
+                    <AppText style={styles.sectionTitleText}>
+                      {t('lists.yourActiveLists')}
+                    </AppText>
+                    <View style={styles.badgeCount}>
+                      <AppText style={styles.badgeCountText}>{entries.length}</AppText>
                     </View>
-                  );
-                })}
-              </View>
+                  </View>
+                  <View style={styles.sectionHeaderActions}>
+                    {entries.length > 1 ? (
+                      <SpringPressable
+                        onPress={() => setIsReordering((current) => !current)}
+                        pressScale={0.94}
+                        haptic="selection"
+                        style={[
+                          styles.reorderPill,
+                          isReordering && styles.reorderPillActive,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          isReordering ? t('lists.doneReordering') : t('lists.reorder')
+                        }
+                      >
+                        <Ionicons
+                          name={isReordering ? 'checkmark' : 'swap-vertical-outline'}
+                          size={14}
+                          color={isReordering ? colors.onAccent : colors.primaryText}
+                        />
+                        <AppText
+                          style={[
+                            styles.reorderPillText,
+                            isReordering && styles.reorderPillTextActive,
+                          ]}
+                        >
+                          {isReordering ? t('lists.doneReordering') : t('lists.reorder')}
+                        </AppText>
+                      </SpringPressable>
+                    ) : null}
+                    <SpringPressable
+                      onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
+                      pressScale={0.94}
+                      haptic="light"
+                      style={styles.newListPill}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('home.createANewList')}
+                    >
+                      <Ionicons name="add" size={16} color={colors.primaryText} />
+                      <AppText style={styles.newListPillText}>
+                        {t('home.newList')}
+                      </AppText>
+                    </SpringPressable>
+                  </View>
+                </View>
+
+                {entries.length === 0 ? (
+                  <Animated.View
+                    entering={FadeIn.duration(220)}
+                    style={styles.emptyHeroWrap}
+                  >
+                    <LinearGradient
+                      colors={['#C4AA8E', '#A48567', '#86694E']}
+                      locations={[0, 0.45, 1]}
+                      start={{ x: 0.12, y: 0 }}
+                      end={{ x: 0.88, y: 1 }}
+                      style={styles.emptyHeroCard}
+                    >
+                      <View style={styles.emptyIconCircle}>
+                        <Ionicons
+                          name="albums-outline"
+                          size={26}
+                          color={colors.onAccent}
+                        />
+                      </View>
+                      <AppText style={styles.emptyTitle}>
+                        {t('lists.createYourFirstList')}
+                      </AppText>
+                      <AppText style={styles.emptySubtitle}>
+                        {t('lists.makeAListOfPlacesToVisitMoviesToWatch')}
+                      </AppText>
+                      <SpringPressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('lists.createAList')}
+                        onPress={() => router.push(`/list/create?spaceId=${space.id}`)}
+                        pressScale={0.965}
+                        haptic="medium"
+                        style={styles.emptyCtaPressable}
+                      >
+                        <GlassSurface
+                          pointerEvents="none"
+                          interactive
+                          tintColor="rgba(255, 255, 255, 0.20)"
+                          fallbackBackgroundColor="rgba(255, 255, 255, 0.24)"
+                          blurIntensity={28}
+                          style={styles.emptyCtaPill}
+                        >
+                          <View style={styles.emptyCtaSpacer} />
+                          <AppText style={styles.emptyCtaText}>
+                            {t('lists.createAList')}
+                          </AppText>
+                          <View style={styles.emptyCtaArrowCircle}>
+                            <Ionicons
+                              name="arrow-forward"
+                              size={17}
+                              color={colors.primaryText}
+                            />
+                          </View>
+                        </GlassSurface>
+                      </SpringPressable>
+                    </LinearGradient>
+                  </Animated.View>
+                ) : (
+                  <Animated.View
+                    entering={FadeIn.duration(220)}
+                    layout={LAYOUT_SPRING}
+                    style={styles.listContainer}
+                  >
+                    {entries.map((list, index) => {
+                      const items = itemQueries[index]?.data?.data ?? [];
+                      const latestItem = items[0];
+                      return (
+                        <Animated.View
+                          key={list.id}
+                          layout={LAYOUT_SPRING}
+                          style={styles.cardPressable}
+                        >
+                          <SpringPressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t('home.openValue', {
+                              value0: list.name,
+                            })}
+                            onPress={() => router.push(`/list/${list.id}`)}
+                            pressScale={0.968}
+                            haptic="light"
+                            style={styles.card}
+                          >
+                            <ListCoverPreview
+                              listName={list.name}
+                              isDefault={list.is_default}
+                              customIcon={list.icon}
+                              items={items}
+                            />
+                            <View style={styles.cardFooter}>
+                              <View style={styles.body}>
+                                <AppText
+                                  variant="cardTitle"
+                                  numberOfLines={1}
+                                  style={styles.cardName}
+                                >
+                                  {list.name}
+                                </AppText>
+                                <AppText
+                                  muted
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                  style={styles.cardMeta}
+                                >
+                                  {latestItem
+                                    ? t('lists.lastAdded', {
+                                        name:
+                                          latestItem.created_by_name ??
+                                          t('common.someone'),
+                                        time: formatRelativeTime(latestItem.created_at),
+                                      })
+                                    : t('lists.0Items')}
+                                </AppText>
+                              </View>
+                              {isReordering ? (
+                                <View style={styles.reorderControls}>
+                                  <SpringPressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('lists.moveUp')}
+                                    hitSlop={6}
+                                    pressScale={0.88}
+                                    disabled={index === 0 || reorderingPending}
+                                    onPress={(event) => {
+                                      event.stopPropagation();
+                                      void moveListOrder(index, -1);
+                                    }}
+                                    style={[
+                                      styles.reorderArrowBtn,
+                                      index === 0 && styles.reorderArrowDisabled,
+                                    ]}
+                                  >
+                                    <Ionicons
+                                      name="chevron-up"
+                                      size={15}
+                                      color={colors.primaryText}
+                                    />
+                                  </SpringPressable>
+                                  <SpringPressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('lists.moveDown')}
+                                    hitSlop={6}
+                                    pressScale={0.88}
+                                    disabled={
+                                      index === entries.length - 1 || reorderingPending
+                                    }
+                                    onPress={(event) => {
+                                      event.stopPropagation();
+                                      void moveListOrder(index, 1);
+                                    }}
+                                    style={[
+                                      styles.reorderArrowBtn,
+                                      index === entries.length - 1 &&
+                                        styles.reorderArrowDisabled,
+                                    ]}
+                                  >
+                                    <Ionicons
+                                      name="chevron-down"
+                                      size={15}
+                                      color={colors.primaryText}
+                                    />
+                                  </SpringPressable>
+                                </View>
+                              ) : (
+                                <SpringPressable
+                                  accessibilityRole="button"
+                                  accessibilityLabel={t('lists.addAnItemToValue', {
+                                    value0: list.name,
+                                  })}
+                                  hitSlop={8}
+                                  pressScale={0.88}
+                                  haptic="medium"
+                                  onPress={(event) => {
+                                    event.stopPropagation();
+                                    router.push(`/item/create?listId=${list.id}`);
+                                  }}
+                                  style={styles.quickAddButton}
+                                >
+                                  <Ionicons
+                                    name="add"
+                                    size={16}
+                                    color={colors.onAccent}
+                                  />
+                                </SpringPressable>
+                              )}
+                            </View>
+                          </SpringPressable>
+                        </Animated.View>
+                      );
+                    })}
+                  </Animated.View>
+                )}
+              </>
             )}
           </>
         )}
@@ -354,445 +995,729 @@ export default function ListsScreen() {
         <Modal
           visible={spaceSheetOpen}
           transparent
-          animationType="slide"
+          animationType="fade"
           onRequestClose={() => setSpaceSheetOpen(false)}
         >
           <Pressable
             style={styles.modalBackdrop}
             onPress={() => setSpaceSheetOpen(false)}
           >
-            <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+            <Animated.View
+              entering={SlideInDown.duration(220).easing(ENTER_EASING)}
+              style={styles.sheet}
+              onStartShouldSetResponder={() => true}
+            >
               <View style={styles.sheetHandle} />
-              <AppText variant="sectionTitle">{t('home.switchSpace')}</AppText>
-              {(spaces.data?.data ?? []).map((entry) => (
-                <Pressable
-                  key={entry.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('home.chooseValue', { value0: entry.name })}
-                  onPress={() => {
-                    setSelectedSpaceId(entry.id);
-                    setSpaceSheetOpen(false);
-                  }}
-                  style={styles.sheetRow}
-                >
-                  <View style={styles.listIcon}>
-                    <Ionicons name="people-outline" size={19} color={mono.paper} />
-                  </View>
-                  <View style={styles.sheetRowBody}>
-                    <AppText variant="cardTitle">{entry.name}</AppText>
-                    <AppText variant="caption" muted numberOfLines={1}>
-                      {(() => {
-                        const memberQuery =
-                          spaceMemberQueries[
-                            (spaces.data?.data ?? []).findIndex(
-                              (space) => space.id === entry.id,
-                            )
-                          ];
-                        const entryMembers = memberQuery?.data?.data ?? [];
-                        if (memberQuery?.isLoading) return t('home.loadingMembers');
-                        return entryMembers.length > 0
-                          ? entryMembers.map((member) => member.display_name).join(' · ')
-                          : t('home.invitationPending');
-                      })()}
-                    </AppText>
-                  </View>
-                  {entry.id === space?.id ? (
-                    <Ionicons name="checkmark" size={20} color={mono.ink} />
-                  ) : null}
-                </Pressable>
-              ))}
-              <Pressable
+              <AppText variant="sectionTitle" style={styles.sheetTitle}>
+                {t('home.switchSpace')}
+              </AppText>
+              <ScrollView
+                style={styles.sheetScroll}
+                contentContainerStyle={styles.sheetScrollContent}
+              >
+                {(spaces.data?.data ?? []).map((entry, index) => {
+                  const memberQuery = spaceMemberQueries[index];
+                  const entryMembers = memberQuery?.data?.data ?? [];
+                  const active = entry.id === space?.id;
+                  return (
+                    <SpringPressable
+                      key={entry.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('home.chooseValue', { value0: entry.name })}
+                      pressScale={0.98}
+                      haptic="selection"
+                      onPress={() => {
+                        setSelectedSpaceId(entry.id);
+                        setSpaceSheetOpen(false);
+                      }}
+                      style={[styles.sheetRow, active && styles.sheetRowActive]}
+                    >
+                      <View style={styles.listIcon}>
+                        <Ionicons
+                          name="people-outline"
+                          size={18}
+                          color={colors.onAccent}
+                        />
+                      </View>
+                      <View style={styles.sheetRowBody}>
+                        <AppText variant="cardTitle" style={styles.sheetRowTitle}>
+                          {entry.name}
+                        </AppText>
+                        <AppText variant="caption" muted numberOfLines={1}>
+                          {memberQuery?.isLoading
+                            ? t('home.loadingMembers')
+                            : entryMembers.length > 0
+                              ? entryMembers
+                                  .map((member) => member.display_name)
+                                  .join(' · ')
+                              : t('home.invitationPending')}
+                        </AppText>
+                      </View>
+                      {active ? (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={21}
+                          color={colors.primaryText}
+                        />
+                      ) : null}
+                    </SpringPressable>
+                  );
+                })}
+              </ScrollView>
+              <SpringPressable
                 accessibilityRole="button"
                 onPress={() => {
                   setSpaceSheetOpen(false);
                   router.push('/space/create');
                 }}
-                style={({ pressed }) => [
-                  styles.sheetCreateButton,
-                  pressed && styles.cardPressed,
-                ]}
+                pressScale={0.965}
+                haptic="medium"
+                style={styles.sheetCreateButton}
               >
+                <Ionicons name="add" size={18} color={colors.onAccent} />
                 <AppText style={styles.sheetCreateText}>
                   {t('home.createANewSpace')}
                 </AppText>
-              </Pressable>
-            </Pressable>
+              </SpringPressable>
+            </Animated.View>
           </Pressable>
         </Modal>
+
+        {editingPlanTarget ? (
+          <PlanSheet
+            visible={Boolean(editingPlanTarget)}
+            item={editingPlanTarget.item}
+            existingPlan={editingPlanTarget.plan}
+            onClose={() => setEditingPlanTarget(null)}
+          />
+        ) : null}
       </Screen>
     </ScreenMotion>
   );
 }
 
-const styles: any = StyleSheet.create({
-  contourTop: {
-    position: 'absolute',
-    top: -165,
-    right: -165,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.7,
-  },
+const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 128,
-  },
-  header: {
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.xs,
-  },
-  title: {
-    fontSize: width > 400 ? 30 : 26,
-    fontWeight: '800',
-    color: colors.primaryText,
-    letterSpacing: -0.8,
+    paddingTop: 14,
+    paddingBottom: 136,
   },
   loaderContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.huge,
   },
-  bannerCard: {
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
-    gap: spacing.md,
-    overflow: 'hidden',
-    position: 'relative',
-    marginBottom: spacing.lg,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)',
-      },
-    }),
+  editorialHeader: {
+    gap: 4,
+    marginBottom: 14,
+    marginTop: 2,
   },
-  bannerGlow: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: mono.ink,
-    opacity: 0.35,
-    ...Platform.select({
-      web: { filter: 'blur(30px)' },
-    }),
+  sectionSwitch: {
+    marginBottom: 16,
   },
-  bannerTop: {
-    gap: spacing.xs,
-  },
-  spaceBadge: {
+  nextPlanBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: mono.ink,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    alignSelf: 'flex-start',
-    gap: 4,
+    gap: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 3,
+    borderRadius: 18,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: '#E2D0BA',
+    marginBottom: 16,
   },
-  spaceBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: mono.paper,
-  },
-  bannerTitle: {
-    fontSize: 20,
-    lineHeight: 26,
-    fontWeight: '800',
-    color: mono.ink,
-    letterSpacing: -0.3,
-  },
-  bannerDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: mono.muted,
-  },
-  bannerButton: {
-    flexDirection: 'row',
+  nextPlanIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: '#E2D0BA',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.ink,
-    paddingVertical: 12,
-    borderRadius: radius.md,
-    gap: 4,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 5px 0px rgba(0, 0, 0, 0.16)',
-      },
-    }),
   },
-  bannerButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.985 }],
+  nextPlanCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
   },
-  bannerButtonText: {
-    color: mono.paper,
+  nextPlanTitle: {
+    fontSize: 13.5,
     fontWeight: '700',
-    fontSize: 13,
+    color: colors.primaryText,
+  },
+  nextPlanDate: {
+    color: '#7A5E42',
+    fontWeight: '600',
+  },
+  emptyPlansCard: {
+    borderRadius: 24,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  emptyPlansIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: '#D4BEA4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  emptyPlansTitle: {
+    textAlign: 'center',
+  },
+  emptyPlansSubtitle: {
+    textAlign: 'center',
+    fontSize: 13.5,
+    lineHeight: 19,
+  },
+  plansStack: {
+    gap: spacing.sm + 4,
+    paddingBottom: spacing.md,
+  },
+  planCard: {
+    borderRadius: 22,
+    padding: spacing.md + 2,
+    gap: spacing.sm + 2,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
+  planTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+  },
+  planThumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  planHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  planItemTitle: {
+    fontSize: 14.5,
+    lineHeight: 19,
+    fontWeight: '700',
+    color: colors.primaryText,
+  },
+  planListBadge: {
+    color: '#7A5E42',
+    fontWeight: '600',
+  },
+  planStatusBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.warningSoft,
+  },
+  planStatusApproved: {
+    backgroundColor: colors.successSoft,
+  },
+  planStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.warning,
+  },
+  planStatusTextApproved: {
+    color: colors.success,
+  },
+  planScheduleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs + 2,
+  },
+  planDateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: '#D4BEA4',
+  },
+  planDateChipText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#5F4932',
+  },
+  planTimeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: '#D4BEA4',
+  },
+  planTimeChipText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#5F4932',
+  },
+  planReminderChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  planReminderChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: colors.secondaryText,
+  },
+  planActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs + 2,
+  },
+  planEditPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6.5,
+    borderRadius: radius.pill,
+    backgroundColor: '#EFE4D6',
+    borderWidth: 1,
+    borderColor: '#CDB59A',
+  },
+  planMiniPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6.5,
+    borderRadius: radius.pill,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: '#D4BEA4',
+  },
+  planMiniPillText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#5F4932',
+  },
+  planDecisionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+  },
+  planApproveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+  },
+  planApproveText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: colors.onAccent,
+  },
+  planDeclineBtn: {
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  planDeclineText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.secondaryText,
+  },
+  summaryEyebrow: {
+    color: colors.secondaryText,
+    letterSpacing: -0.1,
+  },
+  editorialLine: {
+    lineHeight: 35,
+  },
+  headlineLeading: {
+    color: colors.secondaryText,
+  },
+  headlineAccent: {
+    color: colors.primaryText,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.xs,
+    justifyContent: 'space-between',
+    marginBottom: 14,
+    gap: spacing.sm,
+  },
+  sectionTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sectionTitleText: {
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 19,
+    lineHeight: 24,
     fontWeight: '700',
-    color: mono.ink,
+    color: colors.primaryText,
+    letterSpacing: -0.35,
   },
   badgeCount: {
-    backgroundColor: mono.soft,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    backgroundColor: colors.accentSoft,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 7,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeCountText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: mono.muted,
-  },
-  emptyCard: {
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.sm,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)',
-      },
-    }),
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: mono.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    marginBottom: spacing.xs,
-  },
-  emptyBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: mono.ink,
-  },
-  emptyTitle: {
-    fontSize: 18,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.primaryText,
   },
+  newListPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.94)',
+    ...shadows.glass,
+  },
+  newListPillPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.97 }],
+  },
+  newListPillText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
+  sectionHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reorderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radius.pill,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: '#D4BEA4',
+  },
+  reorderPillActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  reorderPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
+  reorderPillTextActive: {
+    color: colors.onAccent,
+  },
+  reorderControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reorderArrowBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  reorderArrowDisabled: {
+    opacity: 0.35,
+  },
+  emptyHeroWrap: {
+    borderRadius: 28,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.34)',
+    ...shadows.elevated,
+  },
+  emptyHeroCard: {
+    padding: 22,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyIconCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '700',
+    color: colors.onAccent,
+    textAlign: 'center',
+    letterSpacing: -0.35,
+  },
   emptySubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.secondaryText,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: 'rgba(255, 252, 248, 0.88)',
     textAlign: 'center',
     maxWidth: 280,
-    marginBottom: spacing.xs,
+    marginBottom: 4,
+  },
+  emptyCtaPressable: {
+    width: '100%',
+    borderRadius: radius.pill,
+  },
+  emptyCtaPill: {
+    minHeight: 52,
+    borderRadius: radius.pill,
+    paddingLeft: 14,
+    paddingRight: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.34)',
+  },
+  emptyCtaSpacer: {
+    width: 38,
+  },
+  emptyCtaText: {
+    color: colors.onAccent,
+    fontSize: 14.5,
+    fontWeight: '600',
+  },
+  emptyCtaArrowCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: spacing.md,
-    paddingBottom: 110, // Avoid bottom tab bar overlap
+    gap: 12,
+    paddingBottom: spacing.md,
   },
   cardPressable: {
-    width: '48%',
-    position: 'relative',
+    width: '48.2%',
   },
   cardPressed: {
-    transform: [{ scale: 0.985 }],
-    opacity: 0.95,
+    transform: [{ scale: 0.978 }],
+    opacity: 0.93,
   },
   card: {
-    gap: spacing.sm,
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
-    padding: spacing.sm,
-    position: 'relative',
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 6px 0px rgba(0, 0, 0, 0.12)',
-        transition: 'transform 0.15s ease, opacity 0.15s ease',
-      },
-    }),
+    gap: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: 'rgba(255, 255, 255, 0.90)',
+    padding: 8,
+    ...shadows.card,
   },
-  previewGrid: {
+  previewBox: {
     width: '100%',
-    aspectRatio: 1,
+    aspectRatio: 1.04,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceSecondary,
+  },
+  emptyPreviewCanvas: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyPreviewBadge: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.glass,
+  },
+  previewSingle: {
+    width: '100%',
+    height: '100%',
+  },
+  previewSplitRow: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  previewHalf: {
+    flex: 1,
+    height: '100%',
+  },
+  previewFeaturedLeft: {
+    flex: 1.25,
+    height: '100%',
+  },
+  previewRightColumn: {
+    flex: 1,
+    gap: 3,
+    height: '100%',
+  },
+  previewRightHalf: {
+    flex: 1,
+    width: '100%',
+  },
+  previewQuad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 3,
-    overflow: 'hidden',
-    borderRadius: radius.lg,
-    backgroundColor: mono.soft,
+    justifyContent: 'space-between',
+    alignContent: 'space-between',
   },
   previewTile: {
     width: '49%',
     height: '49%',
-    backgroundColor: mono.soft,
+    backgroundColor: colors.surfaceSecondary,
   },
-  emptyPreviewTile: {
+  cardFooter: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.soft,
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingBottom: 4,
   },
   body: {
     flex: 1,
-    gap: 3,
+    minWidth: 0,
+    gap: 2,
   },
   cardName: {
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: mono.ink,
+    fontSize: 14.5,
+    lineHeight: 19,
+    fontWeight: '700',
+    color: colors.primaryText,
   },
   cardMeta: {
     fontSize: 11,
     lineHeight: 15,
-    color: mono.muted,
-    marginRight: 28,
+    color: colors.secondaryText,
   },
   quickAddButton: {
-    position: 'absolute',
-    right: spacing.sm,
-    bottom: spacing.sm,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.ink,
+    backgroundColor: colors.accent,
+    ...shadows.glass,
   },
   quickAddButtonPressed: {
-    opacity: 0.82,
+    opacity: 0.85,
     transform: [{ scale: 0.92 }],
+  },
+  pressed: { opacity: 0.8 },
+  skeletonGroup: {
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+  },
+  skeletonListCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    gap: spacing.md,
   },
   modalBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(20, 20, 18, 0.35)',
+    backgroundColor: 'rgba(17, 17, 16, 0.30)',
   },
   sheet: {
     gap: spacing.md,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxl,
-    backgroundColor: mono.paper,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    padding: spacing.xxl,
+    paddingBottom: spacing.section,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    ...shadows.elevated,
   },
   sheetHandle: {
     alignSelf: 'center',
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: mono.ink,
+    backgroundColor: 'rgba(17, 17, 16, 0.16)',
   },
+  sheetTitle: {
+    color: colors.primaryText,
+    fontWeight: '700',
+  },
+  sheetScroll: { maxHeight: 360 },
+  sheetScrollContent: { gap: spacing.sm },
   sheetRow: {
-    minHeight: 52,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: mono.soft,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+  },
+  sheetRowActive: {
+    backgroundColor: colors.surfaceSecondary,
+    borderColor: colors.borderFocus,
   },
   sheetRowBody: { flex: 1, gap: 2 },
+  sheetRowTitle: { color: colors.primaryText },
   listIcon: {
     width: 34,
     height: 34,
-    borderRadius: 11,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.ink,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  spaceSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: 58,
-    padding: 6,
-    paddingRight: spacing.md,
-    borderRadius: 18,
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
-  },
-  spaceCover: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.ink,
-  },
-  spaceSelectorBody: { gap: 2 },
-  spaceTitle: { fontSize: 16, lineHeight: 20, letterSpacing: -0.2 },
-  spaceTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  pendingAvatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.paper,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: mono.ink,
-  },
-  pendingInitial: { color: mono.ink, fontSize: 11, fontWeight: '600' },
-  monoAvatar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.ink,
-  },
-  monoAvatarText: { color: mono.paper, fontWeight: '800' },
-  headerIconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
+    backgroundColor: colors.accent,
   },
   sheetCreateButton: {
     minHeight: 50,
+    flexDirection: 'row',
+    gap: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: mono.ink,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    ...shadows.pillAction,
   },
-  sheetCreateText: { color: mono.paper, fontWeight: '800', fontSize: 14 },
-  topActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  sheetCreateText: { color: colors.onAccent, fontWeight: '600', fontSize: 14 },
 });

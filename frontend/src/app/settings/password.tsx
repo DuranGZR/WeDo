@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useToast } from '@/components/feedback/AppToast';
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText } from '@/components/ui';
-import { mono, spacing } from '@/design-system';
+import { colors, spacing } from '@/design-system';
 import {
   AccountCard,
   AccountScaffold,
@@ -35,7 +36,7 @@ export default function ChangePasswordScreen() {
         <AccountCard>
           <View style={styles.appleHero}>
             <View style={styles.appleIconWrap}>
-              <Ionicons name="logo-apple" size={28} color={mono.paper} />
+              <Ionicons name="logo-apple" size={28} color={colors.onAccent} />
             </View>
             <AppText variant="sectionTitle">{t('settings.secureSignIn')}</AppText>
             <AppText muted style={styles.appleNoticeText}>
@@ -50,6 +51,7 @@ export default function ChangePasswordScreen() {
   const submit = async () => {
     if (newPassword !== confirmation) {
       showToast({
+        type: 'warning',
         title: t('settings.passwordsDonTMatch'),
         message: t('settings.enterTheSameNewPasswordInBothFields'),
       });
@@ -58,6 +60,7 @@ export default function ChangePasswordScreen() {
 
     if (!isStrongPassword(newPassword)) {
       showToast({
+        type: 'warning',
         title: t('settings.chooseAStrongerPassword'),
         message: t('settings.useAtLeast8CharactersIncludingAnUppercaseLetterA'),
       });
@@ -68,12 +71,14 @@ export default function ChangePasswordScreen() {
     try {
       await changePassword(currentPassword, newPassword);
       showToast({
+        type: 'success',
         title: t('settings.passwordChanged'),
         message: t('settings.youVeBeenSignedOutOfAllSessionsForSecurity'),
       });
       router.replace('/(auth)/sign-in');
     } catch (error) {
       showToast({
+        type: 'error',
         title: t('settings.couldnTChangePassword'),
         message: error instanceof Error ? error.message : t('common.tryAgainShort'),
       });
@@ -111,30 +116,32 @@ export default function ChangePasswordScreen() {
           onSubmitEditing={() => void submit()}
         />
         <View style={styles.ruleBox}>
-          <Ionicons name="information-circle-outline" size={17} color={mono.ink} />
+          <Ionicons
+            name="information-circle-outline"
+            size={17}
+            color={colors.secondaryText}
+          />
           <AppText muted style={styles.ruleText}>
             {t('settings.useAtLeast8CharactersIncludingAnUppercaseLetterA_7abfc')}
           </AppText>
         </View>
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.changePassword')}
           disabled={saving}
+          haptic="light"
           onPress={() => void submit()}
-          style={({ pressed }) => [
-            accountStyles.primaryButton,
-            (pressed || saving) && accountStyles.pressed,
-          ]}
+          style={[accountStyles.primaryButton, saving && styles.disabledButton]}
         >
           {saving ? (
-            <ActivityIndicator color={mono.paper} />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
-            <Ionicons name="key" size={18} color={mono.paper} />
+            <Ionicons name="key" size={18} color={colors.onAccent} />
           )}
           <AppText style={accountStyles.primaryButtonText}>
             {t('settings.changePassword')}
           </AppText>
-        </Pressable>
+        </SpringPressable>
       </AccountCard>
     </AccountScaffold>
   );
@@ -145,8 +152,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     padding: spacing.md,
-    borderRadius: 12,
-    backgroundColor: mono.soft,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   ruleText: { flex: 1, fontSize: 12, lineHeight: 17 },
   appleHero: {
@@ -159,7 +168,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: mono.ink,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
@@ -170,4 +179,5 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     paddingHorizontal: spacing.sm,
   },
+  disabledButton: { opacity: 0.6 },
 });

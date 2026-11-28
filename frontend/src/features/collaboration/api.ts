@@ -56,10 +56,11 @@ export type Plan = {
   id: string;
   space_id: string;
   item_id: string;
+  created_by: string;
   scheduled_at: string;
   timezone: string;
   note: string | null;
-  reminder_minutes_before: number;
+  reminder_minutes_before?: number | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -113,8 +114,7 @@ export const collaborationApi = {
     page<Activity>(
       `/api/v1/spaces/${spaceId}/activities?page=${pageNumber}&page_size=50`,
     ),
-  comments: (itemId: string, pageNumber = 1) =>
-    page<Comment>(`/api/v1/items/${itemId}/comments?page=${pageNumber}&page_size=50`),
+  comments: (itemId: string) => allPages<Comment>(`/api/v1/items/${itemId}/comments`),
   createComment: (itemId: string, body: string) =>
     authenticatedApiClient<Comment>(`/api/v1/items/${itemId}/comments`, {
       method: 'POST',
@@ -152,13 +152,24 @@ export const collaborationApi = {
   ) => authenticatedApiClient(`/api/v1/lists/${listId}`, { method: 'PATCH', body }),
   deleteList: (listId: string) =>
     authenticatedApiClient<void>(`/api/v1/lists/${listId}`, { method: 'DELETE' }),
-  reorderLists: (spaceId: string, listIds: string[]) =>
-    authenticatedApiClient(`/api/v1/lists/reorder`, {
+  reorderLists: (_spaceId: string, listIds: string[]) =>
+    authenticatedApiClient<
+      {
+        id: string;
+        space_id: string;
+        name: string;
+        icon?: string | null;
+        position: number;
+        created_by: string;
+        is_default: boolean;
+        created_at: string;
+        updated_at: string;
+      }[]
+    >(`/api/v1/lists/reorder`, {
       method: 'POST',
-      body: { space_id: spaceId, list_ids: listIds },
+      body: { list_ids: listIds },
     }),
-  plans: (spaceId: string, pageNumber = 1) =>
-    page<Plan>(`/api/v1/spaces/${spaceId}/plans?page=${pageNumber}&page_size=50`),
+  plans: (spaceId: string) => allPages<Plan>(`/api/v1/spaces/${spaceId}/plans`),
   createPlan: (body: {
     space_id: string;
     item_id: string;
@@ -172,12 +183,11 @@ export const collaborationApi = {
     authenticatedApiClient<Plan>(`/api/v1/plans/${id}`, { method: 'PATCH', body }),
   planAction: (id: string, action: 'approve' | 'reject' | 'cancel' | 'complete') =>
     authenticatedApiClient<Plan>(`/api/v1/plans/${id}/${action}`, { method: 'POST' }),
-  notifications: (pageNumber = 1) =>
-    page<Notification>(`/api/v1/notifications?page=${pageNumber}&page_size=50`),
+  notifications: () => allPages<Notification>('/api/v1/notifications'),
   unreadCount: () =>
     authenticatedApiClient<{ count: number }>('/api/v1/notifications/unread-count'),
   readNotification: (id: string) =>
-    authenticatedApiClient<void>(`/api/v1/notifications/${id}/read`, { method: 'POST' }),
+    authenticatedApiClient<void>(`/api/v1/notifications/${id}/read`, { method: 'PATCH' }),
   readAllNotifications: () =>
     authenticatedApiClient<void>('/api/v1/notifications/read-all', { method: 'POST' }),
   invitation: (token: string) =>

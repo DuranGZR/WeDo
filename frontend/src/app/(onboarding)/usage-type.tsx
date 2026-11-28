@@ -2,10 +2,14 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, Card, Screen } from '@/components/ui';
-import { colors, spacing, radius } from '@/design-system';
+import Animated, { FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
+
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
+import { AppText, Card, Screen, ScreenHeader } from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 
 const options = [
   {
@@ -54,132 +58,94 @@ const options = [
 
 export default function UsageTypeScreen() {
   useTranslation();
+  const reducedMotion = useReducedMotion();
   const [selected, setSelected] = useState('');
 
   return (
     <Screen scroll={true}>
-      {/* Ambient Glow Background Blobs */}
-      <View style={styles.ambientContainer} pointerEvents="none">
-        <View style={styles.blobCoral} />
-        <View style={styles.blobSand} />
-      </View>
-
-      {/* Header Bar with Back Button */}
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
-        </Pressable>
-      </View>
+      <ScreenHeader fallbackHref="/" />
 
       <View style={styles.content}>
-        {/* Title Section */}
-        <View style={styles.header}>
-          <AppText variant="pageTitle" style={styles.title}>
+        <OnboardingProgress step={1} total={4} />
+
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInDown.duration(280)}
+          style={styles.header}
+        >
+          <AppText variant="largeTitle" style={styles.title}>
             {t('onboarding.whoWillYouUseWedoWith')}
           </AppText>
           <AppText muted style={styles.subtitle}>
             {t('onboarding.weLlSuggestSomeListsToHelpYouGetStarted')}
           </AppText>
-        </View>
+        </Animated.View>
 
-        {/* Choice Grid */}
         <View style={styles.grid}>
-          {options.map((option) => {
+          {options.map((option, index) => {
             const isSelected = selected === option.id;
             return (
-              <Pressable
+              <Animated.View
                 key={option.id}
-                onPress={() => setSelected(option.id)}
+                entering={
+                  reducedMotion
+                    ? undefined
+                    : FadeInDown.delay(50 + index * 35).duration(240)
+                }
                 style={styles.pressableCard}
               >
-                <Card style={[styles.optionCard, isSelected && styles.selectedCard]}>
-                  <View style={styles.cardContent}>
-                    <AppText style={styles.emoji}>{option.emoji}</AppText>
-                    <AppText
-                      variant="cardTitle"
-                      style={[styles.cardLabel, isSelected && styles.selectedLabel]}
-                    >
-                      {option.label}
-                    </AppText>
-                  </View>
-                  {isSelected && (
-                    <View style={styles.checkIndicator}>
-                      <Ionicons name="checkmark-circle" size={20} color={colors.accent} />
+                <SpringPressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  pressScale={0.96}
+                  haptic="selection"
+                  onPress={() => setSelected(option.id)}
+                >
+                  <Card style={[styles.optionCard, isSelected && styles.selectedCard]}>
+                    <View style={styles.cardContent}>
+                      <View
+                        style={[styles.emojiPill, isSelected && styles.emojiPillSelected]}
+                      >
+                        <AppText style={styles.emoji}>{option.emoji}</AppText>
+                      </View>
+                      <AppText
+                        variant="cardTitle"
+                        style={[styles.cardLabel, isSelected && styles.selectedLabel]}
+                      >
+                        {option.label}
+                      </AppText>
                     </View>
-                  )}
-                </Card>
-              </Pressable>
+                    {isSelected ? (
+                      <Animated.View
+                        entering={reducedMotion ? undefined : ZoomIn.duration(180)}
+                        style={styles.checkIndicator}
+                      >
+                        <Ionicons name="checkmark-circle" size={20} color="#9E7F60" />
+                      </Animated.View>
+                    ) : null}
+                  </Card>
+                </SpringPressable>
+              </Animated.View>
             );
           })}
         </View>
 
-        {/* Action Button */}
-        <Pressable
+        <SpringPressable
+          accessibilityRole="button"
+          accessibilityLabel={t('onboarding.continue')}
+          haptic="medium"
           onPress={() => router.push('/(onboarding)/list-templates')}
           disabled={!selected}
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            (!selected || pressed) && styles.btnDisabled,
-          ]}
+          style={[styles.primaryBtn, !selected && styles.btnDisabled]}
         >
           <AppText style={styles.primaryBtnText}>{t('onboarding.continue')}</AppText>
-          <Ionicons name="arrow-forward" size={18} color={colors.surface} />
-        </Pressable>
+          <Ionicons name="arrow-forward" size={18} color={colors.onAccent} />
+        </SpringPressable>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  ambientContainer: {
-    ...StyleSheet.absoluteFill,
-    overflow: 'hidden',
-    zIndex: -1,
-  },
-  blobCoral: {
-    position: 'absolute',
-    top: -100,
-    right: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: colors.accent,
-    opacity: 0.08,
-    ...Platform.select({
-      web: { filter: 'blur(80px)' },
-    }),
-  },
-  blobSand: {
-    position: 'absolute',
-    bottom: -80,
-    left: -80,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#A5A29B',
-    opacity: 0.1,
-    ...Platform.select({
-      web: { filter: 'blur(90px)' },
-    }),
-  },
-  headerBar: {
-    height: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   content: {
     flex: 1,
     gap: spacing.xl,
@@ -191,11 +157,10 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     gap: spacing.xs,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.primaryText,
     textAlign: 'center',
   },
@@ -210,7 +175,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: spacing.md,
-    marginVertical: spacing.md,
+    marginVertical: spacing.xs,
   },
   pressableCard: {
     width: '47%',
@@ -220,27 +185,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.primaryText,
-    backgroundColor: colors.surface,
-    height: 80,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0px 4px 20px rgba(20, 20, 18, 0.04)',
-        transition: 'all 0.2s ease',
-      },
-    }),
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    height: 84,
+    ...shadows.card,
   },
   selectedCard: {
-    borderColor: colors.accent,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 8px 24px rgba(200, 103, 75, 0.12)',
-      },
-    }),
+    borderWidth: 1.5,
+    borderColor: '#9E7F60',
+    backgroundColor: '#FAF5EE',
+    ...shadows.elevated,
   },
   cardContent: {
     flexDirection: 'row',
@@ -248,16 +204,28 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     flex: 1,
   },
+  emojiPill: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emojiPillSelected: {
+    backgroundColor: 'rgba(158, 127, 96, 0.16)',
+  },
   emoji: {
-    fontSize: 22,
+    fontSize: 19,
   },
   cardLabel: {
+    flex: 1,
     color: colors.primaryText,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
   selectedLabel: {
-    color: colors.accent,
+    color: colors.primaryText,
     fontWeight: '700',
   },
   checkIndicator: {
@@ -271,39 +239,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.accent,
     minHeight: 54,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
     width: '100%',
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 6px 20px rgba(200, 103, 75, 0.25)',
-        transition: 'all 0.2s ease',
-      },
-      default: {
-        shadowColor: colors.accent,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 3,
-      },
-    }),
-  },
-  btnPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
+    ...shadows.pillAction,
   },
   btnDisabled: {
-    opacity: 0.5,
-    backgroundColor: colors.accentSoft,
-    ...Platform.select({
-      web: {
-        boxShadow: 'none',
-      },
-    }),
+    opacity: 0.42,
   },
   primaryBtnText: {
-    color: colors.surface,
+    color: colors.onAccent,
     fontSize: 16,
     fontWeight: '700',
   },

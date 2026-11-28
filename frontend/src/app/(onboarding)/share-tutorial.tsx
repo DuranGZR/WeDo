@@ -1,45 +1,38 @@
 import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
-import { StyleSheet, View, Image, Platform, Pressable, Dimensions } from 'react-native';
+import { Dimensions, Image, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, Card, Screen } from '@/components/ui';
-import { colors, spacing, radius } from '@/design-system';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
+import { AppText, Card, Screen, ScreenHeader } from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 
 const { width } = Dimensions.get('window');
 
 export default function ShareTutorialScreen() {
   useTranslation();
+  const reducedMotion = useReducedMotion();
   return (
     <Screen scroll={true}>
-      {/* Ambient Glow Background Blobs */}
-      <View style={styles.ambientContainer} pointerEvents="none">
-        <View style={styles.blobCoral} />
-        <View style={styles.blobSand} />
-      </View>
-
-      {/* Header Bar with Back Button */}
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.goBack')}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
-        </Pressable>
-      </View>
+      <ScreenHeader fallbackHref="/(tabs)" />
 
       <View style={styles.content}>
-        {/* Title Section */}
-        <View style={styles.header}>
+        <OnboardingProgress step={4} total={4} />
+
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInDown.duration(260)}
+          style={styles.header}
+        >
           <AppText variant="largeTitle" style={styles.title}>
             {t('onboarding.saveWhatYouDiscoverToWedo')}
           </AppText>
           <AppText muted style={styles.subtitle}>
             {t('onboarding.bringAnythingYouFindOnlineIntoYourSharedSpaceIn')}
           </AppText>
-        </View>
+        </Animated.View>
 
         {/* Steps Cards */}
         <View style={styles.stepsContainer}>
@@ -89,7 +82,7 @@ export default function ShareTutorialScreen() {
                 </AppText>
               </View>
               <View style={styles.shareIndicator}>
-                <Ionicons name="share-outline" size={15} color={colors.accent} />
+                <Ionicons name="share-outline" size={15} color={colors.primaryText} />
               </View>
             </View>
           </Card>
@@ -226,9 +219,10 @@ export default function ShareTutorialScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actions}>
-          <Pressable
+          <SpringPressable
+            haptic="light"
             onPress={() => router.replace('/(tabs)')}
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+            style={styles.primaryBtn}
             accessibilityRole="button"
             accessibilityLabel={t('onboarding.gotIt')}
           >
@@ -236,19 +230,20 @@ export default function ShareTutorialScreen() {
             <Ionicons
               name="arrow-forward"
               size={18}
-              color={colors.surface}
+              color={colors.onAccent}
               style={styles.btnIcon}
             />
-          </Pressable>
+          </SpringPressable>
 
-          <Pressable
+          <SpringPressable
+            haptic="selection"
             onPress={() => router.replace('/(tabs)')}
-            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+            style={styles.secondaryBtn}
             accessibilityRole="button"
             accessibilityLabel={t('onboarding.later')}
           >
             <AppText style={styles.secondaryBtnText}>{t('onboarding.later')}</AppText>
-          </Pressable>
+          </SpringPressable>
         </View>
       </View>
     </Screen>
@@ -256,56 +251,6 @@ export default function ShareTutorialScreen() {
 }
 
 const styles = StyleSheet.create({
-  ambientContainer: {
-    ...StyleSheet.absoluteFill,
-    overflow: 'hidden',
-    zIndex: -1,
-  },
-  blobCoral: {
-    position: 'absolute',
-    top: -80,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: colors.accent,
-    opacity: 0.08,
-    ...Platform.select({
-      web: { filter: 'blur(75px)' },
-    }),
-  },
-  blobSand: {
-    position: 'absolute',
-    bottom: -80,
-    left: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#A5A29B',
-    opacity: 0.1,
-    ...Platform.select({
-      web: { filter: 'blur(85px)' },
-    }),
-  },
-  headerBar: {
-    height: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-    marginTop: Platform.OS === 'ios' ? 0 : spacing.sm,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(10px)' },
-    }),
-  },
   content: {
     flex: 1,
     gap: spacing.lg,
@@ -321,12 +266,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   title: {
-    fontSize: width > 400 ? 26 : 22,
-    lineHeight: width > 400 ? 32 : 28,
-    fontWeight: '800',
+    fontSize: width > 400 ? 28 : 24,
+    lineHeight: width > 400 ? 34 : 30,
+    fontWeight: '700',
     color: colors.primaryText,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
   subtitle: {
     fontSize: 14,
@@ -339,17 +284,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   stepCard: {
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.primaryText,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0px 8px 24px rgba(20, 20, 18, 0.04)',
-      },
-    }),
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    padding: spacing.lg,
+    ...shadows.card,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -358,16 +298,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   stepBadge: {
-    backgroundColor: colors.accentSoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    backgroundColor: colors.surfaceSecondary,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
     borderRadius: radius.pill,
   },
   stepBadgeText: {
-    color: colors.accent,
-    fontWeight: '800',
+    color: colors.primaryText,
+    fontWeight: '700',
     fontSize: 10,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   stepTitle: {
     color: colors.primaryText,
@@ -380,12 +320,11 @@ const styles = StyleSheet.create({
     color: colors.secondaryText,
     marginBottom: spacing.md,
   },
-  // Step 1 mock: Social badging
   socialRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: colors.surfaceSecondary,
     padding: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -396,7 +335,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     paddingVertical: 5,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.03)',
   },
@@ -410,15 +349,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Step 2 mock: iOS/Android Share Sheet mock
   shareSheetMock: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: colors.surfaceSecondary,
     padding: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -435,32 +373,21 @@ const styles = StyleSheet.create({
   mockAppIconPlaceholder: {
     width: 44,
     height: 44,
-    borderRadius: 10,
-    backgroundColor: 'rgba(20, 20, 18, 0.05)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(17, 17, 16, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   weDoIconContainer: {
     width: 44,
     height: 44,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: colors.accent,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 4px 12px rgba(200, 103, 75, 0.25)',
-      },
-      default: {
-        shadowColor: colors.accent,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-        elevation: 2,
-      },
-    }),
+    ...shadows.glass,
   },
   weDoLogoIcon: {
     width: 28,
@@ -472,8 +399,8 @@ const styles = StyleSheet.create({
   },
   weDoAppName: {
     fontSize: 10,
-    fontWeight: '800',
-    color: colors.accent,
+    fontWeight: '700',
+    color: colors.primaryText,
   },
   pingGlow: {
     position: 'absolute',
@@ -486,10 +413,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.surface,
   },
-  // Step 3 mock: Destination list selector
   listsMock: {
     gap: spacing.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: colors.surfaceSecondary,
     padding: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -500,23 +426,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     borderWidth: 1,
     borderColor: 'transparent',
   },
   mockListItemSelected: {
     backgroundColor: colors.surface,
-    borderColor: 'rgba(200, 103, 75, 0.15)',
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 2px 8px rgba(20, 20, 18, 0.03)',
-      },
-    }),
+    borderColor: colors.border,
+    ...shadows.glass,
   },
   mockListIcon: {
     width: 26,
     height: 26,
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -538,9 +460,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Actions
   actions: {
-    gap: spacing.md,
+    gap: spacing.sm,
     marginTop: spacing.sm,
   },
   primaryBtn: {
@@ -548,29 +469,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accent,
-    minHeight: 52,
-    borderRadius: radius.lg,
+    minHeight: 54,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 6px 16px rgba(200, 103, 75, 0.2)',
-        transition: 'all 0.2s ease',
-      },
-      default: {
-        shadowColor: colors.accent,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 3,
-      },
-    }),
+    ...shadows.pillAction,
   },
   primaryBtnText: {
-    color: colors.surface,
+    color: colors.onAccent,
     fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 0.3,
   },
   btnIcon: {
     marginTop: 1,
@@ -578,25 +486,16 @@ const styles = StyleSheet.create({
   secondaryBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: colors.glassElevated,
     minHeight: 52,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
+    borderRadius: radius.pill,
+    borderWidth: 1,
     borderColor: colors.border,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(10px)',
-        transition: 'all 0.2s ease',
-      },
-    }),
+    ...shadows.glass,
   },
   secondaryBtnText: {
     color: colors.primaryText,
     fontSize: 15,
     fontWeight: '700',
-  },
-  btnPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
   },
 });

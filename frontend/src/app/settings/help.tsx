@@ -3,15 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
 import { AppText } from '@/components/ui';
 import {
   AccountCard,
   AccountScaffold,
   accountStyles,
 } from '@/features/account/components/AccountScaffold';
-import { mono, spacing } from '@/design-system';
+import { colors, shadows, spacing } from '@/design-system';
 
 const topics = [
   {
@@ -50,25 +53,32 @@ const topics = [
 
 function HelpTopic({ title, text }: { title: string; text: string }) {
   useTranslation();
+  const reducedMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      accessibilityState={{ expanded: open }}
-      onPress={() => setOpen((value) => !value)}
-      style={({ pressed }) => [styles.topic, pressed && styles.pressed]}
-    >
-      <View style={styles.topicHeader}>
-        <AppText style={styles.topicTitle}>{title}</AppText>
-        <Ionicons name={open ? 'remove' : 'add'} size={20} color={mono.ink} />
-      </View>
-      {open ? (
-        <AppText muted style={styles.topicText}>
-          {text}
-        </AppText>
-      ) : null}
-    </Pressable>
+    <Animated.View layout={reducedMotion ? undefined : LAYOUT_SPRING}>
+      <SpringPressable
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ expanded: open }}
+        pressScale={0.985}
+        haptic="selection"
+        onPress={() => setOpen((value) => !value)}
+        style={styles.topic}
+      >
+        <View style={styles.topicHeader}>
+          <AppText style={styles.topicTitle}>{title}</AppText>
+          <Ionicons name={open ? 'remove' : 'add'} size={20} color={colors.primaryText} />
+        </View>
+        {open ? (
+          <Animated.View entering={reducedMotion ? undefined : FadeInDown.duration(180)}>
+            <AppText muted style={styles.topicText}>
+              {text}
+            </AppText>
+          </Animated.View>
+        ) : null}
+      </SpringPressable>
+    </Animated.View>
   );
 }
 
@@ -82,7 +92,7 @@ export default function HelpScreen() {
       <AccountCard>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
-            <Ionicons name="sparkles" size={25} color={mono.paper} />
+            <Ionicons name="sparkles" size={25} color={colors.onAccent} />
           </View>
           <View style={styles.heroCopy}>
             <AppText variant="sectionTitle">{t('settings.decideTogether')}</AppText>
@@ -103,64 +113,72 @@ export default function HelpScreen() {
         <AppText variant="caption" style={accountStyles.label}>
           {t('settings.contactSupport')}
         </AppText>
-        <Pressable
+        <SpringPressable
           accessibilityRole="link"
           accessibilityLabel={t('settings.emailSupport')}
+          pressScale={0.985}
+          haptic="selection"
           onPress={() => void Linking.openURL('mailto:contact@durangezer.com')}
-          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          style={styles.linkRow}
         >
           <View style={styles.linkLeft}>
-            <Ionicons name="mail-outline" size={18} color={mono.ink} />
+            <Ionicons name="mail-outline" size={18} color={colors.primaryText} />
             <AppText style={styles.linkTitle}>contact@durangezer.com</AppText>
           </View>
-          <Ionicons name="open-outline" size={16} color={mono.muted} />
-        </Pressable>
+          <Ionicons name="open-outline" size={16} color={colors.tertiaryText} />
+        </SpringPressable>
 
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.reportInappropriateContentOrAUser')}
+          pressScale={0.985}
+          haptic="selection"
           onPress={() => router.push('/settings/report' as never)}
-          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          style={styles.linkRow}
         >
           <View style={styles.linkLeft}>
-            <Ionicons name="flag-outline" size={18} color={mono.ink} />
+            <Ionicons name="flag-outline" size={18} color={colors.primaryText} />
             <AppText style={styles.linkTitle}>{t('settings.reportContentUser')}</AppText>
           </View>
-          <Ionicons name="open-outline" size={16} color={mono.muted} />
-        </Pressable>
+          <Ionicons name="open-outline" size={16} color={colors.tertiaryText} />
+        </SpringPressable>
       </AccountCard>
 
       <AccountCard>
         <AppText variant="caption" style={accountStyles.label}>
           {t('settings.legal')}
         </AppText>
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.openThePrivacyPolicy')}
+          pressScale={0.985}
+          haptic="selection"
           onPress={() => router.push('/legal/privacy' as never)}
-          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          style={styles.linkRow}
         >
           <View style={styles.linkLeft}>
-            <Ionicons name="document-text-outline" size={18} color={mono.ink} />
+            <Ionicons name="document-text-outline" size={18} color={colors.primaryText} />
             <AppText style={styles.linkTitle}>{t('common.privacyPolicy')}</AppText>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={mono.muted} />
-        </Pressable>
+          <Ionicons name="chevron-forward" size={16} color={colors.tertiaryText} />
+        </SpringPressable>
 
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.openTheTermsOfServiceAndEula')}
+          pressScale={0.985}
+          haptic="selection"
           onPress={() => router.push('/legal/terms' as never)}
-          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          style={styles.linkRow}
         >
           <View style={styles.linkLeft}>
-            <Ionicons name="shield-outline" size={18} color={mono.ink} />
+            <Ionicons name="shield-outline" size={18} color={colors.primaryText} />
             <AppText style={styles.linkTitle}>
               {t('common.termsOfServiceAndEula')}
             </AppText>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={mono.muted} />
-        </Pressable>
+          <Ionicons name="chevron-forward" size={16} color={colors.tertiaryText} />
+        </SpringPressable>
       </AccountCard>
     </AccountScaffold>
   );
@@ -171,10 +189,10 @@ const styles = StyleSheet.create({
   heroIcon: {
     width: 54,
     height: 54,
-    borderRadius: 17,
+    borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.ink,
+    backgroundColor: colors.accent,
   },
   heroCopy: { flex: 1, gap: 2 },
   heroText: { fontSize: 13 },
@@ -183,9 +201,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: mono.ink,
-    borderRadius: 14,
-    backgroundColor: mono.paper,
+    borderColor: colors.border,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceCard,
+    ...shadows.card,
   },
   topicHeader: {
     flexDirection: 'row',
@@ -193,7 +212,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  topicTitle: { flex: 1, fontWeight: '800' },
+  topicTitle: { flex: 1, fontWeight: '700' },
   topicText: { fontSize: 13, lineHeight: 19 },
   pressed: { opacity: 0.84 },
   linkRow: {
@@ -210,6 +229,6 @@ const styles = StyleSheet.create({
   linkTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: mono.ink,
+    color: colors.primaryText,
   },
 });

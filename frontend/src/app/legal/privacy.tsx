@@ -2,35 +2,44 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
-import { AppText, Screen } from '@/components/ui';
-import { mono, radius, spacing } from '@/design-system';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
+import { AppText, IconButton, Screen } from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 
 export default function LegalPrivacyScreen() {
   useTranslation();
+  const reducedMotion = useReducedMotion();
   return (
     <Screen scroll={true} contentContainerStyle={styles.container}>
-      <View style={styles.header}>
+      <Animated.View
+        entering={reducedMotion ? undefined : FadeInDown.duration(220)}
+        style={styles.header}
+      >
         <View style={styles.headerTitleRow}>
-          <AppText variant="screenTitle" style={styles.title}>
+          <AppText variant="largeTitle" style={styles.title}>
             {t('common.privacyPolicy')}
           </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('legal.close')}
+          <IconButton
+            icon={<Ionicons name="close" size={20} color={colors.primaryText} />}
+            tone="glass"
+            size={42}
+            label={t('legal.close')}
             onPress={() => router.back()}
-            style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="close" size={22} color={mono.ink} />
-          </Pressable>
+          />
         </View>
         <AppText muted style={styles.date}>
           {t('legal.updated20October2026')}
         </AppText>
-      </View>
+      </Animated.View>
 
-      <View style={styles.content}>
+      <Animated.View
+        entering={reducedMotion ? undefined : FadeInDown.delay(60).duration(240)}
+        layout={reducedMotion ? undefined : LAYOUT_SPRING}
+        style={styles.docCard}
+      >
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
             {t('legal.1OverviewAndOurCommitment')}
@@ -107,7 +116,7 @@ export default function LegalPrivacyScreen() {
           </AppText>
           <AppText style={styles.paragraph}>{t('legal.contactPolicy')}</AppText>
         </View>
-      </View>
+      </Animated.View>
     </Screen>
   );
 }
@@ -117,7 +126,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    backgroundColor: mono.background,
   },
   header: {
     marginBottom: spacing.lg,
@@ -127,25 +135,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: mono.ink,
-  },
-  closeButton: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: mono.soft,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
+    fontWeight: '700',
+    color: colors.primaryText,
   },
   date: {
     fontSize: 13,
   },
-  content: {
+  docCard: {
     gap: spacing.lg,
+    padding: spacing.xl,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    ...shadows.card,
   },
   section: {
     gap: spacing.xs,
@@ -153,24 +160,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: mono.ink,
+    color: colors.primaryText,
   },
   paragraph: {
     fontSize: 14,
     lineHeight: 21,
-    color: mono.muted,
+    color: colors.secondaryText,
   },
   bullet: {
     fontSize: 14,
     lineHeight: 21,
-    color: mono.muted,
+    color: colors.secondaryText,
     paddingLeft: spacing.xs,
   },
   bold: {
     fontWeight: '700',
-    color: mono.ink,
-  },
-  pressed: {
-    opacity: 0.7,
+    color: colors.primaryText,
   },
 });

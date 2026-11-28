@@ -3,17 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText } from '@/components/ui';
-import { mono, spacing } from '@/design-system';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { t } from '@/i18n';
 import { useAuthStore } from '@/store/auth-store';
 import { useSpaceStore } from '@/store/space-store';
@@ -69,10 +63,12 @@ export function SafetyActions({
 
   return (
     <View style={styles.actions}>
-      <Pressable
+      <SpringPressable
         accessibilityRole="button"
         accessibilityLabel={t('safety.report')}
         disabled={pending}
+        pressScale={0.97}
+        haptic="light"
         style={styles.button}
         onPress={() =>
           router.push({
@@ -86,40 +82,57 @@ export function SafetyActions({
           })
         }
       >
-        <Ionicons name="flag-outline" size={17} color={mono.ink} />
-        <AppText>{t('safety.report')}</AppText>
-      </Pressable>
+        <Ionicons name="flag-outline" size={16} color={colors.primaryText} />
+        <AppText style={styles.buttonText}>{t('safety.report')}</AppText>
+      </SpringPressable>
       {canBlock && (
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('safety.blockUser')}
           disabled={pending}
-          style={styles.button}
+          pressScale={0.97}
+          haptic="medium"
+          style={[styles.button, styles.dangerButton]}
           onPress={confirmBlock}
         >
           {pending ? (
-            <ActivityIndicator color={mono.danger} />
+            <ActivityIndicator color={colors.error} />
           ) : (
-            <Ionicons name="ban-outline" size={17} color={mono.danger} />
+            <Ionicons name="ban-outline" size={16} color={colors.error} />
           )}
           <AppText style={styles.danger}>{t('safety.blockUser')}</AppText>
-        </Pressable>
+        </SpringPressable>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  actions: { gap: spacing.xs },
+  actions: { gap: spacing.xs + 2 },
   button: {
-    minHeight: 48,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderWidth: 1,
-    borderColor: mono.line,
-    borderRadius: 12,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceCard,
+    ...shadows.glass,
   },
-  danger: { color: mono.danger },
+  dangerButton: {
+    backgroundColor: colors.errorSoft,
+    borderColor: 'rgba(184, 74, 66, 0.18)',
+  },
+  buttonText: {
+    fontSize: 13.5,
+    fontWeight: '500',
+    color: colors.primaryText,
+  },
+  danger: {
+    color: colors.error,
+    fontSize: 13.5,
+    fontWeight: '500',
+  },
 });

@@ -1,8 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
-import { mono, radius, spacing } from '@/design-system';
+import { SLIDE_SPRING } from '@/components/motion/springs';
+import { colors, shadows, spacing } from '@/design-system';
 import { AppText } from './AppText';
 import { Button } from './Button';
 
@@ -23,43 +30,31 @@ export function EmptyState({
   onSecondaryAction?: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
 }) {
-  const anim = useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
+  const anim = useSharedValue(reducedMotion ? 1 : 0);
 
   useEffect(() => {
-    Animated.spring(anim, {
-      toValue: 1,
-      speed: 16,
-      bounciness: 4,
-      useNativeDriver: Platform.OS !== 'web',
-    }).start();
-  }, [anim]);
+    if (reducedMotion) {
+      anim.set(1);
+      return;
+    }
+    anim.set(0);
+    anim.set(withSpring(1, SLIDE_SPRING));
+  }, [anim, reducedMotion]);
+
+  const containerStyle = useAnimatedStyle(() => {
+    const val = anim.get();
+    return {
+      opacity: val,
+      transform: [{ scale: 0.94 + 0.06 * val }, { translateY: (1 - val) * 12 }],
+    };
+  });
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          opacity: anim,
-          transform: [
-            {
-              scale: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.94, 1],
-              }),
-            },
-            {
-              translateY: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [12, 0],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
+    <Animated.View style={[styles.container, containerStyle]}>
       <View style={styles.outerRing}>
         <View style={styles.iconCircle}>
-          <Ionicons name={icon} size={30} color={mono.ink} />
+          <Ionicons name={icon} size={30} color={colors.primaryText} />
         </View>
       </View>
       <AppText variant="sectionTitle" style={styles.title}>
@@ -98,34 +93,30 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   outerRing: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 82,
+    height: 82,
+    borderRadius: 41,
     borderWidth: 1,
-    borderColor: '#D7D7D5',
+    borderColor: 'rgba(158, 127, 96, 0.24)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
-    backgroundColor: 'rgba(231, 231, 229, 0.4)',
+    backgroundColor: 'rgba(205, 185, 163, 0.16)',
   },
   iconCircle: {
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: mono.paper,
-    borderWidth: 1.5,
-    borderColor: mono.ink,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadows.card,
   },
   title: {
     textAlign: 'center',
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.4,
   },
   description: {

@@ -11,6 +11,8 @@ export const itemsApi = {
     original_url: string;
     title?: string;
   }) => authenticatedApiClient<Item>('/api/v1/items', { method: 'POST', body: input }),
+  update: (itemId: string, body: { title?: string; description?: string }) =>
+    authenticatedApiClient<Item>(`/api/v1/items/${itemId}`, { method: 'PATCH', body }),
   move: (itemId: string, listId: string) =>
     authenticatedApiClient<Item>(`/api/v1/items/${itemId}/move`, {
       method: 'POST',

@@ -1,13 +1,15 @@
 import { Stack } from 'expo-router';
+import { Platform } from 'react-native';
 
 export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: 'fade',
-        animationDuration: 180,
+        animation: Platform.OS === 'android' ? 'ios_from_right' : 'default',
         animationTypeForReplace: 'push',
+        fullScreenGestureEnabled: true,
+        gestureEnabled: true,
       }}
     />
   );

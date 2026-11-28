@@ -1,12 +1,13 @@
-import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
-import { AppText, Screen } from '@/components/ui';
-import { mono, spacing } from '@/design-system';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
+import { AppText, Screen, ScreenHeader } from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 
 export function AccountScaffold({
   title,
@@ -21,30 +22,12 @@ export function AccountScaffold({
 }) {
   useTranslation();
   return (
-    <Screen
-      scroll
-      backgroundColor={mono.background}
-      automaticallyAdjustKeyboardInsets={automaticallyAdjustKeyboardInsets}
-    >
-      <View style={styles.contourTop} pointerEvents="none" />
-      <View style={styles.contourBottom} pointerEvents="none" />
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('common.goBack')}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')
-          }
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        >
-          <Ionicons name="arrow-back" size={21} color={mono.ink} />
-        </Pressable>
-      </View>
+    <Screen scroll automaticallyAdjustKeyboardInsets={automaticallyAdjustKeyboardInsets}>
+      <ScreenHeader fallbackHref="/(tabs)/profile" />
 
       <View style={styles.content}>
         <View style={styles.titleGroup}>
-          <AppText variant="pageTitle" style={styles.title}>
+          <AppText variant="largeTitle" style={styles.title}>
             {title}
           </AppText>
           <AppText muted style={styles.subtitle}>
@@ -65,7 +48,16 @@ export function AccountCard({
   danger?: boolean;
 }) {
   useTranslation();
-  return <View style={[styles.card, danger && styles.dangerCard]}>{children}</View>;
+  const reducedMotion = useReducedMotion();
+  return (
+    <Animated.View
+      entering={reducedMotion ? undefined : FadeInDown.duration(240)}
+      layout={reducedMotion ? undefined : LAYOUT_SPRING}
+      style={[styles.card, danger && styles.dangerCard]}
+    >
+      {children}
+    </Animated.View>
+  );
 }
 
 export function AccountRow({
@@ -83,14 +75,20 @@ export function AccountRow({
 }) {
   useTranslation();
   return (
-    <Pressable
+    <SpringPressable
       accessibilityRole="button"
       accessibilityLabel={title}
+      pressScale={0.985}
+      haptic="selection"
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={styles.row}
     >
       <View style={[styles.rowIcon, danger && styles.dangerIcon]}>
-        <Ionicons name={icon} size={18} color={danger ? mono.danger : mono.ink} />
+        <Ionicons
+          name={icon}
+          size={18}
+          color={danger ? colors.error : colors.primaryText}
+        />
       </View>
       <View style={styles.rowCopy}>
         <AppText style={danger && styles.dangerText}>{title}</AppText>
@@ -100,107 +98,79 @@ export function AccountRow({
           </AppText>
         ) : null}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={mono.muted} />
-    </Pressable>
+      <Ionicons name="chevron-forward" size={18} color={colors.tertiaryText} />
+    </SpringPressable>
   );
 }
 
 export const accountStyles = StyleSheet.create({
   fieldGroup: { gap: spacing.md },
-  label: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: mono.muted },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: colors.secondaryText,
+  },
   primaryButton: {
     minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
-    borderRadius: 12,
-    backgroundColor: mono.ink,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    ...shadows.pillAction,
   },
-  primaryButtonText: { color: mono.paper, fontWeight: '800' },
+  primaryButtonText: { color: colors.onAccent, fontWeight: '700' },
   secondaryButton: {
     minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
-    borderRadius: 12,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
+    borderColor: colors.border,
+    backgroundColor: colors.glassElevated,
+    ...shadows.glass,
   },
-  secondaryButtonText: { color: mono.ink, fontWeight: '800' },
-  dangerButton: { borderColor: mono.danger },
-  dangerButtonText: { color: mono.danger },
+  secondaryButtonText: { color: colors.primaryText, fontWeight: '700' },
+  dangerButton: {
+    backgroundColor: colors.errorSoft,
+    borderColor: 'rgba(184, 74, 66, 0.25)',
+  },
+  dangerButtonText: { color: colors.error, fontWeight: '700' },
   pressed: { opacity: 0.84, transform: [{ scale: 0.985 }] },
-  divider: { height: 1, backgroundColor: mono.line, opacity: 0.35 },
+  divider: { height: 1, backgroundColor: 'rgba(17, 17, 16, 0.06)' },
   note: { fontSize: 12, lineHeight: 17 },
 });
 
 const styles = StyleSheet.create({
-  contourTop: {
-    position: 'absolute',
-    top: -162,
-    right: -165,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.7,
-  },
-  contourBottom: {
-    position: 'absolute',
-    bottom: -180,
-    left: -190,
-    width: 360,
-    height: 360,
-    borderRadius: 180,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.5,
-  },
-  header: {
-    height: 46,
-    justifyContent: 'center',
-    marginTop: Platform.OS === 'ios' ? 0 : spacing.xs,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
-  },
   content: { gap: spacing.lg, paddingBottom: 72 },
   titleGroup: { gap: spacing.xs, paddingVertical: spacing.sm },
-  title: { fontWeight: '800' },
-  subtitle: { fontSize: 14, lineHeight: 20 },
+  title: { fontWeight: '700' },
+  subtitle: { fontSize: 14, lineHeight: 20, color: colors.secondaryText },
   card: {
     gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: 16,
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
-    ...Platform.select({ web: { boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)' } }),
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    ...shadows.card,
   },
-  dangerCard: { borderColor: mono.danger },
+  dangerCard: { borderColor: 'rgba(184, 74, 66, 0.35)' },
   row: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowIcon: {
     width: 38,
     height: 38,
-    borderRadius: 11,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.soft,
+    backgroundColor: colors.surfaceSecondary,
   },
-  dangerIcon: { backgroundColor: '#F4E1DF' },
+  dangerIcon: { backgroundColor: colors.errorSoft },
   rowCopy: { flex: 1, gap: 2 },
-  rowDescription: { fontSize: 11, lineHeight: 15 },
-  dangerText: { color: mono.danger },
-  pressed: { opacity: 0.84, transform: [{ scale: 0.985 }] },
+  rowDescription: { fontSize: 12, lineHeight: 16 },
+  dangerText: { color: colors.error },
 });
