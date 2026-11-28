@@ -1,23 +1,42 @@
+import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   type StyleProp,
   StyleSheet,
   type ViewStyle,
 } from 'react-native';
 
-import { colors, radius, spacing } from '@/design-system';
-import { haptic, type HapticStyle } from '@/lib/haptics';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { colors, radius, shadows, spacing } from '@/design-system';
+import { type HapticStyle } from '@/lib/haptics';
 import { AppText } from './AppText';
+import { GlassSurface } from './GlassSurface';
+
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 type ButtonProps = {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: ButtonVariant;
   loading?: boolean;
   disabled?: boolean;
   hapticFeedback?: HapticStyle;
+  leftIcon?: ReactNode;
   style?: StyleProp<ViewStyle>;
+};
+
+const TEXT_COLORS: Record<ButtonVariant, string> = {
+  primary: colors.onAccent,
+  secondary: colors.primaryText,
+  ghost: colors.primaryText,
+  danger: colors.error,
+};
+
+const VARIANT_HAPTICS: Record<ButtonVariant, HapticStyle> = {
+  primary: 'medium',
+  secondary: 'light',
+  ghost: 'light',
+  danger: 'warning',
 };
 
 export function Button({
@@ -26,64 +45,90 @@ export function Button({
   variant = 'primary',
   loading = false,
   disabled = false,
-  hapticFeedback = 'light',
+  hapticFeedback,
+  leftIcon,
   style,
 }: ButtonProps) {
   const handlePress = () => {
     if (disabled || loading) return;
-    haptic.trigger(hapticFeedback);
     onPress();
   };
 
+  const textColor = TEXT_COLORS[variant];
+  const resolvedHaptic = hapticFeedback ?? VARIANT_HAPTICS[variant];
+
   return (
-    <Pressable
+    <SpringPressable
       accessibilityRole="button"
       accessibilityLabel={label}
       disabled={disabled || loading}
+      haptic={resolvedHaptic}
       onPress={handlePress}
-      style={({ pressed }) => [
+      pressScale={0.965}
+      pressOpacity={0.9}
+      style={[
         styles.base,
         styles[variant],
         style,
-        pressed && styles.pressed,
         (disabled || loading) && styles.disabled,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? colors.surface : colors.accent}
+      {variant === 'secondary' ? (
+        <GlassSurface
+          pointerEvents="none"
+          tintColor="rgba(255, 255, 255, 0.56)"
+          fallbackBackgroundColor={colors.glassElevated}
+          style={styles.glassBackdrop}
         />
+      ) : null}
+      {loading ? (
+        <ActivityIndicator color={textColor} />
       ) : (
-        <AppText style={[styles.label, variant !== 'primary' && styles.darkLabel]}>
-          {label}
-        </AppText>
+        <>
+          {leftIcon}
+          <AppText style={[styles.label, { color: textColor }]}>{label}</AppText>
+        </>
       )}
-    </Pressable>
+    </SpringPressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 52,
-    borderRadius: radius.md,
+    minHeight: 50,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+    overflow: 'hidden',
+  },
+  glassBackdrop: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: radius.pill,
   },
   primary: {
     backgroundColor: colors.accent,
-    borderWidth: 1,
-    borderColor: colors.primaryText,
+    ...shadows.pillAction,
   },
   secondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.primaryText,
+    backgroundColor: 'transparent',
+    ...shadows.glass,
   },
-  ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.error },
-  label: { color: colors.surface, fontWeight: '600' },
-  darkLabel: { color: colors.primaryText },
-  pressed: { opacity: 0.82 },
-  disabled: { opacity: 0.5 },
+  ghost: {
+    backgroundColor: 'transparent',
+  },
+  danger: {
+    backgroundColor: colors.errorSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 74, 66, 0.22)',
+  },
+  label: {
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  disabled: {
+    opacity: 0.5,
+  },
 });

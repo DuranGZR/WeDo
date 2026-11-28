@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/design-system';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { AppText } from './AppText';
 
 export function Chip({
@@ -19,27 +20,23 @@ export function Chip({
   );
   if (!onPress)
     return (
-      <Pressable
-        accessibilityRole="text"
-        style={[styles.base, selected && styles.selected]}
-      >
+      <View accessibilityRole="text" style={[styles.base, selected && styles.selected]}>
         {content}
-      </Pressable>
+      </View>
     );
   return (
-    <Pressable
+    <SpringPressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={label}
+      pressScale={0.95}
+      pressOpacity={0.86}
+      haptic="selection"
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.base,
-        selected && styles.selected,
-        pressed && styles.pressed,
-      ]}
+      style={[styles.base, selected && styles.selected]}
     >
       {content}
-    </Pressable>
+    </SpringPressable>
   );
 }
 
@@ -49,12 +46,21 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: colors.accentSoft,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: colors.border,
   },
-  selected: { backgroundColor: colors.accent, borderColor: colors.accent },
-  label: { color: colors.secondaryText },
-  selectedLabel: { color: colors.surface, fontWeight: '700' },
-  pressed: { opacity: 0.75 },
+  selected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+    ...shadows.glass,
+  },
+  label: {
+    color: colors.secondaryText,
+    fontWeight: '600',
+  },
+  selectedLabel: {
+    color: colors.onAccent,
+    fontWeight: '700',
+  },
 });

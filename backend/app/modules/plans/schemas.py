@@ -19,6 +19,7 @@ class PlanUpdate(BaseModel):
     scheduled_at: datetime | None = None
     timezone: str | None = Field(default=None, max_length=64)
     note: str | None = Field(default=None, max_length=2000)
+    reminder_minutes_before: int | None = Field(default=None, ge=5, le=10080)
 
 
 class PlanResponse(BaseModel):
@@ -29,6 +30,7 @@ class PlanResponse(BaseModel):
     scheduled_at: datetime
     timezone: str
     note: str | None
+    reminder_minutes_before: int | None = None
     status: PlanStatus
     approved_at: datetime | None
     completed_at: datetime | None

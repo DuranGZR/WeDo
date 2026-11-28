@@ -176,5 +176,19 @@
   "web.reportAndBlockPolicy": "İçerik ayrıntısı veya Üyeler ve güvenlik ekranındaki bildirim düğmesini ya da Ayarlar > Yardım bölümündeki formu kullanabilirsin. Ekibimiz bildirimleri 24 saat içinde inceler; uygunsuz içerik kaldırılır ve ihlal eden hesaplar askıya alınabilir. Alternatif iletişim: contact@durangezer.com. Üyeler ve güvenlik ekranından veya içerik ayrıntısından kullanıcı engelleyebilirsin. Engellediğin kişi sana ait ortak alanlardan çıkarılır; sana ait olmayan ortak alanlardan sen ayrılırsın. Önceden kaydedilmiş içerikler alanlarda kalır. Engel varken aynı alana yeniden katılamazsınız. Ayarlar > Engellenen kullanıcılar bölümünden engeli kaldırabilirsin; eski üyelikler otomatik geri gelmez.",
   "web.updated20October2026": "20 Ekim 2026",
   "members.chooseSuccessor": "Ayrılmadan önce bu alandaki etkin bir üyeyi yeni sahip olarak seç.",
-  "members.onlyOwnerTransfers": "Alan sahipliğini yalnız alan sahibi devredebilir."
+  "members.onlyOwnerTransfers": "Alan sahipliğini yalnız alan sahibi devredebilir.",
+  "activity.item_created": "İçerik kaydedildi",
+  "activity.item_updated": "İçerik düzenlendi",
+  "activity.item_moved": "Başka listeye taşındı",
+  "activity.item_completed": "Yapıldı işaretlendi",
+  "activity.item_restored": "Yapılacaklara alındı",
+  "activity.item_deleted": "İçerik silindi",
+  "activity.plan_updated": "Plan güncellendi",
+  "activity.plan_rejected": "Plan reddedildi",
+  "message.newPlanProposed": "Yeni buluşma planı",
+  "message.someoneProposedAPlan": "Ortak alandaki bir içerik için tarih planı önerildi.",
+  "message.planApprovedTitle": "Plan onaylandı",
+  "message.partnerApprovedYourPlan": "Partnerin önerilen tarih planını onayladı.",
+  "message.planRejectedTitle": "Plan reddedildi",
+  "message.partnerRejectedYourPlan": "Partnerin önerilen tarih planını reddetti."
 }

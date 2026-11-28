@@ -3,14 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Controller } from 'react-hook-form';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
 import { AppleAuthButton } from '@/components/auth/AppleAuthButton';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
-import { AuthShell, authColors } from '@/components/auth/AuthShell';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
 import { AppText, TextField } from '@/components/ui';
-import { spacing } from '@/design-system';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { getAuthSubmitError } from '@/features/auth/error-message';
 import { getVerificationChallenge } from '@/features/auth/email-verification';
 import { PasswordField } from '@/features/auth/PasswordField';
@@ -19,6 +22,7 @@ import { useAuthStore } from '@/store/auth-store';
 
 export default function SignInScreen() {
   const { i18n } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const signIn = useAuthStore((state) => state.signIn);
   const { inviteToken, email: registeredEmail } = useLocalSearchParams<{
     inviteToken?: string;
@@ -73,6 +77,11 @@ export default function SignInScreen() {
     <AuthShell
       title={t('auth.welcomeBack')}
       subtitle={t('auth.pickUpWhereYouLeftOffWithYourSharedPlans')}
+      belowCard={
+        <AppText muted style={styles.securityHint}>
+          {t('auth.verifyYourEmailToSignInSecurely')}
+        </AppText>
+      }
       footer={
         <AppText style={styles.footerText}>
           {t('auth.newToWedo')}{' '}
@@ -102,12 +111,16 @@ export default function SignInScreen() {
         </View>
 
         {registeredEmail ? (
-          <View style={styles.registrationNotice}>
-            <Ionicons name="checkmark-circle" size={18} color="#47734B" />
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeInDown.duration(200)}
+            layout={reducedMotion ? undefined : LAYOUT_SPRING}
+            style={styles.registrationNotice}
+          >
+            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
             <AppText style={styles.registrationNoticeText}>
               {t('auth.onceYourEmailIsVerifiedSignInWithYourPassword')}
             </AppText>
-          </View>
+          </Animated.View>
         ) : null}
         <Controller
           control={form.control}
@@ -123,7 +136,6 @@ export default function SignInScreen() {
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
-              style={styles.input}
             />
           )}
         />
@@ -139,39 +151,38 @@ export default function SignInScreen() {
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
-              style={styles.input}
               onSubmitEditing={() => void form.handleSubmit(submit)()}
             />
           )}
         />
         {submitError ? (
-          <View accessibilityRole="alert" style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color="#9D1F1F" />
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeInDown.duration(180)}
+            layout={reducedMotion ? undefined : LAYOUT_SPRING}
+            accessibilityRole="alert"
+            style={styles.errorBanner}
+          >
+            <Ionicons name="alert-circle-outline" size={18} color={colors.error} />
             <AppText style={styles.errorText}>{submitError}</AppText>
-          </View>
+          </Animated.View>
         ) : null}
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('common.signIn')}
+          haptic="medium"
           onPress={() => void form.handleSubmit(submit)()}
           disabled={loading}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            (pressed || loading) && styles.pressed,
-          ]}
+          style={[styles.primaryButton, loading && styles.disabledButton]}
         >
           {loading ? (
-            <ActivityIndicator color={authColors.paper} />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <>
               <AppText style={styles.primaryButtonText}>{t('common.signIn')}</AppText>
-              <Ionicons name="arrow-forward" size={18} color={authColors.paper} />
+              <Ionicons name="arrow-forward" size={18} color={colors.onAccent} />
             </>
           )}
-        </Pressable>
-        <AppText muted style={styles.securityHint}>
-          {t('auth.verifyYourEmailToSignInSecurely')}
-        </AppText>
+        </SpringPressable>
       </View>
     </AuthShell>
   );
@@ -188,70 +199,64 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#D1D1CF',
+    backgroundColor: 'rgba(17, 17, 16, 0.1)',
   },
   dividerText: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  input: {
-    borderRadius: 8,
-    borderColor: '#8D8D8B',
-    backgroundColor: authColors.paper,
-    fontSize: 15,
   },
   registrationNotice: {
     flexDirection: 'row',
     gap: spacing.sm,
     alignItems: 'center',
     padding: spacing.sm,
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#89A98C',
-    backgroundColor: '#EFF7EF',
+    borderColor: 'rgba(78, 122, 88, 0.28)',
+    backgroundColor: colors.successSoft,
   },
   registrationNoticeText: {
     flex: 1,
-    color: '#29522E',
+    color: colors.success,
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '700',
   },
   primaryButton: {
-    minHeight: 54,
+    minHeight: 52,
     marginTop: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    borderRadius: 9,
-    backgroundColor: authColors.ink,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    ...shadows.pillAction,
   },
-  primaryButtonText: { color: authColors.paper, fontSize: 14, fontWeight: '700' },
+  disabledButton: { opacity: 0.72 },
+  primaryButtonText: { color: colors.onAccent, fontSize: 15, fontWeight: '700' },
   securityHint: {
     textAlign: 'center',
     fontSize: 11,
     lineHeight: 16,
-    paddingHorizontal: spacing.md,
   },
   errorBanner: {
     flexDirection: 'row',
     gap: spacing.sm,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#D67A7A',
-    backgroundColor: '#FFF0F0',
-    borderRadius: 8,
+    borderColor: 'rgba(184, 74, 66, 0.28)',
+    backgroundColor: colors.errorSoft,
+    borderRadius: 16,
     padding: spacing.sm,
   },
   errorText: {
     flex: 1,
-    color: '#7A1414',
+    color: colors.error,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '600',
   },
-  footerText: { color: '#5F5F5D', fontSize: 13, textAlign: 'center' },
-  footerLink: { color: authColors.ink, fontWeight: '700' },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
+  footerText: { color: colors.secondaryText, fontSize: 13, textAlign: 'center' },
+  footerLink: { color: colors.primaryText, fontWeight: '700' },
 });

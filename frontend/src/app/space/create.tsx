@@ -2,17 +2,21 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import {
-  Alert,
-  StyleSheet,
-  View,
-  Platform,
-  Pressable,
-  ActivityIndicator,
-} from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText, BrandLogo, Screen, TextField, Card } from '@/components/ui';
-import { colors, spacing, radius } from '@/design-system';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
+import {
+  AppText,
+  BrandLogo,
+  Card,
+  Screen,
+  ScreenHeader,
+  TextField,
+} from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { useCreateSpace } from '@/features/spaces/hooks';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth-store';
@@ -25,6 +29,7 @@ const suggestions = () => [
 
 export default function CreateSpaceScreen() {
   useTranslation();
+  const reducedMotion = useReducedMotion();
   const [name, setName] = useState('');
   const create = useCreateSpace();
 
@@ -57,150 +62,94 @@ export default function CreateSpaceScreen() {
 
   return (
     <Screen scroll={true}>
-      {/* Ambient Glow Background Blobs */}
-      <View style={styles.ambientContainer} pointerEvents="none">
-        <View style={styles.blobCoral} />
-        <View style={styles.blobSand} />
-      </View>
-
-      {/* Header Bar with Back Button */}
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => void handleBack()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.goBack')}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
-        </Pressable>
-      </View>
+      <ScreenHeader onBack={() => void handleBack()} />
 
       <View style={styles.content}>
-        {/* Logo and Title */}
-        <View style={styles.brandHeader}>
-          <BrandLogo />
-          <AppText variant="pageTitle" style={styles.title}>
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInDown.duration(260)}
+          style={styles.brandHeader}
+        >
+          <BrandLogo animated />
+          <AppText variant="largeTitle" style={styles.title}>
             {t('spaces.giveYourSharedSpaceAName')}
           </AppText>
           <AppText muted style={styles.subtitle}>
             {t('spaces.onlyMembersOfThisSpaceCanSeeItsName')}
           </AppText>
-        </View>
+        </Animated.View>
 
-        {/* Glassmorphic Form Card */}
-        <Card style={styles.formCard}>
-          <View style={styles.form}>
-            <TextField
-              autoFocus
-              label={t('spaces.spaceName')}
-              placeholder={t('spaces.eGPekCan')}
-              value={name}
-              onChangeText={setName}
-            />
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInDown.delay(70).duration(280)}
+          layout={reducedMotion ? undefined : LAYOUT_SPRING}
+        >
+          <Card style={styles.formCard}>
+            <View style={styles.form}>
+              <TextField
+                autoFocus
+                label={t('spaces.spaceName')}
+                placeholder={t('spaces.eGPekCan')}
+                value={name}
+                onChangeText={setName}
+              />
 
-            {/* Interactive Suggestions Chips */}
-            <View style={styles.suggestionsContainer}>
-              <AppText variant="caption" muted style={styles.suggestionsLabel}>
-                {t('spaces.suggestions')}
-              </AppText>
-              <View style={styles.chipsWrapper}>
-                {suggestions().map((suggestion) => (
-                  <Pressable
-                    key={suggestion}
-                    onPress={() => setName(suggestion)}
-                    style={({ pressed }) => [
-                      styles.suggestionChip,
-                      name === suggestion && styles.activeChip,
-                      pressed && styles.btnPressed,
-                    ]}
-                  >
-                    <AppText
+              <View style={styles.suggestionsContainer}>
+                <AppText variant="caption" muted style={styles.suggestionsLabel}>
+                  {t('spaces.suggestions')}
+                </AppText>
+                <View style={styles.chipsWrapper}>
+                  {suggestions().map((suggestion) => (
+                    <SpringPressable
+                      key={suggestion}
+                      pressScale={0.95}
+                      haptic="selection"
+                      onPress={() => setName(suggestion)}
                       style={[
-                        styles.chipText,
-                        name === suggestion && styles.activeChipText,
+                        styles.suggestionChip,
+                        name === suggestion && styles.activeChip,
                       ]}
                     >
-                      {suggestion}
-                    </AppText>
-                  </Pressable>
-                ))}
+                      <AppText
+                        style={[
+                          styles.chipText,
+                          name === suggestion && styles.activeChipText,
+                        ]}
+                      >
+                        {suggestion}
+                      </AppText>
+                    </SpringPressable>
+                  ))}
+                </View>
               </View>
-            </View>
 
-            <Pressable
-              onPress={() => void submit()}
-              disabled={create.isPending || !name.trim()}
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                (pressed || create.isPending || !name.trim()) && styles.btnPressed,
-              ]}
-            >
-              {create.isPending ? (
-                <ActivityIndicator color={colors.surface} />
-              ) : (
-                <>
-                  <AppText style={styles.primaryBtnText}>
-                    {t('spaces.createSpace')}
-                  </AppText>
-                  <Ionicons name="arrow-forward" size={18} color={colors.surface} />
-                </>
-              )}
-            </Pressable>
-          </View>
-        </Card>
+              <SpringPressable
+                haptic="medium"
+                onPress={() => void submit()}
+                disabled={create.isPending || !name.trim()}
+                style={[
+                  styles.primaryBtn,
+                  (create.isPending || !name.trim()) && styles.btnDisabled,
+                ]}
+              >
+                {create.isPending ? (
+                  <ActivityIndicator color={colors.surface} />
+                ) : (
+                  <>
+                    <AppText style={styles.primaryBtnText}>
+                      {t('spaces.createSpace')}
+                    </AppText>
+                    <Ionicons name="arrow-forward" size={18} color={colors.surface} />
+                  </>
+                )}
+              </SpringPressable>
+            </View>
+          </Card>
+        </Animated.View>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  ambientContainer: {
-    ...StyleSheet.absoluteFill,
-    overflow: 'hidden',
-    zIndex: -1,
-  },
-  blobCoral: {
-    position: 'absolute',
-    top: -120,
-    left: -80,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: colors.accent,
-    opacity: 0.08,
-    ...Platform.select({
-      web: { filter: 'blur(90px)' },
-    }),
-  },
-  blobSand: {
-    position: 'absolute',
-    bottom: -80,
-    right: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#A5A29B',
-    opacity: 0.1,
-    ...Platform.select({
-      web: { filter: 'blur(80px)' },
-    }),
-  },
-  headerBar: {
-    height: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -215,8 +164,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.primaryText,
     textAlign: 'center',
   },
@@ -227,17 +175,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   formCard: {
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.primaryText,
-    backgroundColor: colors.surface,
+    borderRadius: radius.cardLg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
     padding: spacing.xl,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(16px)',
-        boxShadow: '0px 12px 36px rgba(20, 20, 18, 0.08)',
-      },
-    }),
+    ...shadows.card,
   },
   form: {
     gap: spacing.md,
@@ -258,21 +201,21 @@ const styles = StyleSheet.create({
   suggestionChip: {
     backgroundColor: colors.surfaceSecondary,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.xs + 2,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
   },
   activeChip: {
     borderColor: colors.accent,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.accent,
   },
   chipText: {
     fontSize: 13,
     color: colors.secondaryText,
   },
   activeChipText: {
-    color: colors.accent,
+    color: colors.onAccent,
     fontWeight: '600',
   },
   primaryBtn: {
@@ -281,31 +224,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.accent,
     minHeight: 54,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.xl,
     marginTop: spacing.xs,
     gap: spacing.sm,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 6px 20px rgba(200, 103, 75, 0.25)',
-        transition: 'all 0.2s ease',
-      },
-      default: {
-        shadowColor: colors.accent,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 3,
-      },
-    }),
+    ...shadows.pillAction,
   },
   primaryBtnText: {
-    color: colors.surface,
+    color: colors.onAccent,
     fontSize: 16,
     fontWeight: '700',
   },
-  btnPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
+  btnDisabled: {
+    opacity: 0.45,
   },
 });

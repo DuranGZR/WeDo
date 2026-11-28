@@ -2,15 +2,19 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
-import { AuthShell, authColors } from '@/components/auth/AuthShell';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
 import { AppText, TextField } from '@/components/ui';
-import { spacing } from '@/design-system';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { resendVerification, verifyEmail } from '@/features/auth/email-verification';
 
 export default function VerifyEmailScreen() {
   const { i18n } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const { email, verificationId, resendAfter, inviteToken } = useLocalSearchParams<{
     email?: string;
     verificationId?: string;
@@ -98,13 +102,19 @@ export default function VerifyEmailScreen() {
     >
       <View style={styles.form}>
         {verified || !verificationId ? (
-          <Pressable
-            accessibilityRole="button"
-            style={styles.button}
-            onPress={goToSignIn}
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeInDown.duration(220)}
+            layout={reducedMotion ? undefined : LAYOUT_SPRING}
           >
-            <AppText style={styles.buttonText}>{t('common.signIn')}</AppText>
-          </Pressable>
+            <SpringPressable
+              accessibilityRole="button"
+              haptic="light"
+              style={styles.button}
+              onPress={goToSignIn}
+            >
+              <AppText style={styles.buttonText}>{t('common.signIn')}</AppText>
+            </SpringPressable>
+          </Animated.View>
         ) : (
           <>
             <TextField
@@ -124,26 +134,40 @@ export default function VerifyEmailScreen() {
             />
             <AppText muted>{t('auth.yourCodeIsValidFor10MinutesCheckYourSpam')}</AppText>
             {error ? (
-              <AppText accessibilityRole="alert" style={styles.error}>
-                {error}
-              </AppText>
+              <Animated.View
+                entering={reducedMotion ? undefined : FadeInDown.duration(160)}
+                layout={reducedMotion ? undefined : LAYOUT_SPRING}
+              >
+                <AppText accessibilityRole="alert" style={styles.error}>
+                  {error}
+                </AppText>
+              </Animated.View>
             ) : null}
-            {notice ? <AppText accessibilityLiveRegion="polite">{notice}</AppText> : null}
-            <Pressable
+            {notice ? (
+              <Animated.View
+                entering={reducedMotion ? undefined : FadeInDown.duration(160)}
+                layout={reducedMotion ? undefined : LAYOUT_SPRING}
+              >
+                <AppText accessibilityLiveRegion="polite">{notice}</AppText>
+              </Animated.View>
+            ) : null}
+            <SpringPressable
               accessibilityRole="button"
               accessibilityLabel={t('auth.verifyEmail')}
+              haptic="light"
               disabled={busy || code.length !== 6}
               onPress={() => void submit(false)}
               style={[styles.button, (busy || code.length !== 6) && styles.disabled]}
             >
               {busy ? (
-                <ActivityIndicator color={authColors.paper} />
+                <ActivityIndicator color={colors.onAccent} />
               ) : (
                 <AppText style={styles.buttonText}>{t('auth.verifyEmail')}</AppText>
               )}
-            </Pressable>
-            <Pressable
+            </SpringPressable>
+            <SpringPressable
               accessibilityRole="button"
+              haptic="selection"
               disabled={busy || remaining > 0}
               onPress={() => void submit(true)}
               style={styles.link}
@@ -155,14 +179,15 @@ export default function VerifyEmailScreen() {
                     })
                   : t('auth.resendCode')}
               </AppText>
-            </Pressable>
-            <Pressable
+            </SpringPressable>
+            <SpringPressable
               accessibilityRole="button"
+              haptic="selection"
               onPress={goToSignIn}
               style={styles.link}
             >
               <AppText>{t('auth.backToSignInChangeEmail')}</AppText>
-            </Pressable>
+            </SpringPressable>
           </>
         )}
       </View>
@@ -173,15 +198,16 @@ export default function VerifyEmailScreen() {
 const styles = StyleSheet.create({
   form: { gap: spacing.lg },
   button: {
-    backgroundColor: authColors.ink,
-    minHeight: 50,
-    borderRadius: 14,
+    backgroundColor: colors.accent,
+    minHeight: 52,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.md,
+    ...shadows.pillAction,
   },
-  buttonText: { color: authColors.paper, fontWeight: '600' },
+  buttonText: { color: colors.onAccent, fontWeight: '700' },
   disabled: { opacity: 0.5 },
-  error: { color: '#9D1F1F' },
+  error: { color: colors.error },
   link: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });

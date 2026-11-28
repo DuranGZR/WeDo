@@ -1,12 +1,15 @@
 from fastapi import APIRouter
 
+from app.modules.activities.router import router as activities_router
 from app.modules.auth.router import router as auth_router
+from app.modules.comments.router import router as comments_router
 from app.modules.invitations.router import router as invitations_router
 from app.modules.items.router import router as items_router
 from app.modules.lists.router import router as lists_router
 from app.modules.members.router import router as members_router
 from app.modules.notifications.devices_router import router as devices_router
 from app.modules.notifications.router import router as notifications_router
+from app.modules.plans.router import router as plans_router
 from app.modules.safety.router import router as safety_router
 from app.modules.spaces.router import router as spaces_router
 from app.modules.users.router import router as users_router
@@ -17,6 +20,9 @@ api_v1_router.include_router(users_router, prefix="/users", tags=["Users"])
 api_v1_router.include_router(spaces_router, prefix="/spaces", tags=["Spaces"])
 api_v1_router.include_router(invitations_router, tags=["Invitations"])
 api_v1_router.include_router(items_router, tags=["Items"])
+api_v1_router.include_router(comments_router, tags=["Comments"])
+api_v1_router.include_router(plans_router, tags=["Plans"])
+api_v1_router.include_router(activities_router, tags=["Activities"])
 api_v1_router.include_router(notifications_router, tags=["Notifications"])
 api_v1_router.include_router(devices_router, tags=["Devices"])
 api_v1_router.include_router(members_router, tags=["Members"])

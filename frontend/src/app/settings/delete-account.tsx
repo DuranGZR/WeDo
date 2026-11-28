@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
 import { useToast } from '@/components/feedback/AppToast';
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText } from '@/components/ui';
-import { mono, spacing } from '@/design-system';
+import { colors, spacing } from '@/design-system';
 import {
   AccountCard,
   AccountScaffold,
@@ -42,6 +43,7 @@ export default function DeleteAccountScreen() {
   const submit = async () => {
     if (hasPassword && !password) {
       showToast({
+        type: 'warning',
         title: t('settings.passwordRequired'),
         message: t('settings.enterYourCurrentPasswordToDeleteYourAccount'),
       });
@@ -52,6 +54,7 @@ export default function DeleteAccountScreen() {
     try {
       const appleRevocation = await deleteAccount(hasPassword ? password : undefined);
       showToast({
+        type: 'success',
         title: t('settings.accountDeactivated'),
         message:
           appleRevocation === 'manual'
@@ -69,6 +72,7 @@ export default function DeleteAccountScreen() {
       }
     } catch (error) {
       showToast({
+        type: 'error',
         title: t('settings.couldnTDeleteAccount'),
         message: error instanceof Error ? error.message : t('common.tryAgainShort'),
       });
@@ -84,7 +88,7 @@ export default function DeleteAccountScreen() {
     >
       <AccountCard danger>
         <View style={styles.warningTitle}>
-          <Ionicons name="warning-outline" size={23} color={mono.danger} />
+          <Ionicons name="warning-outline" size={23} color={colors.error} />
           <AppText variant="sectionTitle" style={styles.dangerText}>
             {t('settings.permanentAction')}
           </AppText>
@@ -103,34 +107,35 @@ export default function DeleteAccountScreen() {
           />
         ) : (
           <View style={styles.appleNotice}>
-            <Ionicons name="logo-apple" size={18} color={mono.ink} />
+            <Ionicons name="logo-apple" size={18} color={colors.primaryText} />
             <AppText style={styles.appleNoticeText}>
               {t('settings.thisAccountUsesGoogleOrAppleSignInNoPassword')}
             </AppText>
           </View>
         )}
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.permanentlyDeleteAccount')}
           disabled={deleting}
+          haptic="warning"
           onPress={removeAccount}
-          style={({ pressed }) => [
+          style={[
             accountStyles.secondaryButton,
             accountStyles.dangerButton,
-            (pressed || deleting) && accountStyles.pressed,
+            deleting && accountStyles.pressed,
           ]}
         >
           {deleting ? (
-            <ActivityIndicator color={mono.danger} />
+            <ActivityIndicator color={colors.error} />
           ) : (
-            <Ionicons name="trash-outline" size={18} color={mono.danger} />
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
           )}
           <AppText
             style={[accountStyles.secondaryButtonText, accountStyles.dangerButtonText]}
           >
             {t('settings.permanentlyDeleteAccount')}
           </AppText>
-        </Pressable>
+        </SpringPressable>
       </AccountCard>
     </AccountScaffold>
   );
@@ -138,21 +143,23 @@ export default function DeleteAccountScreen() {
 
 const styles = StyleSheet.create({
   warningTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  dangerText: { color: mono.danger },
+  dangerText: { color: colors.error },
   copy: { fontSize: 13, lineHeight: 19 },
   appleNotice: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     padding: spacing.md,
-    borderRadius: 12,
-    backgroundColor: mono.soft,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSecondary,
   },
   appleNoticeText: {
     flex: 1,
     fontSize: 13,
     lineHeight: 18,
-    color: mono.ink,
+    color: colors.primaryText,
     fontWeight: '600',
   },
 });

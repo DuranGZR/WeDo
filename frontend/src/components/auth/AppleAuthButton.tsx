@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Image,
   Platform,
-  Pressable,
   StyleSheet,
   View,
   type StyleProp,
@@ -15,7 +14,9 @@ import {
 } from 'react-native';
 
 import { useToast } from '@/components/feedback/AppToast';
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText } from '@/components/ui';
+import { colors, radius, shadows } from '@/design-system';
 import { useAuthStore } from '@/store/auth-store';
 
 type AppleAuthButtonProps = {
@@ -59,6 +60,7 @@ export function AppleAuthButton({
     try {
       if (Platform.OS !== 'ios' || !isAvailable) {
         showToast({
+          type: 'info',
           title: t('auth.signInWithApple'),
           message: t('auth.signInWithAppleIsAvailableOnSupportedIosDevices'),
         });
@@ -104,6 +106,7 @@ export function AppleAuthButton({
         return;
       }
       showToast({
+        type: 'error',
         title: t('auth.signInFailed'),
         message: err.message ?? t('auth.somethingWentWrongSigningInWithApple'),
       });
@@ -124,12 +127,15 @@ export function AppleAuthButton({
   // Render our localized label; the native button follows the device language.
   // Authentication still uses Apple's native authorization sheet.
   return (
-    <Pressable
+    <SpringPressable
       accessibilityRole="button"
       accessibilityLabel={label}
       disabled={Platform.OS === 'ios' && !isAvailable}
+      pressScale={0.97}
+      pressOpacity={0.86}
+      haptic="light"
       onPress={() => void handleAppleAuth()}
-      style={({ pressed }) => [styles.customButton, style, pressed && styles.pressed]}
+      style={[styles.customButton, style]}
     >
       <Image
         source={require('../../../assets/auth_apple.png')}
@@ -137,24 +143,25 @@ export function AppleAuthButton({
         resizeMode="contain"
       />
       <AppText style={styles.customButtonText}>{label}</AppText>
-    </Pressable>
+    </SpringPressable>
   );
 }
 
 const styles = StyleSheet.create({
   customButton: {
     width: '100%',
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#090909',
+    height: 50,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     gap: 10,
+    ...shadows.pillAction,
   },
   customButtonText: {
-    color: '#FFFFFF',
+    color: colors.onAccent,
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
@@ -166,14 +173,10 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     width: '100%',
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#090909',
+    height: 50,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.99 }],
   },
 });

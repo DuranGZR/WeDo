@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryText,
+    backgroundColor: colors.accent,
   },
-  text: { color: colors.surface, fontWeight: '700', textAlign: 'center' },
+  text: { color: colors.onAccent, fontWeight: '700', textAlign: 'center' },
 });

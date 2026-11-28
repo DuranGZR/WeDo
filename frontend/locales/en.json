@@ -1,3 +1,6 @@
 {
-  "ios": {}
+  "ios": {
+    "NSCalendarsUsageDescription": "WeDo saves planned dates to your calendar when you choose to add a reminder.",
+    "NSCalendarsFullAccessUsageDescription": "WeDo saves planned dates to your calendar when you choose to add a reminder."
+  }
 }

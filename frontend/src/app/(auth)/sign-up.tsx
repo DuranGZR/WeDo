@@ -3,31 +3,72 @@ import { useTranslation, Trans } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Controller } from 'react-hook-form';
+import Animated, {
+  FadeInDown,
+  FadeOutUp,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { ApiClientError } from '@/api/client/api-client';
 import { AppleAuthButton } from '@/components/auth/AppleAuthButton';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
-import { AuthShell, authColors } from '@/components/auth/AuthShell';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
 import { AppText, TextField } from '@/components/ui';
-import { spacing } from '@/design-system';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { getAuthSubmitError } from '@/features/auth/error-message';
 import { PasswordField } from '@/features/auth/PasswordField';
 import { useSignUpForm } from '@/features/auth/forms';
 import { getPasswordStrength } from '@/features/auth/password-strength';
 import { useAuthStore } from '@/store/auth-store';
 
-function PasswordCheck({ passed, label }: { passed: boolean; label: string }) {
+function PasswordCheck({
+  passed,
+  label,
+  reducedMotion,
+}: {
+  passed: boolean;
+  label: string;
+  reducedMotion: boolean;
+}) {
   useTranslation();
+  const iconScale = useSharedValue(1);
+  const wasPassed = useSharedValue(passed);
+
+  useEffect(() => {
+    const becamePassed = passed && !wasPassed.get();
+    wasPassed.set(passed);
+    if (becamePassed && !reducedMotion) {
+      iconScale.set(
+        withSequence(
+          withSpring(1.24, { damping: 10, stiffness: 360, mass: 0.5 }),
+          withSpring(1, { damping: 16, stiffness: 260, mass: 0.7 }),
+        ),
+      );
+    }
+  }, [iconScale, passed, reducedMotion, wasPassed]);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale.get() }],
+  }));
+
   return (
     <View style={styles.checkRow}>
-      <Ionicons
-        name={passed ? 'checkmark-circle' : 'ellipse-outline'}
-        size={15}
-        color={passed ? '#47734B' : '#747472'}
-      />
+      <Animated.View style={iconStyle}>
+        <Ionicons
+          name={passed ? 'checkmark-circle' : 'ellipse-outline'}
+          size={15}
+          color={passed ? colors.success : colors.tertiaryText}
+        />
+      </Animated.View>
       <AppText style={[styles.checkText, passed && styles.checkTextPassed]}>
         {label}
       </AppText>
@@ -35,15 +76,54 @@ function PasswordCheck({ passed, label }: { passed: boolean; label: string }) {
   );
 }
 
+function StrengthBar({
+  active,
+  strong,
+  reducedMotion,
+}: {
+  active: boolean;
+  strong: boolean;
+  reducedMotion: boolean;
+}) {
+  const fillScale = useSharedValue(active ? 1 : 0);
+
+  useEffect(() => {
+    const target = active ? 1 : 0;
+    if (reducedMotion) {
+      fillScale.set(target);
+    } else {
+      fillScale.set(withSpring(target, { damping: 18, stiffness: 260, mass: 0.75 }));
+    }
+  }, [active, fillScale, reducedMotion]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: fillScale.get() }],
+    opacity: 0.25 + 0.75 * fillScale.get(),
+  }));
+
+  return (
+    <View style={styles.strengthBarTrack}>
+      <Animated.View
+        style={[styles.strengthBarFill, strong && styles.strengthBarStrong, fillStyle]}
+      />
+    </View>
+  );
+}
+
 export default function SignUpScreen() {
   const { i18n } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const signUp = useAuthStore((state) => state.signUp);
   const { inviteToken } = useLocalSearchParams<{ inviteToken?: string }>();
   const form = useSignUpForm();
   const password = form.watch('password');
   const strength = getPasswordStrength(password);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const showStrengthCard = passwordFocused || password.length > 0;
+  const collapseChecklist = !passwordFocused && strength.score === 4;
 
   useEffect(() => {
     const clearFeedback = () => {
@@ -134,7 +214,6 @@ export default function SignUpScreen() {
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
-              style={styles.input}
             />
           )}
         />
@@ -152,7 +231,6 @@ export default function SignUpScreen() {
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
-              style={styles.input}
             />
           )}
         />
@@ -167,50 +245,74 @@ export default function SignUpScreen() {
               textContentType="newPassword"
               value={field.value}
               onChangeText={field.onChange}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
               error={fieldState.error?.message}
-              style={styles.input}
             />
           )}
         />
-        <View style={styles.strengthCard}>
-          <View style={styles.strengthHeader}>
-            <AppText style={styles.strengthTitle}>{t('auth.passwordStrength')}</AppText>
-            <AppText
-              style={[
-                styles.strengthLabel,
-                strength.score === 4 && styles.strengthLabelGood,
-              ]}
-            >
-              {strength.label}
-            </AppText>
-          </View>
-          <View style={styles.strengthBars}>
-            {[1, 2, 3, 4].map((index) => (
-              <View
-                key={index}
-                style={[
-                  styles.strengthBar,
-                  strength.score >= index && styles.strengthBarActive,
-                ]}
-              />
-            ))}
-          </View>
-          <View style={styles.checks}>
-            <PasswordCheck
-              passed={strength.checks.length}
-              label={t('auth.atLeast8Characters')}
-            />
-            <PasswordCheck
-              passed={strength.checks.uppercase}
-              label={t('auth.anUppercaseLetter')}
-            />
-            <PasswordCheck
-              passed={strength.checks.lowercase}
-              label={t('auth.aLowercaseLetter')}
-            />
-            <PasswordCheck passed={strength.checks.digit} label={t('auth.aNumber')} />
-          </View>
-        </View>
+        {showStrengthCard ? (
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeInDown.duration(200)}
+            exiting={reducedMotion ? undefined : FadeOutUp.duration(150)}
+            layout={reducedMotion ? undefined : LAYOUT_SPRING}
+            style={[styles.strengthCard, collapseChecklist && styles.strengthCardCompact]}
+          >
+            <View style={styles.strengthHeader}>
+              <AppText style={styles.strengthTitle}>{t('auth.passwordStrength')}</AppText>
+              <View style={styles.strengthStatusWrap}>
+                {strength.score === 4 ? (
+                  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                ) : null}
+                <AppText
+                  style={[
+                    styles.strengthLabel,
+                    strength.score === 4 && styles.strengthLabelGood,
+                  ]}
+                >
+                  {strength.label}
+                </AppText>
+              </View>
+            </View>
+            <View style={styles.strengthBars}>
+              {[1, 2, 3, 4].map((index) => (
+                <StrengthBar
+                  key={index}
+                  active={strength.score >= index}
+                  strong={strength.score === 4}
+                  reducedMotion={reducedMotion}
+                />
+              ))}
+            </View>
+            {!collapseChecklist ? (
+              <Animated.View
+                entering={reducedMotion ? undefined : FadeInDown.duration(180)}
+                style={styles.checks}
+              >
+                <PasswordCheck
+                  passed={strength.checks.length}
+                  label={t('auth.atLeast8Characters')}
+                  reducedMotion={reducedMotion}
+                />
+                <PasswordCheck
+                  passed={strength.checks.uppercase}
+                  label={t('auth.anUppercaseLetter')}
+                  reducedMotion={reducedMotion}
+                />
+                <PasswordCheck
+                  passed={strength.checks.lowercase}
+                  label={t('auth.aLowercaseLetter')}
+                  reducedMotion={reducedMotion}
+                />
+                <PasswordCheck
+                  passed={strength.checks.digit}
+                  label={t('auth.aNumber')}
+                  reducedMotion={reducedMotion}
+                />
+              </Animated.View>
+            ) : null}
+          </Animated.View>
+        ) : null}
         <Controller
           control={form.control}
           name="passwordConfirmation"
@@ -223,17 +325,21 @@ export default function SignUpScreen() {
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
-              style={styles.input}
               onSubmitEditing={() => void form.handleSubmit(submit)()}
             />
           )}
         />
 
         {submitError ? (
-          <View accessibilityRole="alert" style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color="#9D1F1F" />
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeInDown.duration(180)}
+            layout={reducedMotion ? undefined : LAYOUT_SPRING}
+            accessibilityRole="alert"
+            style={styles.errorBanner}
+          >
+            <Ionicons name="alert-circle-outline" size={18} color={colors.error} />
             <AppText style={styles.errorText}>{submitError}</AppText>
-          </View>
+          </Animated.View>
         ) : null}
 
         <View style={styles.legalNotice}>
@@ -258,27 +364,25 @@ export default function SignUpScreen() {
           </AppText>
         </View>
 
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('auth.createAccount')}
+          haptic="medium"
           onPress={() => void form.handleSubmit(submit)()}
           disabled={loading}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            (pressed || loading) && styles.pressed,
-          ]}
+          style={[styles.primaryButton, loading && styles.disabledButton]}
         >
           {loading ? (
-            <ActivityIndicator color={authColors.paper} />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <>
               <AppText style={styles.primaryButtonText}>
                 {t('auth.createAccount')}
               </AppText>
-              <Ionicons name="arrow-forward" size={18} color={authColors.paper} />
+              <Ionicons name="arrow-forward" size={18} color={colors.onAccent} />
             </>
           )}
-        </Pressable>
+        </SpringPressable>
         <AppText muted style={styles.afterRegister}>
           {t('auth.weLlEmailYouAVerificationCodeAfterYouSign')}
         </AppText>
@@ -298,75 +402,99 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#D1D1CF',
+    backgroundColor: 'rgba(17, 17, 16, 0.1)',
   },
   dividerText: {
     fontSize: 12,
     fontWeight: '600',
   },
-  input: {
-    borderRadius: 8,
-    borderColor: '#8D8D8B',
-    backgroundColor: authColors.paper,
-    fontSize: 15,
-  },
   strengthCard: {
     gap: spacing.sm,
     padding: spacing.md,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#B8B8B6',
-    backgroundColor: '#F3F3F1',
+    borderColor: colors.border,
+    backgroundColor: '#F5F2EC',
   },
-  strengthHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  strengthTitle: { fontSize: 12, fontWeight: '800' },
-  strengthLabel: { fontSize: 12, fontWeight: '800', color: '#747472' },
-  strengthLabelGood: { color: '#47734B' },
+  strengthCardCompact: {
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.successSoft,
+    borderColor: 'rgba(78, 122, 88, 0.22)',
+  },
+  strengthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  strengthStatusWrap: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  strengthTitle: { fontSize: 12, fontWeight: '700' },
+  strengthLabel: { fontSize: 12, fontWeight: '700', color: colors.secondaryText },
+  strengthLabelGood: { color: colors.success },
   strengthBars: { flexDirection: 'row', gap: 4 },
-  strengthBar: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#D1D1CF' },
-  strengthBarActive: { backgroundColor: authColors.ink },
-  checks: { gap: 3 },
+  strengthBarTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(17, 17, 16, 0.10)',
+  },
+  strengthBarFill: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: colors.accent,
+  },
+  strengthBarStrong: {
+    backgroundColor: colors.success,
+  },
+  checks: { gap: 4 },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  checkText: { fontSize: 11, color: '#747472' },
-  checkTextPassed: { color: '#47734B', fontWeight: '700' },
+  checkText: { fontSize: 11, color: colors.secondaryText },
+  checkTextPassed: { color: colors.success, fontWeight: '700' },
   primaryButton: {
-    minHeight: 54,
+    minHeight: 52,
     marginTop: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    borderRadius: 9,
-    backgroundColor: authColors.ink,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    ...shadows.pillAction,
   },
-  primaryButtonText: { color: authColors.paper, fontSize: 14, fontWeight: '700' },
+  disabledButton: { opacity: 0.72 },
+  primaryButtonText: { color: colors.onAccent, fontSize: 15, fontWeight: '700' },
   afterRegister: { textAlign: 'center', fontSize: 11, lineHeight: 16 },
   errorBanner: {
     flexDirection: 'row',
     gap: spacing.sm,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#D67A7A',
-    backgroundColor: '#FFF0F0',
-    borderRadius: 8,
+    borderColor: 'rgba(184, 74, 66, 0.28)',
+    backgroundColor: colors.errorSoft,
+    borderRadius: 16,
     padding: spacing.sm,
   },
   errorText: {
     flex: 1,
-    color: '#7A1414',
+    color: colors.error,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '600',
   },
-  footerText: { color: '#5F5F5D', fontSize: 13, textAlign: 'center' },
-  footerLink: { color: authColors.ink, fontWeight: '700' },
+  footerText: { color: colors.secondaryText, fontSize: 13, textAlign: 'center' },
+  footerLink: { color: colors.primaryText, fontWeight: '700' },
   legalNotice: { marginTop: spacing.xs, alignItems: 'center' },
-  legalText: { fontSize: 11, lineHeight: 16, textAlign: 'center', color: '#6F6F6D' },
+  legalText: {
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: 'center',
+    color: colors.secondaryText,
+  },
   legalLink: {
-    color: authColors.ink,
+    color: colors.primaryText,
     fontSize: 11,
     lineHeight: 16,
     fontWeight: '600',
   },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
 });

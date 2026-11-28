@@ -1,102 +1,97 @@
-import { formatLocale, searchText, t } from '@/i18n';
+import { formatLocale, searchText, t, type TranslationKey } from '@/i18n';
 
+import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { useState, useMemo, useCallback } from 'react';
 import {
-  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   View,
-  Pressable,
-  Platform,
-  Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText, Card, ListDetailSkeleton, Screen, TextField } from '@/components/ui';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInDown,
+  SlideOutDown,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+
+import {
+  classifyItemSource,
+  ItemCard,
+  type ItemSourceKind,
+} from '@/components/domain/ItemCard';
+import { useOptionalToast } from '@/components/feedback/AppToast';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { ENTER_EASING, LAYOUT_SPRING, SLIDE_SPRING } from '@/components/motion/springs';
+import {
+  AppText,
+  Button,
+  Card,
+  GlassSurface,
+  IconButton,
+  ListDetailSkeleton,
+  Screen,
+  ScreenHeader,
+  SegmentedControl,
+  TextField,
+} from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
+import { itemsApi } from '@/features/items/api';
+import { useItems } from '@/features/items/hooks';
+import type { Item } from '@/features/items/types';
+import { getListAppearance } from '@/features/lists/appearance';
+import { useList, useLists } from '@/features/lists/hooks';
 import { haptic } from '@/lib/haptics';
 
-import { colors, mono, radius, spacing } from '@/design-system';
-import { ItemCard } from '@/components/domain/ItemCard';
-import { useItems } from '@/features/items/hooks';
-import { useList } from '@/features/lists/hooks';
+type SortOption = 'newest' | 'oldest' | 'az';
+type SourceFilter = 'all' | ItemSourceKind;
 
-const { width } = Dimensions.get('window');
+const SORT_OPTIONS: { value: SortOption; labelKey: TranslationKey }[] = [
+  { value: 'newest', labelKey: 'lists.sortNewest' },
+  { value: 'oldest', labelKey: 'lists.sortOldest' },
+  { value: 'az', labelKey: 'lists.sortAZ' },
+];
 
-function getListIcon(name: string, isDefault: boolean): any {
-  const lower = name.toLowerCase();
-  if (
-    lower.includes('git') ||
-    lower.includes('gez') ||
-    lower.includes('yer') ||
-    lower.includes('seyahat') ||
-    ['travel', 'place', 'visit'].some((word) => lower.includes(word)) ||
-    lower.includes('tatil')
-  ) {
-    return 'location-outline';
-  }
-  if (
-    lower.includes('izle') ||
-    ['watch', 'movie', 'series'].some((word) => lower.includes(word)) ||
-    lower.includes('film') ||
-    lower.includes('dizi') ||
-    lower.includes('tv') ||
-    lower.includes('sinema')
-  ) {
-    return 'play-circle-outline';
-  }
-  if (
-    lower.includes('al') ||
-    lower.includes('market') ||
-    lower.includes('alışveriş') ||
-    ['shop', 'buy', 'grocer'].some((word) => lower.includes(word)) ||
-    lower.includes('bakkal') ||
-    lower.includes('kıyafet')
-  ) {
-    return 'cart-outline';
-  }
-  if (
-    lower.includes('yemek') ||
-    lower.includes('mutfak') ||
-    lower.includes('tarif') ||
-    ['recipe', 'food', 'restaurant'].some((word) => lower.includes(word)) ||
-    lower.includes('restoran') ||
-    lower.includes('kafe') ||
-    lower.includes('akşam')
-  ) {
-    return 'restaurant-outline';
-  }
-  if (
-    lower.includes('müzik') ||
-    ['music', 'song', 'concert'].some((word) => lower.includes(word)) ||
-    lower.includes('şarkı') ||
-    lower.includes('çal') ||
-    lower.includes('konser')
-  ) {
-    return 'musical-notes-outline';
-  }
-  if (
-    lower.includes('plan') ||
-    lower.includes('takvim') ||
-    lower.includes('etkinlik') ||
-    ['event', 'calendar', 'activity'].some((word) => lower.includes(word)) ||
-    lower.includes('aktivite')
-  ) {
-    return 'calendar-outline';
-  }
-  return isDefault ? 'star-outline' : 'list-outline';
-}
+const SOURCE_OPTIONS: { value: SourceFilter; labelKey: TranslationKey }[] = [
+  { value: 'all', labelKey: 'lists.sourceAll' },
+  { value: 'instagram', labelKey: 'lists.sourceInstagram' },
+  { value: 'tiktok', labelKey: 'lists.sourceTikTok' },
+  { value: 'youtube', labelKey: 'lists.sourceYoutube' },
+  { value: 'shopping', labelKey: 'lists.sourceShopping' },
+  { value: 'maps', labelKey: 'lists.sourceMaps' },
+  { value: 'web', labelKey: 'lists.sourceWeb' },
+];
+
+const SWITCH_STEP = 38; // 36px circle + 2px gap
 
 export default function ListDetailScreen() {
   useTranslation();
   const locale = formatLocale();
+  const client = useQueryClient();
+  const toast = useOptionalToast();
+  const reducedMotion = useReducedMotion();
   const { listId } = useLocalSearchParams<{ listId: string }>();
   const list = useList(listId);
+  const spaceLists = useLists(list.data?.space_id ?? '');
   const result = useItems(listId);
+  const { refetch } = result;
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      void result.refetch();
-    }, [result]),
+      void refetch();
+    }, [refetch]),
   );
 
   const [isSearching, setIsSearching] = useState(false);
@@ -104,16 +99,36 @@ export default function ListDetailScreen() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>(
     'all',
   );
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [moveTargetItem, setMoveTargetItem] = useState<Item | null>(null);
+
+  const viewThumbX = useSharedValue(0);
+  useEffect(() => {
+    const target = viewMode === 'list' ? SWITCH_STEP : 0;
+    if (reducedMotion) {
+      viewThumbX.value = target;
+      return;
+    }
+    viewThumbX.value = withSpring(target, SLIDE_SPRING);
+  }, [reducedMotion, viewMode, viewThumbX]);
+
+  const viewThumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: viewThumbX.value }],
+  }));
 
   const items = useMemo(() => result.data?.data ?? [], [result.data?.data]);
 
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    const query = searchText(searchQuery.trim(), locale);
+    const matches = items.filter((item) => {
       const matchesStatus =
         statusFilter === 'all' ||
         (statusFilter === 'completed' && item.status === 'completed') ||
         (statusFilter === 'pending' && item.status !== 'completed');
-      const query = searchText(searchQuery.trim(), locale);
+      const matchesSource =
+        sourceFilter === 'all' || classifyItemSource(item) === sourceFilter;
       const matchesSearch =
         !isSearching ||
         !query ||
@@ -121,13 +136,21 @@ export default function ListDetailScreen() {
           `${item.title ?? ''} ${item.description ?? ''} ${item.source_domain ?? ''}`,
           locale,
         ).includes(query);
-      return matchesStatus && matchesSearch;
+      return matchesStatus && matchesSource && matchesSearch;
     });
-  }, [items, isSearching, searchQuery, statusFilter, locale]);
+
+    return [...matches].sort((a, b) => {
+      if (sortBy === 'az') {
+        return (a.title ?? '').localeCompare(b.title ?? '', locale);
+      }
+      const delta = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return sortBy === 'oldest' ? -delta : delta;
+    });
+  }, [items, isSearching, searchQuery, statusFilter, sourceFilter, sortBy, locale]);
 
   if (result.isLoading || list.isLoading) {
     return (
-      <Screen backgroundColor={mono.background}>
+      <Screen>
         <ListDetailSkeleton />
       </Screen>
     );
@@ -135,7 +158,7 @@ export default function ListDetailScreen() {
 
   if (result.isError || !list.data) {
     return (
-      <Screen backgroundColor={mono.background}>
+      <Screen>
         <Card style={styles.errorCard}>
           <View style={styles.errorIconCircle}>
             <Ionicons name="alert-circle-outline" size={32} color={colors.error} />
@@ -146,77 +169,195 @@ export default function ListDetailScreen() {
           <AppText muted style={styles.errorSubtitle}>
             {t('lists.checkYourConnectionAndTryAgain')}
           </AppText>
-          <Pressable
+          <Button
+            label={t('lists.goBack')}
             onPress={() => router.replace('/(tabs)/lists')}
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
-          >
-            <AppText style={styles.primaryBtnText}>{t('lists.goBack')}</AppText>
-          </Pressable>
+          />
         </Card>
       </Screen>
     );
   }
 
-  const iconName = getListIcon(list.data.name, list.data.is_default);
+  const listVisual = getListAppearance(
+    list.data.name,
+    list.data.is_default,
+    list.data.icon,
+  );
+  const destinationLists = (spaceLists.data?.data ?? []).filter(
+    (entry) => entry.id !== listId,
+  );
 
-  return (
-    <Screen scroll={true} backgroundColor={mono.background}>
-      <View style={styles.contourTop} pointerEvents="none" />
-      <View style={styles.contourBottom} pointerEvents="none" />
+  const invalidateListQueries = async (targetItemId?: string) => {
+    await client.invalidateQueries({ queryKey: ['lists', listId] });
+    await client.invalidateQueries({ queryKey: ['lists'] });
+    if (targetItemId) {
+      await client.invalidateQueries({ queryKey: ['items', targetItemId] });
+    }
+  };
 
-      {/* Header Bar with Back Button */}
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => router.push('/lists')}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.goBack')}
-        >
-          <Ionicons name="arrow-back" size={22} color={mono.ink} />
-        </Pressable>
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await client.invalidateQueries({ queryKey: ['lists', listId] });
+      await result.refetch?.();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
-        <Pressable
-          onPress={() => router.push(`/list/${listId}/edit`)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('lists.editList')}
-        >
-          <Ionicons
-            name="create-outline"
-            size={16}
-            color={mono.ink}
-            style={{ marginRight: 2 }}
-          />
-          <AppText style={styles.editBtnText}>{t('lists.edit')}</AppText>
-        </Pressable>
-      </View>
+  const handleToggleComplete = async (target: Item) => {
+    const wasCompleted = target.status === 'completed';
+    try {
+      if (wasCompleted) {
+        await itemsApi.restore(target.id);
+      } else {
+        await itemsApi.complete(target.id);
+      }
+      await invalidateListQueries(target.id);
+      toast?.showToast({
+        type: wasCompleted ? 'info' : 'success',
+        title: wasCompleted
+          ? t('items.markedAsNotDoneToast')
+          : t('items.markedAsDoneToast'),
+        actionLabel: t('common.undo'),
+        onAction: () => {
+          const revert = wasCompleted
+            ? itemsApi.complete(target.id)
+            : itemsApi.restore(target.id);
+          void revert.then(() => invalidateListQueries(target.id));
+        },
+      });
+    } catch {
+      toast?.showToast({ type: 'error', title: t('common.tryAgainShort') });
+    }
+  };
 
-      <View style={styles.content}>
-        {/* List Identity Card (Centered) */}
-        <View style={styles.identityContainer}>
-          <View style={styles.iconCircle}>
-            <Ionicons name={iconName} size={30} color={mono.paper} />
+  const handleMoveToList = async (targetListId: string, targetListName: string) => {
+    if (!moveTargetItem) return;
+    const itemToMove = moveTargetItem;
+    try {
+      await itemsApi.move(itemToMove.id, targetListId);
+      setMoveTargetItem(null);
+      await invalidateListQueries(itemToMove.id);
+      toast?.showToast({
+        type: 'success',
+        title: t('items.movedToListToast', { list: targetListName }),
+        actionLabel: t('common.undo'),
+        onAction: () => {
+          void itemsApi
+            .move(itemToMove.id, listId)
+            .then(() => invalidateListQueries(itemToMove.id));
+        },
+      });
+    } catch {
+      toast?.showToast({ type: 'error', title: t('common.tryAgainShort') });
+    }
+  };
+
+  const confirmDeleteItem = (target: Item) => {
+    haptic.warning();
+    Alert.alert(t('items.deleteThisItem'), t('items.thisItemWillBeRemovedFromTheList'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('items.delete'),
+        style: 'destructive',
+        onPress: () => {
+          void itemsApi
+            .remove(target.id)
+            .then(async () => {
+              haptic.medium();
+              await invalidateListQueries(target.id);
+              toast?.showToast({ type: 'info', title: t('items.deletedToast') });
+            })
+            .catch(() => {
+              toast?.showToast({ type: 'error', title: t('common.tryAgainShort') });
+            });
+        },
+      },
+    ]);
+  };
+
+  const listHeader = (
+    <View style={styles.headerBlock}>
+      <ScreenHeader
+        fallbackHref="/(tabs)/lists"
+        rightAction={
+          <View style={styles.headerActions}>
+            <IconButton
+              tone="glass"
+              size={40}
+              label={t('lists.searchThisList_28c9c')}
+              icon={
+                <Ionicons
+                  name={isSearching ? 'close' : 'search-outline'}
+                  size={18}
+                  color={colors.primaryText}
+                />
+              }
+              onPress={() => {
+                setIsSearching((current) => {
+                  if (current) setSearchQuery('');
+                  return !current;
+                });
+              }}
+            />
+            <SpringPressable
+              onPress={() => router.push(`/list/${listId}/edit`)}
+              hitSlop={8}
+              pressScale={0.94}
+              haptic="light"
+              style={styles.editBtnPressable}
+              accessibilityRole="button"
+              accessibilityLabel={t('lists.editList')}
+            >
+              <View style={styles.editBtn}>
+                <Ionicons name="create-outline" size={16} color={colors.primaryText} />
+                <AppText style={styles.editBtnText}>{t('lists.edit')}</AppText>
+              </View>
+            </SpringPressable>
           </View>
-          <AppText variant="largeTitle" style={styles.listName}>
-            {list.data.name}
-          </AppText>
-          <View style={styles.countBadge}>
-            <AppText style={styles.countBadgeText}>
+        }
+      />
+
+      <View style={styles.headerContent}>
+        <View style={styles.identityRow}>
+          <View
+            style={[styles.iconCircle, { backgroundColor: listVisual.backgroundColor }]}
+          >
+            <Ionicons name={listVisual.icon} size={22} color={listVisual.color} />
+          </View>
+          <View style={styles.identityMeta}>
+            <AppText variant="pageTitle" numberOfLines={2} style={styles.listName}>
+              {list.data.name}
+            </AppText>
+            <AppText style={styles.countText}>
               {t('common.itemCount', { count: items.length })}
             </AppText>
           </View>
+          <SpringPressable
+            onPress={() => router.push(`/item/create?listId=${listId}`)}
+            pressScale={0.95}
+            haptic="medium"
+            style={styles.addCompactPill}
+            accessibilityRole="button"
+            accessibilityLabel={t('lists.addLink')}
+          >
+            <Ionicons name="add" size={18} color={colors.onAccent} />
+            <AppText style={styles.addCompactText}>{t('lists.addLink_95772')}</AppText>
+          </SpringPressable>
         </View>
 
-        {/* Action Row or Search Input */}
         {isSearching ? (
-          <View style={styles.searchBarRow}>
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeIn.duration(150)}
+            exiting={reducedMotion ? undefined : FadeOut.duration(120)}
+            style={styles.searchBarRow}
+          >
             <View style={styles.searchInputWrapper}>
               <Ionicons
                 name="search"
                 size={18}
-                color={mono.ink}
+                color={colors.secondaryText}
                 style={styles.searchFieldIcon}
               />
               <TextField
@@ -227,349 +368,514 @@ export default function ListDetailScreen() {
                 autoFocus
               />
               {searchQuery.length > 0 && (
-                <Pressable
+                <SpringPressable
+                  hitSlop={8}
+                  pressScale={0.88}
+                  haptic="selection"
                   onPress={() => setSearchQuery('')}
                   style={styles.clearSearchBtn}
                 >
                   <Ionicons name="close-circle" size={18} color={colors.tertiaryText} />
-                </Pressable>
+                </SpringPressable>
               )}
             </View>
-            <Pressable
+            <SpringPressable
               onPress={() => {
                 setIsSearching(false);
                 setSearchQuery('');
               }}
-              style={({ pressed }) => [
-                styles.cancelSearchBtn,
-                pressed && styles.btnPressed,
-              ]}
+              pressScale={0.95}
+              haptic="selection"
+              style={styles.cancelSearchBtn}
             >
               <AppText style={styles.cancelSearchText}>{t('items.cancel')}</AppText>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.actionRow}>
-            <Pressable
-              onPress={() => setIsSearching(true)}
-              style={({ pressed }) => [
-                styles.actionBtn,
-                styles.actionBtnSecondary,
-                pressed && styles.btnPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('lists.searchThisList_28c9c')}
-            >
-              <Ionicons name="search" size={18} color={colors.primaryText} />
-              <AppText style={styles.actionBtnText}>{t('lists.search')}</AppText>
-            </Pressable>
-
-            <Pressable
-              onPress={() => router.push(`/item/create?listId=${listId}`)}
-              style={({ pressed }) => [
-                styles.actionBtn,
-                styles.actionBtnPrimary,
-                pressed && styles.btnPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('lists.addLink')}
-            >
-              <Ionicons name="add" size={18} color={mono.paper} />
-              <AppText style={[styles.actionBtnText, { color: mono.paper }]}>
-                {t('lists.addLink_95772')}
-              </AppText>
-            </Pressable>
-          </View>
-        )}
-
-        {items.length > 0 ? (
-          <View style={styles.filterRow}>
-            {(
-              [
-                ['all', t('lists.all')],
-                ['pending', t('lists.notDone')],
-                ['completed', t('lists.done')],
-              ] as const
-            ).map(([value, label]) => (
-              <Pressable
-                key={value}
-                onPress={() => {
-                  haptic.selection();
-                  setStatusFilter(value);
-                }}
-                style={({ pressed }) => [
-                  styles.filterChip,
-                  statusFilter === value && styles.filterChipActive,
-                  pressed && styles.btnPressed,
-                ]}
-
-                accessibilityRole="button"
-                accessibilityLabel={t('lists.filterBy', { label })}
-              >
-                <AppText
-                  style={[
-                    styles.filterChipText,
-                    statusFilter === value && styles.filterChipTextActive,
-                  ]}
-                >
-                  {label}
-                </AppText>
-              </Pressable>
-            ))}
-          </View>
+            </SpringPressable>
+          </Animated.View>
         ) : null}
 
-        {/* List Content Area */}
-        {items.length === 0 ? (
-          /* Custom Premium Empty State Card */
-          <Card style={styles.emptyCard}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="link-outline" size={32} color={mono.paper} />
-              <View style={styles.emptyBadge} />
+        {items.length > 0 ? (
+          <>
+            <View style={styles.controlsRow}>
+              <SegmentedControl
+                style={styles.segmentedFlex}
+                options={[
+                  { value: 'all', label: t('lists.all') },
+                  { value: 'pending', label: t('lists.notDone') },
+                  { value: 'completed', label: t('lists.done') },
+                ]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+              />
+              <View style={styles.viewSwitcher}>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[styles.viewSwitchThumb, viewThumbStyle]}
+                />
+                <SpringPressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('lists.gridView')}
+                  accessibilityState={{ selected: viewMode === 'grid' }}
+                  pressScale={0.9}
+                  pressOpacity={0.85}
+                  haptic={viewMode === 'grid' ? 'none' : 'selection'}
+                  onPress={() => {
+                    if (viewMode === 'grid') return;
+                    setViewMode('grid');
+                  }}
+                  style={styles.viewSwitchItem}
+                >
+                  <Ionicons
+                    name="grid-outline"
+                    size={16}
+                    color={viewMode === 'grid' ? colors.onAccent : colors.secondaryText}
+                  />
+                </SpringPressable>
+                <SpringPressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('lists.listView')}
+                  accessibilityState={{ selected: viewMode === 'list' }}
+                  pressScale={0.9}
+                  pressOpacity={0.85}
+                  haptic={viewMode === 'list' ? 'none' : 'selection'}
+                  onPress={() => {
+                    if (viewMode === 'list') return;
+                    setViewMode('list');
+                  }}
+                  style={styles.viewSwitchItem}
+                >
+                  <Ionicons
+                    name="list-outline"
+                    size={18}
+                    color={viewMode === 'list' ? colors.onAccent : colors.secondaryText}
+                  />
+                </SpringPressable>
+              </View>
             </View>
-            <AppText variant="sectionTitle" style={styles.emptyTitle}>
-              {t('lists.yourListIsEmpty')}
-            </AppText>
-            <AppText muted style={styles.emptySubtitle}>
-              {t('lists.shareSomethingFromAnotherAppOrAddALinkAbove')}
-            </AppText>
-            <Pressable
-              onPress={() => router.push(`/item/create?listId=${listId}`)}
-              style={({ pressed }) => [
-                styles.emptyActionBtn,
-                pressed && styles.btnPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('lists.addYourFirstItem')}
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterStrip}
             >
-              <AppText style={styles.emptyActionBtnText}>{t('items.addItem')}</AppText>
-            </Pressable>
-          </Card>
-        ) : filteredItems.length === 0 ? (
-          /* Empty Search / Filter Results Card */
-          <Card style={styles.emptyCard}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons
-                name={
-                  isSearching && searchQuery.trim()
-                    ? 'search-outline'
-                    : statusFilter === 'completed'
-                      ? 'checkmark-done-circle-outline'
-                      : 'checkbox-outline'
-                }
-                size={32}
-                color={colors.secondaryText}
-              />
-              <View style={styles.emptyBadge} />
-            </View>
-            <AppText variant="sectionTitle" style={styles.emptyTitle}>
-              {isSearching && searchQuery.trim()
-                ? t('lists.noResults')
-                : statusFilter === 'completed'
-                  ? t('lists.noCompletedItems')
-                  : t('lists.nothingLeftToDo')}
-            </AppText>
-            <AppText muted style={styles.emptySubtitle}>
-              {isSearching && searchQuery.trim()
-                ? t('lists.noSavedItemsMatchValueCheckYourSearchAndTry', {
-                    value0: searchQuery,
-                  })
-                : statusFilter === 'completed'
-                  ? t('lists.noItemsInThisListHaveBeenMarkedAsDone')
-                  : t('lists.youVeCompletedEverythingInThisList')}
-            </AppText>
-          </Card>
-        ) : (
-          <View style={styles.itemsContainer}>
-            {filteredItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                grid={true}
-                onPress={() => router.push(`/item/${item.id}`)}
-              />
-            ))}
-          </View>
-        )}
+              {SORT_OPTIONS.map((option) => {
+                const selected = sortBy === option.value;
+                return (
+                  <SpringPressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    pressScale={0.94}
+                    haptic="selection"
+                    onPress={() => setSortBy(option.value)}
+                    style={[styles.filterChip, selected && styles.filterChipActive]}
+                  >
+                    <AppText
+                      style={[
+                        styles.filterChipText,
+                        selected && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {t(option.labelKey)}
+                    </AppText>
+                  </SpringPressable>
+                );
+              })}
+
+              <View style={styles.filterDivider} />
+
+              {SOURCE_OPTIONS.map((option) => {
+                const selected = sourceFilter === option.value;
+                return (
+                  <SpringPressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    pressScale={0.94}
+                    haptic="selection"
+                    onPress={() => setSourceFilter(option.value)}
+                    style={[styles.filterChip, selected && styles.filterChipActive]}
+                  >
+                    <AppText
+                      style={[
+                        styles.filterChipText,
+                        selected && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {t(option.labelKey)}
+                    </AppText>
+                  </SpringPressable>
+                );
+              })}
+            </ScrollView>
+          </>
+        ) : null}
       </View>
+    </View>
+  );
+
+  const emptyElement =
+    items.length === 0 ? (
+      <Animated.View layout={LAYOUT_SPRING} style={styles.emptyHeroWrap}>
+        <LinearGradient
+          colors={['#C4AA8E', '#A48567', '#86694E']}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0.12, y: 0 }}
+          end={{ x: 0.88, y: 1 }}
+          style={styles.emptyHeroCard}
+        >
+          <View style={styles.emptyHeroIconCircle}>
+            <Ionicons name="link-outline" size={26} color={colors.onAccent} />
+          </View>
+          <AppText style={styles.emptyHeroTitle}>{t('lists.yourListIsEmpty')}</AppText>
+          <AppText style={styles.emptyHeroSubtitle}>
+            {t('lists.shareSomethingFromAnotherAppOrAddALinkAbove')}
+          </AppText>
+          <SpringPressable
+            accessibilityRole="button"
+            accessibilityLabel={t('items.addItem')}
+            onPress={() => router.push(`/item/create?listId=${listId}`)}
+            pressScale={0.97}
+            haptic="medium"
+            style={styles.emptyCtaPressable}
+          >
+            <GlassSurface
+              pointerEvents="none"
+              interactive
+              tintColor="rgba(255, 255, 255, 0.20)"
+              fallbackBackgroundColor="rgba(255, 255, 255, 0.24)"
+              blurIntensity={28}
+              style={styles.emptyCtaPill}
+            >
+              <View style={styles.emptyCtaSpacer} />
+              <AppText style={styles.emptyCtaText}>{t('lists.addYourFirstItem')}</AppText>
+              <View style={styles.emptyCtaArrowCircle}>
+                <Ionicons name="arrow-forward" size={17} color={colors.primaryText} />
+              </View>
+            </GlassSurface>
+          </SpringPressable>
+        </LinearGradient>
+      </Animated.View>
+    ) : (
+      <Animated.View entering={FadeIn.duration(200)} layout={LAYOUT_SPRING}>
+        <Card style={styles.emptyCard}>
+          <View style={styles.emptyIconCircleMuted}>
+            <Ionicons
+              name={
+                isSearching && searchQuery.trim()
+                  ? 'search-outline'
+                  : statusFilter === 'completed'
+                    ? 'checkmark-done-circle-outline'
+                    : 'checkbox-outline'
+              }
+              size={30}
+              color={colors.secondaryText}
+            />
+          </View>
+          <AppText variant="sectionTitle" style={styles.emptyTitle}>
+            {isSearching && searchQuery.trim()
+              ? t('lists.noResults')
+              : statusFilter === 'completed'
+                ? t('lists.noCompletedItems')
+                : t('lists.nothingLeftToDo')}
+          </AppText>
+          <AppText muted style={styles.emptySubtitle}>
+            {isSearching && searchQuery.trim()
+              ? t('lists.noSavedItemsMatchValueCheckYourSearchAndTry', {
+                  value0: searchQuery,
+                })
+              : statusFilter === 'completed'
+                ? t('lists.noItemsInThisListHaveBeenMarkedAsDone')
+                : t('lists.youVeCompletedEverythingInThisList')}
+          </AppText>
+        </Card>
+      </Animated.View>
+    );
+
+  return (
+    <Screen
+      scroll={false}
+      dismissKeyboardOnTap={false}
+      ambient="hero"
+      style={styles.screenNoPad}
+    >
+      <View style={styles.listShell}>
+        {listHeader}
+        <Animated.FlatList
+          key={viewMode}
+          style={styles.flatListFlex}
+          data={items.length === 0 ? [] : filteredItems}
+          keyExtractor={(entry) => entry.id}
+          numColumns={viewMode === 'grid' ? 2 : 1}
+          columnWrapperStyle={viewMode === 'grid' ? styles.columnWrapper : undefined}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={emptyElement}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void handleRefresh()}
+              tintColor="#9E7F60"
+              colors={['#9E7F60']}
+            />
+          }
+          renderItem={({ item }) => (
+            <View style={viewMode === 'grid' ? styles.gridItemCell : styles.listItemCell}>
+              <ItemCard
+                item={item}
+                grid={viewMode === 'grid'}
+                onPress={() => router.push(`/item/${item.id}`)}
+                onToggleComplete={
+                  viewMode === 'list' ? () => void handleToggleComplete(item) : undefined
+                }
+                onMovePress={
+                  viewMode === 'list' && destinationLists.length > 0
+                    ? () => setMoveTargetItem(item)
+                    : undefined
+                }
+                onDeletePress={
+                  viewMode === 'list' ? () => confirmDeleteItem(item) : undefined
+                }
+              />
+            </View>
+          )}
+        />
+      </View>
+
+      <Modal
+        visible={Boolean(moveTargetItem)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMoveTargetItem(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setMoveTargetItem(null)}>
+          <Animated.View
+            entering={
+              reducedMotion ? undefined : SlideInDown.duration(220).easing(ENTER_EASING)
+            }
+            exiting={reducedMotion ? undefined : SlideOutDown.duration(160)}
+            style={styles.moveSheet}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.sheetHandle} />
+            <AppText variant="sectionTitle">{t('items.destinationList')}</AppText>
+            {destinationLists.map((entry) => (
+              <SpringPressable
+                key={entry.id}
+                accessibilityRole="button"
+                pressScale={0.975}
+                haptic="selection"
+                onPress={() => void handleMoveToList(entry.id, entry.name)}
+                style={styles.moveSheetOption}
+              >
+                <AppText style={styles.moveSheetOptionText}>{entry.name}</AppText>
+                <Ionicons name="arrow-forward" size={17} color={colors.primaryText} />
+              </SpringPressable>
+            ))}
+            <Button
+              label={t('items.cancel')}
+              variant="ghost"
+              onPress={() => setMoveTargetItem(null)}
+            />
+          </Animated.View>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  contourTop: {
-    position: 'absolute',
-    top: -150,
-    right: -155,
-    width: 330,
-    height: 330,
-    borderRadius: 165,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.75,
-  },
-  contourBottom: {
-    position: 'absolute',
-    bottom: -160,
-    left: -185,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.5,
-  },
-  headerBar: {
-    height: 48,
+  headerActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.xs,
-    marginTop: Platform.OS === 'ios' ? 0 : spacing.sm,
+    gap: spacing.xs,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: mono.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: mono.ink,
+  editBtnPressable: {
+    borderRadius: radius.pill,
   },
   editBtn: {
-    height: 38,
-    paddingHorizontal: spacing.md,
+    height: 40,
+    paddingHorizontal: 14,
     borderRadius: radius.pill,
-    backgroundColor: mono.paper,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    gap: 5,
+    backgroundColor: '#F1EDE6',
     borderWidth: 1,
-    borderColor: mono.ink,
+    borderColor: 'rgba(17, 17, 16, 0.08)',
+    ...shadows.glass,
   },
   editBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: mono.ink,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryText,
   },
-  loaderContainer: {
+  listShell: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 300,
-  },
-  content: {
-    flex: 1,
-    gap: spacing.lg,
     maxWidth: 480,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: spacing.sm,
+  },
+  flatListFlex: {
+    flex: 1,
+  },
+  listContent: {
+    flexGrow: 1,
+    gap: 10,
+    paddingTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.huge,
   },
-  identityContainer: {
-    alignItems: 'center',
+  headerBlock: {
     gap: spacing.xs,
-    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: mono.ink,
+  headerContent: {
+    gap: spacing.md + 2,
+    paddingHorizontal: 2,
+    paddingTop: spacing.xs,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 2,
+  },
+  gridItemCell: {
+    flex: 1,
+    maxWidth: '48.6%',
+  },
+  listItemCell: {
+    width: '100%',
+  },
+  filterStrip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  listName: {
-    fontSize: width > 400 ? 26 : 22,
-    fontWeight: '800',
-    color: mono.ink,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-  },
-  countBadge: {
-    backgroundColor: mono.soft,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  countBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: mono.muted,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
+    gap: spacing.xs + 2,
+    paddingVertical: 2,
   },
   filterChip: {
-    flex: 1,
-    minHeight: 38,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.paper,
     borderWidth: 1,
-    borderColor: mono.ink,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
   },
   filterChipActive: {
-    backgroundColor: mono.ink,
-    borderColor: mono.ink,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   filterChipText: {
-    color: mono.muted,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
+    color: colors.secondaryText,
   },
   filterChipTextActive: {
-    color: mono.paper,
+    color: colors.onAccent,
   },
-  actionBtn: {
+  filterDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: colors.border,
+    marginHorizontal: 2,
+  },
+  modalBackdrop: {
     flex: 1,
-    height: 48,
-    borderRadius: radius.lg,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(17, 17, 16, 0.34)',
+  },
+  moveSheet: {
+    gap: spacing.sm + 2,
+    padding: spacing.xl,
+    paddingBottom: spacing.section,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    ...shadows.elevated,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(17, 17, 16, 0.16)',
+  },
+  moveSheetOption: {
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceSecondary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  moveSheetOptionText: {
+    color: colors.primaryText,
+    fontWeight: '600',
+  },
+  screenNoPad: {
+    padding: 0,
+    paddingBottom: 0,
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.85)',
+    ...shadows.glass,
+  },
+  identityMeta: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  listName: {
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: '700',
+    color: colors.primaryText,
+    letterSpacing: -0.5,
+  },
+  countText: {
+    fontSize: 12.5,
+    lineHeight: 16,
+    color: colors.secondaryText,
+    fontWeight: '500',
+  },
+  addCompactPill: {
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
+    ...shadows.pillAction,
   },
-  actionBtnSecondary: {
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
-  },
-  actionBtnPrimary: {
-    backgroundColor: mono.ink,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 5px 0px rgba(0, 0, 0, 0.16)',
-      },
-    }),
-  },
-  actionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: mono.ink,
+  addCompactText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.onAccent,
   },
   searchBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.xs,
   },
   searchInputWrapper: {
     flex: 1,
     position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchFieldIcon: {
     position: 'absolute',
@@ -577,8 +883,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   searchField: {
-    flex: 1,
-    paddingLeft: spacing.xxl + 8,
+    paddingLeft: spacing.xxl + 10,
     paddingRight: spacing.xxl,
   },
   clearSearchBtn: {
@@ -589,57 +894,157 @@ const styles = StyleSheet.create({
   },
   cancelSearchBtn: {
     paddingHorizontal: spacing.sm,
-    height: 48,
+    height: 46,
     justifyContent: 'center',
   },
   cancelSearchText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: mono.ink,
+    fontWeight: '600',
+    color: colors.primaryText,
   },
-  itemsContainer: {
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  segmentedFlex: {
+    flex: 1,
+  },
+  viewSwitcher: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    backgroundColor: '#EFEBE4',
+    borderWidth: 1,
+    borderColor: 'rgba(17, 17, 16, 0.08)',
+    padding: 4,
+    gap: 2,
+  },
+  viewSwitchThumb: {
+    position: 'absolute',
+    left: 4,
+    top: 4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.accent,
+    ...shadows.pillAction,
+  },
+  viewSwitchItem: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  itemsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: 12,
     justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  itemsList: {
+    gap: 10,
+    marginTop: 2,
+  },
+  emptyHeroWrap: {
+    borderRadius: 28,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.34)',
+    ...shadows.elevated,
+  },
+  emptyHeroCard: {
+    padding: 22,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyHeroIconCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  emptyHeroTitle: {
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '700',
+    color: colors.onAccent,
+    textAlign: 'center',
+    letterSpacing: -0.35,
+  },
+  emptyHeroSubtitle: {
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: 'rgba(255, 252, 248, 0.88)',
+    textAlign: 'center',
+    maxWidth: 280,
+    marginBottom: 4,
+  },
+  emptyCtaPressable: {
+    width: '100%',
+    borderRadius: radius.pill,
+  },
+  emptyCtaPill: {
+    minHeight: 52,
+    borderRadius: radius.pill,
+    paddingLeft: 14,
+    paddingRight: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.34)',
+  },
+  emptyCtaSpacer: {
+    width: 38,
+  },
+  emptyCtaText: {
+    color: colors.onAccent,
+    fontSize: 14.5,
+    fontWeight: '600',
+  },
+  emptyCtaArrowCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyCard: {
-    borderRadius: 16,
+    borderRadius: radius.cardLg,
     borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
+    borderColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
     padding: spacing.xl,
     alignItems: 'center',
     gap: spacing.sm,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)',
-      },
-    }),
+    ...shadows.card,
   },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: mono.ink,
+  emptyIconCircleMuted: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
     marginBottom: spacing.xs,
-  },
-  emptyBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: mono.ink,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.primaryText,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 13,
@@ -647,22 +1052,10 @@ const styles = StyleSheet.create({
     color: colors.secondaryText,
     textAlign: 'center',
     maxWidth: 280,
-    marginBottom: spacing.xs,
-  },
-  emptyActionBtn: {
-    backgroundColor: mono.ink,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-  },
-  emptyActionBtnText: {
-    color: mono.paper,
-    fontWeight: '700',
-    fontSize: 13,
   },
   errorCard: {
     margin: spacing.lg,
-    borderRadius: radius.xl,
+    borderRadius: radius.cardLg,
     padding: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
@@ -671,7 +1064,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FDE8E8',
+    backgroundColor: colors.errorSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -681,19 +1074,5 @@ const styles = StyleSheet.create({
   },
   errorSubtitle: {
     textAlign: 'center',
-  },
-  primaryBtn: {
-    backgroundColor: mono.ink,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-  },
-  primaryBtnText: {
-    color: mono.paper,
-    fontWeight: '700',
-  },
-  btnPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
   },
 });

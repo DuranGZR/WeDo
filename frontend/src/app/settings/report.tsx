@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText, TextField } from '@/components/ui';
 import {
   AccountCard,
@@ -11,7 +12,7 @@ import {
   accountStyles,
 } from '@/features/account/components/AccountScaffold';
 import { safetyApi, type ReportReason, type ReportReceipt } from '@/features/safety/api';
-import { mono, spacing } from '@/design-system';
+import { colors, spacing } from '@/design-system';
 import { t } from '@/i18n';
 
 const reasons = [
@@ -75,7 +76,7 @@ export default function ReportScreen() {
     >
       {receipt ? (
         <AccountCard>
-          <Ionicons name="checkmark-circle-outline" size={32} color={mono.ink} />
+          <Ionicons name="checkmark-circle-outline" size={32} color={colors.success} />
           <AppText variant="sectionTitle">{t('safety.reportSaved')}</AppText>
           <AppText>{t('safety.reportSavedDescription')}</AppText>
           <AppText selectable>{t('safety.reference', { id: receipt.id })}</AppText>
@@ -88,11 +89,13 @@ export default function ReportScreen() {
           <AppText variant="sectionTitle">{t('safety.chooseReason')}</AppText>
           <View style={styles.reasons}>
             {reasons.map((entry) => (
-              <Pressable
+              <SpringPressable
                 key={entry.value}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: reason === entry.value }}
                 disabled={pending}
+                pressScale={0.98}
+                haptic="selection"
                 accessibilityLabel={t(entry.key)}
                 onPress={() => setReason(entry.value)}
                 style={[styles.reason, reason === entry.value && styles.selected]}
@@ -100,10 +103,12 @@ export default function ReportScreen() {
                 <Ionicons
                   name={reason === entry.value ? 'radio-button-on' : 'radio-button-off'}
                   size={19}
-                  color={mono.ink}
+                  color={
+                    reason === entry.value ? colors.primaryText : colors.tertiaryText
+                  }
                 />
                 <AppText>{t(entry.key)}</AppText>
-              </Pressable>
+              </SpringPressable>
             ))}
           </View>
           <TextField
@@ -130,22 +135,23 @@ export default function ReportScreen() {
               {error}
             </AppText>
           ) : null}
-          <Pressable
+          <SpringPressable
             accessibilityRole="button"
             accessibilityLabel={t('safety.sendReport')}
             disabled={pending}
+            haptic="light"
             onPress={() => void submit()}
             style={[accountStyles.primaryButton, pending && styles.disabled]}
           >
             {pending ? (
-              <ActivityIndicator color={mono.paper} />
+              <ActivityIndicator color={colors.onAccent} />
             ) : (
-              <Ionicons name="flag-outline" size={18} color={mono.paper} />
+              <Ionicons name="flag-outline" size={18} color={colors.onAccent} />
             )}
             <AppText style={accountStyles.primaryButtonText}>
               {t('safety.sendReport')}
             </AppText>
-          </Pressable>
+          </SpringPressable>
         </AccountCard>
       )}
     </AccountScaffold>
@@ -159,13 +165,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: mono.line,
+    borderColor: colors.border,
   },
-  selected: { backgroundColor: mono.soft, borderColor: mono.ink },
+  selected: {
+    backgroundColor: colors.surfaceSecondary,
+    borderColor: colors.borderFocus,
+  },
   details: { minHeight: 120, textAlignVertical: 'top', paddingTop: spacing.md },
-  error: { color: mono.danger },
+  error: { color: colors.error },
   disabled: { opacity: 0.5 },
 });

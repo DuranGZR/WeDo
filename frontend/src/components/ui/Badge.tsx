@@ -1,37 +1,39 @@
 import { StyleSheet, View } from 'react-native';
-import { mono, radius, spacing } from '@/design-system';
+
+import { colors, radius, spacing } from '@/design-system';
 import { AppText } from './AppText';
 
-export function Badge({
-  label,
-  tone = 'neutral',
-}: {
-  label: string;
-  tone?: 'neutral' | 'accent' | 'success' | 'warning' | 'error';
-}) {
+export type BadgeTone = 'neutral' | 'accent' | 'success' | 'warning' | 'error' | 'glass';
+
+const BADGE_STYLES: Record<BadgeTone, { bg: string; text: string }> = {
+  neutral: { bg: colors.accentSoft, text: colors.primaryText },
+  accent: { bg: colors.accent, text: colors.onAccent },
+  success: { bg: colors.successSoft, text: colors.success },
+  warning: { bg: colors.warningSoft, text: colors.warning },
+  error: { bg: colors.errorSoft, text: colors.error },
+  glass: { bg: colors.glassDark, text: colors.onAccent },
+};
+
+export function Badge({ label, tone = 'neutral' }: { label: string; tone?: BadgeTone }) {
+  const palette = BADGE_STYLES[tone];
+
   return (
-    <View style={[styles.base, styles[tone]]}>
-      <AppText
-        variant="caption"
-        style={[styles.text, tone === 'accent' && styles.accentText]}
-      >
+    <View style={[styles.base, { backgroundColor: palette.bg }]}>
+      <AppText variant="caption" style={[styles.text, { color: palette.text }]}>
         {label}
       </AppText>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   base: {
     alignSelf: 'flex-start',
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.xs,
   },
-  neutral: { backgroundColor: mono.soft },
-  accent: { backgroundColor: mono.ink },
-  success: { backgroundColor: mono.soft },
-  warning: { backgroundColor: mono.soft },
-  error: { backgroundColor: '#F1D9D6' },
-  text: { color: mono.ink },
-  accentText: { color: mono.paper },
+  text: {
+    fontWeight: '600',
+  },
 });

@@ -1,55 +1,113 @@
-import { t } from '@/i18n';
-import { useTranslation } from 'react-i18next';
+import { formatPlanDateTime, formatRelativeTime, t } from '@/i18n';
+
+import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { AppText, Card, EmptyState, ItemDetailSkeleton, Screen } from '@/components/ui';
-import { haptic } from '@/lib/haptics';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  SlideInDown,
+  SlideOutDown,
+  useReducedMotion,
+} from 'react-native-reanimated';
 
-import { getItemPreviewImage } from '@/components/domain/ItemCard';
-import { colors, mono, spacing } from '@/design-system';
+import { ItemCommentsSection } from '@/components/domain/ItemCommentsSection';
+import {
+  getItemFallbackImage,
+  getItemPreviewImage,
+  getItemSourceLabel,
+} from '@/components/domain/ItemCard';
+import { useToast } from '@/components/feedback/AppToast';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { ENTER_EASING, LAYOUT_SPRING } from '@/components/motion/springs';
+import {
+  AppText,
+  Button,
+  Card,
+  EmptyState,
+  GlassSurface,
+  IconButton,
+  ItemDetailSkeleton,
+  Screen,
+  ScreenHeader,
+  SmartImage,
+  TextField,
+} from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
+import { itemsApi } from '@/features/items/api';
 import {
   useCompleteItem,
   useDeleteItem,
   useItem,
   useMoveItem,
   useRestoreItem,
+  useUpdateItem,
 } from '@/features/items/hooks';
 import { useLists } from '@/features/lists/hooks';
+import { usePlanAction, useSpacePlans } from '@/features/plans/hooks';
+import { decodePlanNote } from '@/features/plans/note-meta';
+import { PlanSheet } from '@/features/plans/PlanSheet';
 import { SafetyActions } from '@/features/safety/SafetyActions';
+import {
+  addPlanToDeviceCalendar,
+  buildLocationQuery,
+  isPlaceLikeItem,
+  openInAppleMaps,
+  openInGoogleCalendar,
+  openInGoogleMaps,
+} from '@/lib/external-apps';
+import { haptic } from '@/lib/haptics';
+import { useAuthStore } from '@/store/auth-store';
 
 export default function ItemDetailScreen() {
   useTranslation();
+  const reducedMotion = useReducedMotion();
+  const client = useQueryClient();
+  const { showToast } = useToast();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const item = useItem(itemId);
+  const ownId = useAuthStore((state) => state.user?.id);
   const [isMoveOpen, setIsMoveOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isPlanOpen, setIsPlanOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const lists = useLists(item.data?.space_id ?? '');
+  const plans = useSpacePlans(item.data?.space_id ?? '');
+  const planAction = usePlanAction(item.data?.space_id ?? '');
   const complete = useCompleteItem(itemId);
   const restore = useRestoreItem(itemId);
   const remove = useDeleteItem(itemId, item.data?.list_id ?? '');
+  const update = useUpdateItem(itemId);
   const move = useMoveItem(itemId, item.data?.list_id ?? '', item.data?.space_id ?? '');
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'));
 
-  if (item.isLoading)
+  if (item.isLoading) {
     return (
-      <Screen backgroundColor={mono.background}>
+      <Screen>
         <ItemDetailSkeleton />
       </Screen>
     );
-  if (item.isError && !item.data)
+  }
+
+  if (item.isError && !item.data) {
     return (
-      <Screen backgroundColor={mono.background}>
-        <Header onBack={goBack} />
+      <Screen>
+        <ScreenHeader onBack={goBack} />
         <EmptyState
           icon="cloud-offline-outline"
           title={t('items.couldnTLoad')}
@@ -59,11 +117,12 @@ export default function ItemDetailScreen() {
         />
       </Screen>
     );
+  }
 
-  if (!item.data)
+  if (!item.data) {
     return (
-      <Screen backgroundColor={mono.background}>
-        <Header onBack={goBack} />
+      <Screen>
+        <ScreenHeader onBack={goBack} />
         <EmptyState
           icon="alert-circle-outline"
           title={t('items.itemNotFound')}
@@ -73,6 +132,7 @@ export default function ItemDetailScreen() {
         />
       </Screen>
     );
+  }
 
   const value = item.data;
   const completed = value.status === 'completed';
@@ -91,60 +151,454 @@ export default function ItemDetailScreen() {
       },
     ]);
   };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await client.invalidateQueries({ queryKey: ['items', itemId] });
+      await client.invalidateQueries({ queryKey: ['items', itemId, 'comments'] });
+      if (value.space_id) {
+        await client.invalidateQueries({ queryKey: ['spaces', value.space_id, 'plans'] });
+      }
+      await item.refetch?.();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditTitle(value.title ?? '');
+    setEditDescription(value.description ?? '');
+    setIsEditOpen(true);
+  };
+
+  const saveEdits = () => {
+    const trimmedTitle = editTitle.trim();
+    const trimmedDescription = editDescription.trim();
+    update.mutate(
+      {
+        title: trimmedTitle || undefined,
+        description: trimmedDescription,
+      },
+      {
+        onSuccess: () => {
+          setIsEditOpen(false);
+          showToast({ type: 'success', title: t('items.updated') });
+        },
+        onError: (err) => {
+          showToast({
+            type: 'error',
+            title: t('settings.couldnTSave'),
+            message: err instanceof Error ? err.message : t('common.tryAgainShort'),
+          });
+        },
+      },
+    );
+  };
+
+  const handleCopyLink = async () => {
+    if (!value.original_url) return;
+    try {
+      await Clipboard.setStringAsync(value.original_url);
+      showToast({ type: 'success', title: t('items.copiedLink') });
+    } catch {
+      showToast({ type: 'error', title: t('common.tryAgainShort') });
+    }
+  };
+
+  const placeLike = isPlaceLikeItem(value);
+  const locationQuery = buildLocationQuery({
+    title: value.title,
+    originalUrl: value.original_url,
+  });
+
+  const activePlan = (plans.data?.data ?? []).find(
+    (entry) =>
+      entry.item_id === value.id &&
+      (entry.status === 'proposed' || entry.status === 'approved'),
+  );
+  const activePlanMeta = activePlan ? decodePlanNote(activePlan.note) : null;
+  const activePlanCreatedByOther = Boolean(
+    activePlan && activePlan.created_by && activePlan.created_by !== ownId,
+  );
+
+  const pendingPreview =
+    (value.metadata_status === 'pending' || value.metadata_status === 'processing') &&
+    !value.preview_image_url;
+
   return (
-    <Screen scroll backgroundColor={mono.background}>
-      <View style={styles.contourTop} pointerEvents="none" />
-      <View style={styles.contourBottom} pointerEvents="none" />
-      <Header onBack={goBack} />
-      <View style={styles.content}>
-        <Card style={styles.previewCard}>
-          <Image
-            source={{ uri: getItemPreviewImage(value) }}
+    <Screen
+      scroll
+      automaticallyAdjustKeyboardInsets
+      refreshing={refreshing}
+      onRefresh={() => void handleRefresh()}
+    >
+      <ScreenHeader
+        onBack={goBack}
+        rightAction={
+          <View style={styles.headerActions}>
+            <IconButton
+              tone="glass"
+              size={40}
+              label={t('items.editItem')}
+              icon={
+                <Ionicons name="create-outline" size={18} color={colors.primaryText} />
+              }
+              onPress={openEditModal}
+            />
+            <IconButton
+              tone="glass"
+              size={40}
+              label={t('items.viewHistory')}
+              icon={<Ionicons name="time-outline" size={18} color={colors.primaryText} />}
+              onPress={() => router.push(`/item/${value.id}/history`)}
+            />
+          </View>
+        }
+      />
+
+      <Animated.View entering={FadeIn.duration(220)} style={styles.content}>
+        <Card variant="elevated" style={styles.previewCard}>
+          <SmartImage
+            uri={getItemPreviewImage(value)}
+            fallbackUri={getItemFallbackImage(value)}
+            pending={pendingPreview}
             style={styles.cover}
-            resizeMode="cover"
           />
+          <View style={styles.metaPills}>
+            <View style={styles.sourceBadge}>
+              <AppText style={styles.sourceBadgeText}>
+                {getItemSourceLabel(value)}
+              </AppText>
+            </View>
+            <AppText variant="caption" muted>
+              {formatRelativeTime(value.created_at)}
+            </AppText>
+          </View>
           <AppText variant="pageTitle" style={styles.title}>
             {value.title ?? t('common.savedItem')}
           </AppText>
+          {value.description ? (
+            <AppText style={styles.description}>{value.description}</AppText>
+          ) : null}
           {value.original_url ? (
-            <Pressable
-              onPress={() => void Linking.openURL(value.original_url!)}
-              style={({ pressed }) => [styles.sourceButton, pressed && styles.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel={t('items.openLink')}
-            >
-              <Ionicons name="open-outline" size={17} color={mono.ink} />
-              <AppText style={styles.sourceButtonText}>{t('items.openLink')}</AppText>
-            </Pressable>
+            <View style={styles.linkRow}>
+              <SpringPressable
+                onPress={() => void Linking.openURL(value.original_url!)}
+                pressScale={0.965}
+                haptic="light"
+                style={[styles.pillPressable, styles.linkOpenFlex]}
+                accessibilityRole="button"
+                accessibilityLabel={t('items.openLink')}
+              >
+                <GlassSurface
+                  elevated
+                  interactive
+                  tintColor="rgba(255, 255, 255, 0.52)"
+                  fallbackBackgroundColor={colors.glassElevated}
+                  style={styles.sourceButton}
+                >
+                  <Ionicons name="open-outline" size={17} color={colors.primaryText} />
+                  <AppText style={styles.sourceButtonText}>{t('items.openLink')}</AppText>
+                </GlassSurface>
+              </SpringPressable>
+              <IconButton
+                tone="glass"
+                size={46}
+                label={t('items.copyLink')}
+                icon={
+                  <Ionicons name="copy-outline" size={18} color={colors.primaryText} />
+                }
+                onPress={() => void handleCopyLink()}
+              />
+            </View>
+          ) : null}
+          {placeLike && locationQuery ? (
+            <View style={styles.mapsRow}>
+              {Platform.OS === 'ios' ? (
+                <SpringPressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('items.openAppleMaps')}
+                  pressScale={0.95}
+                  haptic="light"
+                  onPress={() => void openInAppleMaps(locationQuery, value.original_url)}
+                  style={styles.mapPill}
+                >
+                  <Ionicons name="map-outline" size={15} color="#5F4932" />
+                  <AppText style={styles.mapPillText}>{t('items.openAppleMaps')}</AppText>
+                </SpringPressable>
+              ) : null}
+              <SpringPressable
+                accessibilityRole="button"
+                accessibilityLabel={t('items.openGoogleMaps')}
+                pressScale={0.95}
+                haptic="light"
+                onPress={() => void openInGoogleMaps(locationQuery, value.original_url)}
+                style={styles.mapPill}
+              >
+                <Ionicons name="navigate-outline" size={15} color="#5F4932" />
+                <AppText style={styles.mapPillText}>{t('items.openGoogleMaps')}</AppText>
+              </SpringPressable>
+            </View>
           ) : null}
           <View style={styles.creatorRow}>
-            <Ionicons name="person-outline" size={17} color={colors.secondaryText} />
-            <AppText muted>
+            <View style={styles.creatorIcon}>
+              <Ionicons name="person-outline" size={14} color={colors.primaryText} />
+            </View>
+            <AppText muted style={styles.creatorText}>
               {t('items.addedBy')} {value.created_by_name}
             </AppText>
           </View>
         </Card>
+
         <SafetyActions
           itemId={value.id}
           userId={value.created_by}
           displayName={value.created_by_name}
           spaceId={value.space_id}
         />
-        <Pressable
+
+        {activePlan ? (
+          <Card variant="elevated" style={styles.planCard}>
+            <View style={styles.planHeaderRow}>
+              <View style={styles.planIconWrap}>
+                <Ionicons name="calendar" size={18} color="#9E7F60" />
+              </View>
+              <View style={styles.planHeaderCopy}>
+                <AppText variant="caption" style={styles.planEyebrow}>
+                  {t('plans.activePlan')}
+                </AppText>
+                <AppText style={styles.planDateTitle}>
+                  {formatPlanDateTime(activePlan.scheduled_at)}
+                </AppText>
+              </View>
+              <View
+                style={[
+                  styles.planStatusBadge,
+                  activePlan.status === 'approved' && styles.planStatusApproved,
+                ]}
+              >
+                <AppText
+                  style={[
+                    styles.planStatusText,
+                    activePlan.status === 'approved' && styles.planStatusTextApproved,
+                  ]}
+                >
+                  {activePlan.status === 'approved'
+                    ? t('plans.statusApproved')
+                    : t('plans.statusProposed')}
+                </AppText>
+              </View>
+            </View>
+            {activePlanMeta?.location ? (
+              <AppText variant="caption" style={styles.planLocationText}>
+                {activePlanMeta.location}
+              </AppText>
+            ) : null}
+            {activePlanMeta?.note ? (
+              <AppText variant="caption" muted>
+                {activePlanMeta.note}
+              </AppText>
+            ) : null}
+            <View style={styles.mapsRow}>
+              {Platform.OS !== 'web' ? (
+                <SpringPressable
+                  accessibilityRole="button"
+                  pressScale={0.95}
+                  haptic="selection"
+                  onPress={() =>
+                    void addPlanToDeviceCalendar({
+                      itemId: value.id,
+                      scheduledAt: activePlan.scheduled_at,
+                      reminderMinutesBefore: activePlan.reminder_minutes_before,
+                    }).then((res) => {
+                      showToast({
+                        type: res.status === 'saved' ? 'success' : 'warning',
+                        title:
+                          res.status === 'saved'
+                            ? t('plans.addedToCalendar')
+                            : t('plans.calendarPermissionDenied'),
+                      });
+                    })
+                  }
+                  style={styles.mapPill}
+                >
+                  <Ionicons name="calendar-outline" size={14} color="#5F4932" />
+                  <AppText style={styles.mapPillText}>
+                    {t('plans.addToAppleCalendar')}
+                  </AppText>
+                </SpringPressable>
+              ) : null}
+              <SpringPressable
+                accessibilityRole="button"
+                pressScale={0.95}
+                haptic="selection"
+                onPress={() =>
+                  void openInGoogleCalendar({
+                    itemId: value.id,
+                    scheduledAt: activePlan.scheduled_at,
+                  })
+                }
+                style={styles.mapPill}
+              >
+                <Ionicons name="logo-google" size={13} color="#5F4932" />
+                <AppText style={styles.mapPillText}>
+                  {t('plans.addToGoogleCalendar')}
+                </AppText>
+              </SpringPressable>
+              <SpringPressable
+                accessibilityRole="button"
+                pressScale={0.95}
+                haptic="light"
+                onPress={() => setIsPlanOpen(true)}
+                style={styles.mapPill}
+              >
+                <Ionicons name="create-outline" size={14} color="#5F4932" />
+                <AppText style={styles.mapPillText}>{t('plans.editAction')}</AppText>
+              </SpringPressable>
+            </View>
+            <View style={styles.planDecisionRow}>
+              {activePlan.status === 'proposed' && activePlanCreatedByOther ? (
+                <>
+                  <SpringPressable
+                    accessibilityRole="button"
+                    pressScale={0.95}
+                    haptic="medium"
+                    disabled={planAction.isPending}
+                    onPress={() =>
+                      planAction.mutate(
+                        { planId: activePlan.id, action: 'approve' },
+                        {
+                          onSuccess: () =>
+                            showToast({
+                              type: 'success',
+                              title: t('plans.planUpdated'),
+                            }),
+                        },
+                      )
+                    }
+                    style={styles.planApproveBtn}
+                  >
+                    <Ionicons name="checkmark" size={14} color={colors.onAccent} />
+                    <AppText style={styles.planApproveText}>{t('plans.approve')}</AppText>
+                  </SpringPressable>
+                  <SpringPressable
+                    accessibilityRole="button"
+                    pressScale={0.95}
+                    haptic="warning"
+                    disabled={planAction.isPending}
+                    onPress={() =>
+                      planAction.mutate({ planId: activePlan.id, action: 'reject' })
+                    }
+                    style={styles.planDeclineBtn}
+                  >
+                    <AppText style={styles.planDeclineText}>{t('plans.decline')}</AppText>
+                  </SpringPressable>
+                </>
+              ) : activePlan.status === 'proposed' ? (
+                <SpringPressable
+                  accessibilityRole="button"
+                  pressScale={0.95}
+                  haptic="warning"
+                  disabled={planAction.isPending}
+                  onPress={() =>
+                    planAction.mutate(
+                      { planId: activePlan.id, action: 'cancel' },
+                      {
+                        onSuccess: () =>
+                          showToast({
+                            type: 'info',
+                            title: t('plans.cancelledToast'),
+                          }),
+                      },
+                    )
+                  }
+                  style={styles.planDeclineBtn}
+                >
+                  <AppText style={styles.planDeclineText}>
+                    {t('plans.cancelPlan')}
+                  </AppText>
+                </SpringPressable>
+              ) : (
+                <SpringPressable
+                  accessibilityRole="button"
+                  pressScale={0.95}
+                  haptic="medium"
+                  disabled={planAction.isPending}
+                  onPress={() =>
+                    planAction.mutate(
+                      { planId: activePlan.id, action: 'complete' },
+                      {
+                        onSuccess: () =>
+                          showToast({
+                            type: 'success',
+                            title: t('plans.planUpdated'),
+                          }),
+                      },
+                    )
+                  }
+                  style={styles.planApproveBtn}
+                >
+                  <Ionicons name="checkmark-done" size={14} color={colors.onAccent} />
+                  <AppText style={styles.planApproveText}>{t('plans.complete')}</AppText>
+                </SpringPressable>
+              )}
+            </View>
+          </Card>
+        ) : (
+          <SpringPressable
+            onPress={() => setIsPlanOpen(true)}
+            pressScale={0.965}
+            haptic="light"
+            style={styles.pillPressable}
+            accessibilityRole="button"
+            accessibilityLabel={t('plans.schedulePlan')}
+          >
+            <GlassSurface
+              elevated
+              interactive
+              tintColor="rgba(250, 245, 238, 0.78)"
+              fallbackBackgroundColor="#FAF5EE"
+              style={styles.scheduleTrigger}
+            >
+              <Ionicons name="calendar-outline" size={19} color="#7A5E42" />
+              <AppText style={styles.scheduleTriggerText}>
+                {t('plans.schedulePlan')}
+              </AppText>
+            </GlassSurface>
+          </SpringPressable>
+        )}
+
+        <SpringPressable
           onPress={() => {
-            haptic.medium();
             if (completed) {
-              restore.mutate();
+              restore.mutate(undefined, {
+                onSuccess: () =>
+                  showToast({
+                    type: 'info',
+                    title: t('items.markedAsNotDoneToast'),
+                    actionLabel: t('common.undo'),
+                    onAction: () => complete.mutate(),
+                  }),
+              });
             } else {
-              complete.mutate();
+              complete.mutate(undefined, {
+                onSuccess: () =>
+                  showToast({
+                    type: 'success',
+                    title: t('items.markedAsDoneToast'),
+                    actionLabel: t('common.undo'),
+                    onAction: () => restore.mutate(),
+                  }),
+              });
             }
           }}
           disabled={complete.isPending || restore.isPending}
-
-          style={({ pressed }) => [
-            styles.completeButton,
-            completed && styles.restoreButton,
-            pressed && styles.pressed,
+          pressScale={0.965}
+          haptic={completed ? 'light' : 'medium'}
+          style={[
+            styles.pillPressable,
+            !completed && styles.completeButton,
             (complete.isPending || restore.isPending) && styles.disabled,
           ]}
           accessibilityRole="button"
@@ -152,68 +606,144 @@ export default function ItemDetailScreen() {
             completed ? t('items.markAsNotDone') : t('items.markAsDone')
           }
         >
-          {complete.isPending || restore.isPending ? (
-            <ActivityIndicator color={completed ? mono.ink : mono.paper} />
+          {completed ? (
+            <GlassSurface
+              elevated
+              interactive
+              tintColor="rgba(255, 255, 255, 0.54)"
+              fallbackBackgroundColor={colors.glassElevated}
+              style={styles.restoreButton}
+            >
+              {restore.isPending ? (
+                <ActivityIndicator color={colors.primaryText} />
+              ) : (
+                <>
+                  <Ionicons
+                    name="arrow-undo-outline"
+                    size={19}
+                    color={colors.primaryText}
+                  />
+                  <AppText style={styles.restoreText}>{t('items.markAsNotDone')}</AppText>
+                </>
+              )}
+            </GlassSurface>
+          ) : complete.isPending ? (
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <>
               <Ionicons
-                name={completed ? 'arrow-undo-outline' : 'checkmark-circle-outline'}
+                name="checkmark-circle-outline"
                 size={20}
-                color={completed ? mono.ink : mono.paper}
+                color={colors.onAccent}
               />
-              <AppText style={[styles.completeText, completed && styles.restoreText]}>
-                {completed ? t('items.markAsNotDone') : t('items.markAsDone')}
-              </AppText>
+              <AppText style={styles.completeText}>{t('items.markAsDone')}</AppText>
             </>
           )}
-        </Pressable>
-        <Pressable
+        </SpringPressable>
+
+        <SpringPressable
           onPress={() => setIsMoveOpen((current) => !current)}
-          style={({ pressed }) => [styles.moveButton, pressed && styles.pressed]}
+          pressScale={0.965}
+          haptic="selection"
+          style={styles.pillPressable}
           accessibilityRole="button"
         >
-          <Ionicons name="swap-horizontal-outline" size={19} color={mono.ink} />
-          <AppText style={styles.moveText}>{t('items.moveToAnotherList')}</AppText>
-        </Pressable>
+          <GlassSurface
+            elevated
+            interactive
+            tintColor="rgba(255, 255, 255, 0.52)"
+            fallbackBackgroundColor={colors.glassElevated}
+            style={styles.moveButton}
+          >
+            <Ionicons
+              name="swap-horizontal-outline"
+              size={19}
+              color={colors.primaryText}
+            />
+            <AppText style={styles.moveText}>{t('items.moveToAnotherList')}</AppText>
+          </GlassSurface>
+        </SpringPressable>
+
         {isMoveOpen ? (
-          <Card style={styles.moveCard}>
-            <AppText variant="cardTitle">{t('items.destinationList')}</AppText>
-            {lists.data?.data
-              .filter((entry) => entry.id !== value.list_id)
-              .map((entry) => (
-                <Pressable
-                  key={entry.id}
-                  disabled={move.isPending}
-                  onPress={() =>
-                    move.mutate(entry.id, {
-                      onSuccess: () => {
-                        setIsMoveOpen(false);
-                        router.replace(`/list/${entry.id}`);
-                      },
-                    })
-                  }
-                  style={({ pressed }) => [styles.moveOption, pressed && styles.pressed]}
-                >
-                  <AppText style={styles.moveOptionText}>{entry.name}</AppText>
-                  <Ionicons name="arrow-forward" size={17} color={mono.ink} />
-                </Pressable>
-              ))}
-            {lists.data?.data.length === 1 ? (
-              <AppText muted>
-                {t('items.createAnotherListInThisSpaceToMoveTheItem')}
-              </AppText>
-            ) : null}
-          </Card>
+          <Animated.View entering={FadeInDown.duration(180)} layout={LAYOUT_SPRING}>
+            <Card style={styles.moveCard}>
+              <AppText variant="cardTitle">{t('items.destinationList')}</AppText>
+              {lists.data?.data
+                .filter((entry) => entry.id !== value.list_id)
+                .map((entry) => (
+                  <SpringPressable
+                    key={entry.id}
+                    accessibilityRole="button"
+                    disabled={move.isPending}
+                    pressScale={0.975}
+                    haptic="selection"
+                    onPress={() => {
+                      const previousListId = value.list_id;
+                      move.mutate(entry.id, {
+                        onSuccess: () => {
+                          setIsMoveOpen(false);
+                          showToast({
+                            type: 'success',
+                            title: t('items.movedToListToast', { list: entry.name }),
+                            actionLabel: t('common.undo'),
+                            onAction: () => {
+                              void itemsApi.move(value.id, previousListId).then(() => {
+                                void client.invalidateQueries({
+                                  queryKey: ['items', value.id],
+                                });
+                                void client.invalidateQueries({ queryKey: ['lists'] });
+                                router.replace(`/list/${previousListId}`);
+                              });
+                            },
+                          });
+                          router.replace(`/list/${entry.id}`);
+                        },
+                      });
+                    }}
+                    style={styles.moveOption}
+                  >
+                    <AppText style={styles.moveOptionText}>{entry.name}</AppText>
+                    <Ionicons name="arrow-forward" size={17} color={colors.primaryText} />
+                  </SpringPressable>
+                ))}
+              {lists.data?.data.length === 1 ? (
+                <AppText muted>
+                  {t('items.createAnotherListInThisSpaceToMoveTheItem')}
+                </AppText>
+              ) : null}
+            </Card>
+          </Animated.View>
         ) : null}
-        <Pressable
+
+        <ItemCommentsSection itemId={value.id} spaceId={value.space_id} />
+
+        <SpringPressable
+          accessibilityRole="button"
+          accessibilityLabel={t('items.viewHistory')}
+          pressScale={0.975}
+          haptic="selection"
+          onPress={() => router.push(`/item/${value.id}/history`)}
+          style={styles.pillPressable}
+        >
+          <GlassSurface
+            elevated
+            interactive
+            tintColor="rgba(255, 255, 255, 0.52)"
+            fallbackBackgroundColor={colors.glassElevated}
+            style={styles.moveButton}
+          >
+            <Ionicons name="time-outline" size={18} color={colors.primaryText} />
+            <AppText style={styles.moveText}>{t('items.viewHistory')}</AppText>
+          </GlassSurface>
+        </SpringPressable>
+
+        <SpringPressable
           onPress={confirmDelete}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           disabled={remove.isPending}
-          style={({ pressed }) => [
-            styles.deleteButton,
-            pressed && styles.pressed,
-            remove.isPending && styles.disabled,
-          ]}
+          pressScale={0.96}
+          haptic="warning"
+          style={[styles.deleteButton, remove.isPending && styles.disabled]}
           accessibilityRole="button"
           accessibilityLabel={t('items.deleteItem')}
         >
@@ -221,156 +751,360 @@ export default function ItemDetailScreen() {
           <AppText style={styles.deleteText}>
             {remove.isPending ? t('safety.deleting') : t('items.deleteItem')}
           </AppText>
+        </SpringPressable>
+      </Animated.View>
+
+      <Modal
+        visible={isEditOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsEditOpen(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setIsEditOpen(false)}>
+          <Animated.View
+            entering={
+              reducedMotion ? undefined : SlideInDown.duration(220).easing(ENTER_EASING)
+            }
+            exiting={reducedMotion ? undefined : SlideOutDown.duration(160)}
+            style={styles.sheet}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.sheetHandle} />
+            <AppText variant="sectionTitle">{t('items.editItem')}</AppText>
+            <TextField
+              label={t('items.titleLabel')}
+              value={editTitle}
+              onChangeText={setEditTitle}
+              maxLength={255}
+              placeholder={t('common.savedItem')}
+            />
+            <TextField
+              label={t('items.noteLabel')}
+              value={editDescription}
+              onChangeText={setEditDescription}
+              maxLength={1000}
+              multiline
+              placeholder={t('items.notePlaceholder')}
+            />
+            <Button
+              label={t('sharing.save')}
+              variant="primary"
+              loading={update.isPending}
+              disabled={update.isPending}
+              onPress={saveEdits}
+            />
+            <Button
+              label={t('items.cancel')}
+              variant="ghost"
+              onPress={() => setIsEditOpen(false)}
+            />
+          </Animated.View>
         </Pressable>
-      </View>
+      </Modal>
+      <PlanSheet
+        visible={isPlanOpen}
+        item={value}
+        existingPlan={activePlan}
+        onClose={() => setIsPlanOpen(false)}
+      />
     </Screen>
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
-  useTranslation();
-  return (
-    <View style={styles.header}>
-      <Pressable
-        onPress={onBack}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        accessibilityRole="button"
-        accessibilityLabel={t('common.goBack')}
-      >
-        <Ionicons name="arrow-back" size={22} color={mono.ink} />
-      </Pressable>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  contourTop: {
-    position: 'absolute',
-    top: -150,
-    right: -155,
-    width: 330,
-    height: 330,
-    borderRadius: 165,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.75,
-  },
-  contourBottom: {
-    position: 'absolute',
-    bottom: -160,
-    left: -185,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.5,
-  },
-  header: { height: 56, justifyContent: 'center', paddingHorizontal: spacing.xs },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
-  },
   content: {
     width: '100%',
     maxWidth: 480,
     alignSelf: 'center',
-    gap: spacing.lg,
+    gap: spacing.md + 2,
     padding: spacing.sm,
     paddingBottom: spacing.huge,
   },
-  previewCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    ...Platform.select({ web: { boxShadow: '0px 7px 0px rgba(0,0,0,0.14)' } }),
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
-  cover: { width: '100%', height: 240, borderRadius: 11, backgroundColor: mono.soft },
-  title: { fontSize: 22, fontWeight: '800', color: mono.ink, marginTop: spacing.xs },
-  sourceButton: {
-    minHeight: 44,
-    borderRadius: 10,
+  previewCard: {
+    borderRadius: 28,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  cover: {
+    width: '100%',
+    height: 240,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  metaPills: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  sourceBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  sourceBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
+  title: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    color: colors.primaryText,
+    marginTop: 2,
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.secondaryText,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  linkOpenFlex: {
+    flex: 1,
+  },
+  mapsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  mapPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: '#FAF5EE',
     borderWidth: 1,
-    borderColor: mono.ink,
+    borderColor: '#D4BEA4',
+  },
+  mapPillText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#5F4932',
+  },
+  pillPressable: {
+    borderRadius: radius.pill,
+  },
+  sourceButton: {
+    minHeight: 46,
+    borderRadius: radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: mono.paper,
+    gap: spacing.xs + 2,
   },
-  sourceButtonText: { color: mono.ink, fontSize: 14, fontWeight: '700' },
+  sourceButtonText: {
+    color: colors.primaryText,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   creatorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
+  },
+  creatorIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  creatorText: {
+    fontSize: 13,
   },
   completeButton: {
-    minHeight: 54,
-    borderRadius: 12,
+    minHeight: 52,
+    borderRadius: radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: mono.ink,
-    ...Platform.select({ web: { boxShadow: '0px 5px 0px rgba(0,0,0,0.16)' } }),
+    backgroundColor: colors.accent,
+    ...shadows.pillAction,
   },
-  completeText: { color: mono.paper, fontSize: 15, fontWeight: '700' },
-  restoreButton: { backgroundColor: mono.paper, borderWidth: 1, borderColor: mono.ink },
-  restoreText: { color: mono.ink },
-  deleteButton: {
-    minHeight: 46,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: mono.danger,
+  completeText: { color: colors.onAccent, fontSize: 15, fontWeight: '600' },
+  restoreButton: {
+    minHeight: 52,
+    borderRadius: radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: mono.paper,
+    gap: spacing.sm,
   },
-  deleteText: { color: mono.danger, fontSize: 14, fontWeight: '700' },
+  restoreText: { color: colors.primaryText, fontSize: 15, fontWeight: '600' },
   moveButton: {
     minHeight: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: mono.ink,
+    borderRadius: radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: mono.paper,
+    gap: spacing.xs + 2,
   },
-  moveText: { color: mono.ink, fontSize: 14, fontWeight: '700' },
+  moveText: { color: colors.primaryText, fontSize: 14, fontWeight: '600' },
   moveCard: {
-    gap: spacing.xs,
-    padding: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
+    gap: spacing.sm,
+    padding: spacing.md + 2,
+    borderRadius: 22,
   },
   moveOption: {
-    minHeight: 46,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 9,
-    backgroundColor: mono.soft,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceSecondary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  moveOptionText: { color: mono.ink, fontWeight: '700' },
-  loader: { flex: 1, minHeight: 280, alignItems: 'center', justifyContent: 'center' },
-  pressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
+  moveOptionText: { color: colors.primaryText, fontWeight: '600' },
+  deleteButton: {
+    minHeight: 48,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 74, 66, 0.22)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs + 2,
+    backgroundColor: colors.errorSoft,
+  },
+  deleteText: { color: colors.error, fontSize: 14, fontWeight: '600' },
   disabled: { opacity: 0.55 },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(17, 17, 16, 0.34)',
+  },
+  sheet: {
+    gap: spacing.md,
+    padding: spacing.xl,
+    paddingBottom: spacing.section,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    ...shadows.elevated,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(17, 17, 16, 0.16)',
+  },
+  scheduleTrigger: {
+    minHeight: 50,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: '#D4BEA4',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs + 2,
+  },
+  scheduleTriggerText: {
+    color: '#5F4932',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  planCard: {
+    borderRadius: 24,
+    padding: spacing.md + 2,
+    gap: spacing.sm + 2,
+  },
+  planHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+  },
+  planIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: '#D4BEA4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  planEyebrow: {
+    color: '#7A5E42',
+    fontWeight: '700',
+  },
+  planDateTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primaryText,
+  },
+  planStatusBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.warningSoft,
+  },
+  planStatusApproved: {
+    backgroundColor: colors.successSoft,
+  },
+  planStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.warning,
+  },
+  planStatusTextApproved: {
+    color: colors.success,
+  },
+  planLocationText: {
+    color: '#5F4932',
+    fontWeight: '600',
+  },
+  planDecisionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    paddingTop: spacing.xs,
+  },
+  planApproveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+  },
+  planApproveText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.onAccent,
+  },
+  planDeclineBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.errorSoft,
+  },
+  planDeclineText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.error,
+  },
 });

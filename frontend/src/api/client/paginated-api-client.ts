@@ -12,9 +12,7 @@ export async function allPages<T>(path: string): Promise<Page<T>> {
   let page = 1;
   while (true) {
     const params = new URLSearchParams({ page: String(page), page_size: '100' });
-    const result = await authenticatedApiClient<Page<T>>(
-      `${path}?${params.toString()}`,
-    );
+    const result = await authenticatedApiClient<Page<T>>(`${path}?${params.toString()}`);
     data.push(...result.data);
     if (!result.pagination.has_more) break;
     page += 1;

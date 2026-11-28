@@ -1,31 +1,35 @@
-import { useCallback } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
-import { useFocusEffect } from 'expo-router';
 import Animated, {
-  Easing,
   cancelAnimation,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 
-export function ScreenMotion({ children }: { children: React.ReactNode }) {
-  const progress = useSharedValue(0);
+import { ENTER_EASING } from './springs';
 
-  useFocusEffect(
-    useCallback(() => {
-      progress.value = 0;
-      progress.value = withTiming(1, {
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-      });
-      return () => cancelAnimation(progress);
-    }, [progress]),
-  );
+/** Gently settles a screen once on mount without flashing blank on stack pop-back. */
+export function ScreenMotion({ children }: { children: React.ReactNode }) {
+  const reducedMotion = useReducedMotion();
+  const progress = useSharedValue(reducedMotion ? 1 : 0);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      progress.value = 1;
+      return;
+    }
+    progress.value = withTiming(1, {
+      duration: 240,
+      easing: ENTER_EASING,
+    });
+    return () => cancelAnimation(progress);
+  }, [progress, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ translateY: (1 - progress.value) * 8 }],
+    transform: [{ translateY: (1 - progress.value) * 6 }],
   }));
 
   return (

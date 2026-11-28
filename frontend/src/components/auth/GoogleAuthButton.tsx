@@ -5,7 +5,6 @@ import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Pressable,
   Platform,
   StyleSheet,
   View,
@@ -14,7 +13,9 @@ import {
 } from 'react-native';
 
 import { useToast } from '@/components/feedback/AppToast';
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText } from '@/components/ui';
+import { colors, radius, shadows } from '@/design-system';
 import { getGoogleIdToken } from '@/lib/google-auth';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -60,6 +61,7 @@ export function GoogleAuthButton({
     } catch (error: unknown) {
       const err = error as { message?: string };
       showToast({
+        type: 'error',
         title: t('auth.signInFailed'),
         message: err.message ?? t('auth.somethingWentWrongSigningInWithGoogle'),
       });
@@ -74,17 +76,20 @@ export function GoogleAuthButton({
   if (loading) {
     return (
       <View style={[styles.button, styles.loadingContainer, style]}>
-        <ActivityIndicator color="#090909" />
+        <ActivityIndicator color={colors.primaryText} />
       </View>
     );
   }
 
   return (
-    <Pressable
+    <SpringPressable
       accessibilityRole="button"
       accessibilityLabel={t('auth.continueWithGoogle')}
+      pressScale={0.97}
+      pressOpacity={0.88}
+      haptic="light"
       onPress={() => void handleGoogleAuth()}
-      style={({ pressed }) => [styles.button, style, pressed && styles.pressed]}
+      style={[styles.button, style]}
     >
       <Image
         source={require('../../../assets/auth_google.png')}
@@ -92,26 +97,27 @@ export function GoogleAuthButton({
         resizeMode="contain"
       />
       <AppText style={styles.buttonText}>{t('auth.continueWithGoogle_99694')}</AppText>
-    </Pressable>
+    </SpringPressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
     width: '100%',
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E0E0DC',
+    height: 50,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     gap: 10,
+    ...shadows.glass,
   },
   buttonText: {
-    color: '#090909',
+    color: colors.primaryText,
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
@@ -123,9 +129,5 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  pressed: {
-    backgroundColor: '#F5F5F3',
-    transform: [{ scale: 0.99 }],
   },
 });

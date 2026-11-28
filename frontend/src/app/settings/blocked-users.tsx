@@ -1,7 +1,8 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText } from '@/components/ui';
 import {
   AccountCard,
@@ -36,21 +37,23 @@ export default function BlockedUsersScreen() {
       ) : blocks.isError ? (
         <AccountCard>
           <AppText accessibilityRole="alert">{blocks.error.message}</AppText>
-          <Pressable
+          <SpringPressable
             accessibilityRole="button"
+            haptic="light"
             onPress={() => void blocks.refetch()}
             style={accountStyles.secondaryButton}
           >
             <AppText>{t('common.retry')}</AppText>
-          </Pressable>
+          </SpringPressable>
         </AccountCard>
       ) : (
         <>
           {(blocks.data?.pages.flatMap((page) => page.data) ?? []).map((user) => (
             <AccountCard key={user.user_id}>
               <AppText variant="sectionTitle">{user.display_name}</AppText>
-              <Pressable
+              <SpringPressable
                 accessibilityRole="button"
+                haptic="medium"
                 disabled={unblock.isPending}
                 onPress={() => unblock.mutate(user.user_id)}
                 style={accountStyles.secondaryButton}
@@ -59,7 +62,7 @@ export default function BlockedUsersScreen() {
                   <ActivityIndicator />
                 ) : null}
                 <AppText>{t('safety.unblock')}</AppText>
-              </Pressable>
+              </SpringPressable>
             </AccountCard>
           ))}
           {blocks.data?.pages[0]?.data.length === 0 ? (
@@ -69,14 +72,15 @@ export default function BlockedUsersScreen() {
           ) : null}
           {blocks.hasNextPage ? (
             <View>
-              <Pressable
+              <SpringPressable
                 accessibilityRole="button"
+                haptic="selection"
                 disabled={blocks.isFetchingNextPage}
                 onPress={() => void blocks.fetchNextPage()}
                 style={accountStyles.secondaryButton}
               >
                 <AppText>{t('safety.loadMore')}</AppText>
-              </Pressable>
+              </SpringPressable>
             </View>
           ) : null}
         </>

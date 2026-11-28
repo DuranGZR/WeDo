@@ -37,12 +37,94 @@ export function formatLocale(): string {
     getLocales().find((locale) => locale.languageCode === 'en')?.languageTag ?? 'en-GB'
   );
 }
+const TURKISH_MONTHS = [
+  'Ocak',
+  'Şubat',
+  'Mart',
+  'Nisan',
+  'Mayıs',
+  'Haziran',
+  'Temmuz',
+  'Ağustos',
+  'Eylül',
+  'Ekim',
+  'Kasım',
+  'Aralık',
+] as const;
+
+const TURKISH_WEEKDAYS = [
+  'Pazar',
+  'Pazartesi',
+  'Salı',
+  'Çarşamba',
+  'Perşembe',
+  'Cuma',
+  'Cumartesi',
+] as const;
+
+const ENGLISH_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
+const ENGLISH_WEEKDAYS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
+
+export function formatPlanDateLabel(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const months = currentLanguage() === 'tr' ? TURKISH_MONTHS : ENGLISH_MONTHS;
+  const day = date.getDate();
+  const month = months[date.getMonth()] ?? '';
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+}
+
+export function formatPlanWeekdayLabel(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const weekdays = currentLanguage() === 'tr' ? TURKISH_WEEKDAYS : ENGLISH_WEEKDAYS;
+  return weekdays[date.getDay()] ?? '';
+}
+
+export function formatPlanTimeLabel(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+export function formatPlanDateTime(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return `${formatPlanDateLabel(date)} (${formatPlanWeekdayLabel(date)}) · ${formatPlanTimeLabel(date)}`;
+}
+
 export function formatDate(value: Date | string, withTime = false): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return withTime
-    ? date.toLocaleString(formatLocale())
-    : date.toLocaleDateString(formatLocale());
+  if (withTime) {
+    return `${formatPlanDateLabel(date)} · ${formatPlanTimeLabel(date)}`;
+  }
+  return date.toLocaleDateString(formatLocale());
 }
 
 export function formatNumber(value: number): string {

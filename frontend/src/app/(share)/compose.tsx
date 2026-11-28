@@ -1,34 +1,40 @@
 import { t } from '@/i18n';
-import { useTranslation } from 'react-i18next';
+
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
 import { useShareIntentContext } from 'expo-share-intent';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
-import { AppText, EmptyState, Screen, ShareComposeSkeleton } from '@/components/ui';
-import { colors, radius, spacing } from '@/design-system';
+import { ApiClientError } from '@/api/client/api-client';
+import { useToast } from '@/components/feedback/AppToast';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
+import {
+  AppText,
+  Card,
+  EmptyState,
+  Screen,
+  ScreenHeader,
+  ShareComposeSkeleton,
+  TextField,
+} from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { useCreateItem } from '@/features/items/hooks';
 import { useLists } from '@/features/lists/hooks';
 import { queueShare } from '@/features/sharing/queue';
 import { sharePayloadSchema } from '@/features/sharing/types';
 import { useSpaces } from '@/features/spaces/hooks';
-import { useSpaceStore } from '@/store/space-store';
-import { ApiClientError } from '@/api/client/api-client';
-import { useToast } from '@/components/feedback/AppToast';
 import { haptic } from '@/lib/haptics';
+import { useSpaceStore } from '@/store/space-store';
 
 const findUrl = (value?: string | null) => value?.match(/https?:\/\/[^\s]+/i)?.[0];
 
 export default function ShareComposeScreen() {
   useTranslation();
+  const reducedMotion = useReducedMotion();
   const params = useLocalSearchParams<{
     url?: string;
     sharedText?: string;
@@ -177,13 +183,11 @@ export default function ShareComposeScreen() {
   if (!share) {
     return (
       <Screen>
-        <Pressable
-          onPress={leaveShareFlow}
-          style={styles.backButton}
-          accessibilityRole="button"
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
-        </Pressable>
+        <ScreenHeader
+          onBack={leaveShareFlow}
+          backIcon="close"
+          backLabel={t('sharing.cancel')}
+        />
         <EmptyState
           title={t('sharing.nothingToShare')}
           description={t('sharing.tryAgainWithALinkTextOrAnImage')}
@@ -192,173 +196,213 @@ export default function ShareComposeScreen() {
     );
   }
 
+  const saveDisabled = !space || !list || create.isPending;
+
   return (
     <Screen>
-      <Pressable
-        onPress={leaveShareFlow}
-        style={styles.backButton}
-        accessibilityRole="button"
-        accessibilityLabel={t('sharing.cancel')}
-      >
-        <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
-      </Pressable>
+      <ScreenHeader
+        onBack={leaveShareFlow}
+        backIcon="close"
+        backLabel={t('sharing.cancel')}
+      />
 
-      <View style={styles.heading}>
-        <AppText variant="pageTitle">{t('sharing.saveToWedo')}</AppText>
-        <AppText muted>{t('sharing.chooseWhereToSaveThisLink')}</AppText>
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.linkRow}>
-          <Ionicons name="link-outline" size={20} color={colors.primaryText} />
-          <AppText numberOfLines={2} style={styles.linkText}>
-            {sharedUrl ?? sharedText ?? t('sharing.sharedContent')}
-          </AppText>
-        </View>
-
-        <AppText style={styles.label}>{t('sharing.space')}</AppText>
-        <View style={styles.optionList}>
-          {spaces.data?.data.map((entry) => (
-            <Pressable
-              key={entry.id}
-              onPress={() => {
-                haptic.selection();
-                setSpaceId(entry.id);
-              }}
-              style={[styles.option, entry.id === spaceId && styles.optionSelected]}
-            >
-              <AppText
-                style={entry.id === spaceId ? styles.optionSelectedText : undefined}
-              >
-                {entry.name}
-              </AppText>
-              {entry.id === spaceId && (
-                <Ionicons name="checkmark" size={18} color={colors.surface} />
-              )}
-            </Pressable>
-          ))}
-        </View>
-
-        <AppText style={styles.label}>{t('sharing.list')}</AppText>
-        <View style={styles.optionList}>
-          {lists.data?.data.map((entry) => (
-            <Pressable
-              key={entry.id}
-              onPress={() => {
-                haptic.selection();
-                setListId(entry.id);
-              }}
-              style={[styles.option, entry.id === listId && styles.optionSelected]}
-            >
-              <AppText
-                style={entry.id === listId ? styles.optionSelectedText : undefined}
-              >
-                {entry.name}
-              </AppText>
-              {entry.id === listId && (
-                <Ionicons name="checkmark" size={18} color={colors.surface} />
-              )}
-            </Pressable>
-          ))}
-        </View>
-
-        <AppText style={styles.label}>{t('sharing.title')}</AppText>
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder={t('sharing.giveThisItemATitle')}
-          placeholderTextColor={colors.tertiaryText}
-          maxLength={120}
-          style={styles.input}
-        />
-
-        <Pressable
-          disabled={!space || !list || create.isPending}
-          onPress={() => void save()}
-          style={[
-            styles.saveButton,
-            (!space || !list || create.isPending) && styles.disabled,
-          ]}
+      <View style={styles.content}>
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInDown.duration(260)}
+          style={styles.heading}
         >
-          {create.isPending ? (
-            <ActivityIndicator color={colors.surface} />
-          ) : (
-            <>
-              <AppText style={styles.saveText}>{t('sharing.save')}</AppText>
-              <Ionicons name="arrow-forward" size={20} color={colors.surface} />
-            </>
-          )}
-        </Pressable>
+          <AppText variant="largeTitle" style={styles.headingTitle}>
+            {t('sharing.saveToWedo')}
+          </AppText>
+          <AppText muted>{t('sharing.chooseWhereToSaveThisLink')}</AppText>
+        </Animated.View>
+
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInDown.delay(65).duration(280)}
+          layout={reducedMotion ? undefined : LAYOUT_SPRING}
+        >
+          <Card style={styles.card}>
+            <View style={styles.linkRow}>
+              <View style={styles.linkIconWrap}>
+                <Ionicons name="link-outline" size={18} color={colors.primaryText} />
+              </View>
+              <AppText numberOfLines={2} style={styles.linkText}>
+                {sharedUrl ?? sharedText ?? t('sharing.sharedContent')}
+              </AppText>
+            </View>
+
+            <AppText style={styles.label}>{t('sharing.space')}</AppText>
+            <View style={styles.optionList}>
+              {spaces.data?.data.map((entry) => {
+                const selected = entry.id === spaceId;
+                return (
+                  <SpringPressable
+                    key={entry.id}
+                    pressScale={0.98}
+                    haptic="selection"
+                    onPress={() => setSpaceId(entry.id)}
+                    style={[styles.option, selected && styles.optionSelected]}
+                  >
+                    <AppText
+                      style={selected ? styles.optionSelectedText : styles.optionText}
+                    >
+                      {entry.name}
+                    </AppText>
+                    {selected && (
+                      <Ionicons name="checkmark" size={18} color={colors.onAccent} />
+                    )}
+                  </SpringPressable>
+                );
+              })}
+            </View>
+
+            <AppText style={styles.label}>{t('sharing.list')}</AppText>
+            <View style={styles.optionList}>
+              {lists.data?.data.map((entry) => {
+                const selected = entry.id === listId;
+                return (
+                  <SpringPressable
+                    key={entry.id}
+                    pressScale={0.98}
+                    haptic="selection"
+                    onPress={() => setListId(entry.id)}
+                    style={[styles.option, selected && styles.optionSelected]}
+                  >
+                    <AppText
+                      style={selected ? styles.optionSelectedText : styles.optionText}
+                    >
+                      {entry.name}
+                    </AppText>
+                    {selected && (
+                      <Ionicons name="checkmark" size={18} color={colors.onAccent} />
+                    )}
+                  </SpringPressable>
+                );
+              })}
+            </View>
+
+            <TextField
+              label={t('sharing.title')}
+              value={title}
+              onChangeText={setTitle}
+              placeholder={t('sharing.giveThisItemATitle')}
+              maxLength={120}
+            />
+
+            <SpringPressable
+              disabled={saveDisabled}
+              haptic="light"
+              onPress={() => void save()}
+              style={[styles.saveButton, saveDisabled && styles.disabled]}
+            >
+              {create.isPending ? (
+                <ActivityIndicator color={colors.onAccent} />
+              ) : (
+                <>
+                  <AppText style={styles.saveText}>{t('sharing.save')}</AppText>
+                  <Ionicons name="arrow-forward" size={19} color={colors.onAccent} />
+                </>
+              )}
+            </SpringPressable>
+          </Card>
+        </Animated.View>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.primaryText,
+  content: {
+    flex: 1,
+    gap: spacing.lg,
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.huge,
   },
-  heading: { gap: spacing.xs, marginTop: spacing.xxl, marginBottom: spacing.xl },
+  heading: {
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  headingTitle: {
+    letterSpacing: -0.6,
+  },
   card: {
     gap: spacing.md,
     padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderColor: colors.primaryText,
+    borderRadius: radius.cardLg,
     borderWidth: 1,
-    borderRadius: radius.xl,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    ...shadows.card,
   },
   linkRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    alignItems: 'flex-start',
-    paddingBottom: spacing.sm,
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceSecondary,
   },
-  linkText: { flex: 1, fontSize: 13, lineHeight: 18 },
-  label: { marginTop: spacing.sm, fontSize: 13, fontWeight: '700' },
+  linkIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.primaryText,
+  },
+  label: {
+    marginTop: spacing.xs,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
   optionList: { gap: spacing.xs },
   option: {
-    minHeight: 44,
+    minHeight: 46,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   optionSelected: {
-    backgroundColor: colors.primaryText,
-    borderColor: colors.primaryText,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+    ...shadows.glass,
   },
-  optionSelectedText: { color: colors.surface, fontWeight: '700' },
-  input: {
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderColor: colors.border,
-    borderWidth: 1,
+  optionText: {
     color: colors.primaryText,
-    fontSize: 15,
+    fontWeight: '500',
+  },
+  optionSelectedText: {
+    color: colors.onAccent,
+    fontWeight: '600',
   },
   saveButton: {
-    minHeight: 52,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryText,
+    minHeight: 50,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
+    ...shadows.pillAction,
   },
-  saveText: { color: colors.surface, fontWeight: '800' },
+  saveText: { color: colors.onAccent, fontSize: 15, fontWeight: '600' },
+  pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.45 },
 });

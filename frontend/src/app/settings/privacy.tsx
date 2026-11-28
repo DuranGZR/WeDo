@@ -2,15 +2,16 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { SpringPressable } from '@/components/motion/SpringPressable';
 import { AppText } from '@/components/ui';
 import {
   AccountCard,
   AccountScaffold,
   accountStyles,
 } from '@/features/account/components/AccountScaffold';
-import { mono, spacing } from '@/design-system';
+import { colors, spacing } from '@/design-system';
 
 const principles = [
   {
@@ -51,7 +52,7 @@ export default function PrivacyScreen() {
     >
       <AccountCard>
         <View style={styles.heroIcon}>
-          <Ionicons name="shield-checkmark" size={27} color={mono.paper} />
+          <Ionicons name="shield-checkmark" size={27} color={colors.onAccent} />
         </View>
         <AppText variant="sectionTitle">{t('settings.privateByDefault')}</AppText>
         <AppText muted style={styles.intro}>
@@ -64,7 +65,7 @@ export default function PrivacyScreen() {
           <AccountCard key={principle.title}>
             <View style={styles.itemHeader}>
               <View style={styles.itemIcon}>
-                <Ionicons name={principle.icon} size={19} color={mono.ink} />
+                <Ionicons name={principle.icon} size={19} color={colors.primaryText} />
               </View>
               <AppText style={styles.itemTitle}>{principle.title}</AppText>
             </View>
@@ -88,33 +89,37 @@ export default function PrivacyScreen() {
         <AppText variant="caption" style={accountStyles.label}>
           {t('settings.legalDocuments')}
         </AppText>
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.openThePrivacyPolicy')}
+          pressScale={0.985}
+          haptic="selection"
           onPress={() => router.push('/legal/privacy' as never)}
-          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          style={styles.linkRow}
         >
           <View style={styles.linkLeft}>
-            <Ionicons name="document-text-outline" size={18} color={mono.ink} />
+            <Ionicons name="document-text-outline" size={18} color={colors.primaryText} />
             <AppText style={styles.linkTitle}>{t('common.privacyPolicy')}</AppText>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={mono.muted} />
-        </Pressable>
+          <Ionicons name="chevron-forward" size={16} color={colors.tertiaryText} />
+        </SpringPressable>
 
-        <Pressable
+        <SpringPressable
           accessibilityRole="button"
           accessibilityLabel={t('settings.openTheTermsOfService')}
+          pressScale={0.985}
+          haptic="selection"
           onPress={() => router.push('/legal/terms' as never)}
-          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          style={styles.linkRow}
         >
           <View style={styles.linkLeft}>
-            <Ionicons name="shield-outline" size={18} color={mono.ink} />
+            <Ionicons name="shield-outline" size={18} color={colors.primaryText} />
             <AppText style={styles.linkTitle}>
               {t('common.termsOfServiceAndEula')}
             </AppText>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={mono.muted} />
-        </Pressable>
+          <Ionicons name="chevron-forward" size={16} color={colors.tertiaryText} />
+        </SpringPressable>
       </AccountCard>
     </AccountScaffold>
   );
@@ -124,10 +129,10 @@ const styles = StyleSheet.create({
   heroIcon: {
     width: 56,
     height: 56,
-    borderRadius: 18,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.ink,
+    backgroundColor: colors.accent,
   },
   intro: { fontSize: 14, lineHeight: 20 },
   list: { gap: spacing.md },
@@ -135,12 +140,12 @@ const styles = StyleSheet.create({
   itemIcon: {
     width: 36,
     height: 36,
-    borderRadius: 11,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.soft,
+    backgroundColor: colors.surfaceSecondary,
   },
-  itemTitle: { fontWeight: '800' },
+  itemTitle: { fontWeight: '700' },
   linkRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,7 +160,7 @@ const styles = StyleSheet.create({
   linkTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: mono.ink,
+    color: colors.primaryText,
   },
   pressed: {
     opacity: 0.7,

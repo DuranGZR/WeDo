@@ -2,10 +2,11 @@ import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 
-import { AppText, Screen } from '@/components/ui';
-import { mono, radius, spacing } from '@/design-system';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { AppText, IconButton, Screen } from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 
 export default function LegalTermsScreen() {
   useTranslation();
@@ -13,24 +14,23 @@ export default function LegalTermsScreen() {
     <Screen scroll={true} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
-          <AppText variant="screenTitle" style={styles.title}>
+          <AppText variant="largeTitle" style={styles.title}>
             {t('common.termsOfServiceAndEula')}
           </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('legal.close')}
+          <IconButton
+            icon={<Ionicons name="close" size={20} color={colors.primaryText} />}
+            tone="glass"
+            size={42}
+            label={t('legal.close')}
             onPress={() => router.back()}
-            style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="close" size={22} color={mono.ink} />
-          </Pressable>
+          />
         </View>
         <AppText muted style={styles.date}>
           {t('legal.updated20October2026')}
         </AppText>
       </View>
 
-      <View style={styles.content}>
+      <View style={styles.docCard}>
         <View style={styles.section}>
           <AppText variant="sectionTitle" style={styles.sectionTitle}>
             {t('legal.1AcceptanceOfTheseTerms')}
@@ -86,18 +86,20 @@ export default function LegalTermsScreen() {
           <AppText style={styles.paragraph}>
             {t('legal.forQuestionsAboutTheseTermsOrHelpWithTheApp')}
           </AppText>
-          <Pressable
+          <SpringPressable
             accessibilityRole="link"
+            pressScale={0.97}
+            haptic="selection"
             onPress={() =>
               void Linking.openURL(
                 `mailto:contact@durangezer.com?subject=${encodeURIComponent(t('legal.supportSubject'))}`,
               )
             }
-            style={({ pressed }) => [styles.emailLink, pressed && styles.pressed]}
+            style={styles.emailLink}
           >
-            <Ionicons name="mail-outline" size={17} color={mono.ink} />
+            <Ionicons name="mail-outline" size={17} color={colors.primaryText} />
             <AppText style={styles.emailText}>contact@durangezer.com</AppText>
-          </Pressable>
+          </SpringPressable>
         </View>
       </View>
     </Screen>
@@ -109,7 +111,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    backgroundColor: mono.background,
   },
   header: {
     marginBottom: spacing.lg,
@@ -119,25 +120,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: mono.ink,
-  },
-  closeButton: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: mono.soft,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
+    fontWeight: '700',
+    color: colors.primaryText,
   },
   date: {
     fontSize: 13,
   },
-  content: {
+  docCard: {
     gap: spacing.lg,
+    padding: spacing.xl,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    ...shadows.card,
   },
   section: {
     gap: spacing.xs,
@@ -145,22 +145,22 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: mono.ink,
+    color: colors.primaryText,
   },
   paragraph: {
     fontSize: 14,
     lineHeight: 21,
-    color: mono.muted,
+    color: colors.secondaryText,
   },
   bullet: {
     fontSize: 14,
     lineHeight: 21,
-    color: mono.muted,
+    color: colors.secondaryText,
     paddingLeft: spacing.xs,
   },
   bold: {
     fontWeight: '700',
-    color: mono.ink,
+    color: colors.primaryText,
   },
   emailLink: {
     flexDirection: 'row',
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   emailText: {
     fontSize: 14,
     fontWeight: '700',
-    color: mono.ink,
+    color: colors.primaryText,
     textDecorationLine: 'underline',
   },
   pressed: {

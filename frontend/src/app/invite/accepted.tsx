@@ -1,113 +1,60 @@
 import { t } from '@/i18n';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
-import { AppText, Badge, Screen } from '@/components/ui';
-import { colors, radius, spacing } from '@/design-system';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { AppText, Badge, Screen, ScreenHeader } from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 
 export default function InviteAcceptedScreen() {
   useTranslation();
+  const reducedMotion = useReducedMotion();
   return (
     <Screen scroll={true}>
-      <View style={styles.ambientContainer} pointerEvents="none">
-        <View style={styles.blobCoral} />
-        <View style={styles.blobSand} />
-      </View>
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.goBack')}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.primaryText} />
-        </Pressable>
-      </View>
+      <ScreenHeader fallbackHref="/(tabs)" />
       <View style={styles.content}>
         <View style={styles.center}>
-          <View style={styles.mark}>
+          <Animated.View
+            entering={reducedMotion ? undefined : ZoomIn.duration(280)}
+            style={styles.mark}
+          >
             <AppText style={styles.markText}>✓</AppText>
-          </View>
+          </Animated.View>
           <Badge label={t('common.invitationAccepted')} tone="success" />
-          <AppText variant="pageTitle">{t('common.youReReadyToDecideTogether')}</AppText>
+          <AppText variant="largeTitle">{t('common.youReReadyToDecideTogether')}</AppText>
           <AppText muted style={styles.copy}>
             {t('common.youCanNowBrowseSharedListsSaveNewIdeasAnd')}
           </AppText>
-          <View style={[styles.glassCard, styles.card]}>
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeInDown.delay(90).duration(240)}
+            style={[styles.glassCard, styles.card]}
+          >
             <AppText variant="cardTitle">{t('common.whatSNext')}</AppText>
             <AppText muted>{t('common.goToYourSpaceAndOpenYourFirstSharedList')}</AppText>
-          </View>
-          <Pressable
+          </Animated.View>
+          <SpringPressable
+            haptic="light"
             onPress={() => router.replace('/(tabs)')}
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+            style={styles.primaryBtn}
           >
             <AppText style={styles.primaryBtnText}>{t('common.goToSpace')}</AppText>
-          </Pressable>
-          <Pressable
+          </SpringPressable>
+          <SpringPressable
+            haptic="selection"
             onPress={() => router.back()}
-            style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
+            style={styles.ghostBtn}
           >
             <AppText style={styles.ghostBtnText}>{t('onboarding.later')}</AppText>
-          </Pressable>
+          </SpringPressable>
         </View>
       </View>
     </Screen>
   );
 }
 
-const styles: any = StyleSheet.create({
-  ambientContainer: {
-    ...StyleSheet.absoluteFill,
-    overflow: 'hidden',
-    zIndex: -1,
-  },
-  blobCoral: {
-    position: 'absolute',
-    top: -80,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: colors.accent,
-    opacity: 0.08,
-    ...Platform.select({
-      web: { filter: 'blur(75px)' },
-    }),
-  },
-  blobSand: {
-    position: 'absolute',
-    bottom: -80,
-    left: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#A5A29B',
-    opacity: 0.1,
-    ...Platform.select({
-      web: { filter: 'blur(85px)' },
-    }),
-  },
-  headerBar: {
-    height: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-    marginTop: Platform.OS === 'ios' ? 0 : spacing.sm,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(10px)' },
-    }),
-  },
+const styles = StyleSheet.create({
   content: {
     flex: 1,
     gap: spacing.lg,
@@ -124,24 +71,19 @@ const styles: any = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E3EEE4',
+    backgroundColor: colors.successSoft,
     marginBottom: spacing.sm,
   },
   markText: { fontSize: 32, color: colors.success },
   copy: { lineHeight: 22 },
   card: { gap: spacing.xs, marginVertical: spacing.sm },
   glassCard: {
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.primaryText,
-    backgroundColor: colors.surface,
+    borderRadius: radius.cardLg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
     padding: spacing.xl,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0px 8px 24px rgba(20, 20, 18, 0.04)',
-      },
-    }),
+    ...shadows.card,
   },
   primaryBtn: {
     flexDirection: 'row',
@@ -149,18 +91,14 @@ const styles: any = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.accent,
     minHeight: 52,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 4px 12px rgba(200, 103, 75, 0.15)',
-      },
-    }),
+    ...shadows.pillAction,
   },
   primaryBtnText: {
-    color: colors.surface,
-    fontSize: 14,
+    color: colors.onAccent,
+    fontSize: 15,
     fontWeight: '700',
   },
   btnPressed: {
@@ -169,7 +107,7 @@ const styles: any = StyleSheet.create({
   },
   ghostBtn: {
     minHeight: 52,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,

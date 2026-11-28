@@ -11,6 +11,7 @@ import { initializeDatabase } from '@/database/client';
 import { NotificationEffects } from './notification-effects';
 import { syncOutbox } from '@/features/sharing/sync';
 import { ToastProvider } from '@/components/feedback/AppToast';
+import { useHapticsStore } from '@/store/haptics-store';
 import { useLanguageStore } from '@/store/language-store';
 import { useSpaceStore } from '@/store/space-store';
 import { useTranslation } from 'react-i18next';
@@ -25,11 +26,11 @@ export function AppProviders({ children }: PropsWithChildren) {
   const languageHydrated = useLanguageStore((state) => state.hydrated);
   const accessToken = useAuthStore((state) => state.accessToken);
   const hydrate = useAuthStore((state) => state.hydrate);
-  const hydrated = useAuthStore((state) => state.hydrated);
 
   useEffect(() => {
     initializeDatabase();
     void Promise.all([
+      useHapticsStore.getState().hydrate(),
       useLanguageStore.getState().hydrate(),
       useSpaceStore.getState().hydrate(),
     ]).then(hydrate);
@@ -43,10 +44,10 @@ export function AppProviders({ children }: PropsWithChildren) {
   }, [hydrate]);
 
   useEffect(() => {
-    if (hydrated && languageHydrated) {
+    if (languageHydrated) {
       void SplashScreen.hideAsync().catch(() => {});
     }
-  }, [hydrated, languageHydrated]);
+  }, [languageHydrated]);
   useEffect(() => {
     if (!accessToken) return;
     void syncOutbox();

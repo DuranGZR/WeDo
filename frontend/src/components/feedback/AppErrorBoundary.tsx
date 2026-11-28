@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { AppText, Button } from '@/components/ui';
-import { colors, mono, radius, spacing } from '@/design-system';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { haptic } from '@/lib/haptics';
 
 type State = { error: Error | null };
@@ -40,7 +40,7 @@ export class AppErrorBoundary extends Component<PropsWithChildren, State> {
         <View style={styles.card}>
           <View style={styles.outerRing}>
             <View style={styles.iconCircle}>
-              <Ionicons name="warning-outline" size={32} color="#E5484D" />
+              <Ionicons name="warning-outline" size={32} color={colors.error} />
             </View>
           </View>
           <AppText variant="pageTitle" style={styles.title}>
@@ -66,7 +66,7 @@ export class AppErrorBoundary extends Component<PropsWithChildren, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F6F2',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.screen,
@@ -74,50 +74,46 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: mono.paper,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#090909',
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.cardLg,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 6,
+    ...shadows.elevated,
   },
   outerRing: {
     width: 76,
     height: 76,
     borderRadius: 38,
     borderWidth: 1,
-    borderColor: '#F8D7DA',
+    borderColor: 'rgba(184, 74, 66, 0.22)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF5F5',
+    backgroundColor: colors.errorSoft,
   },
   iconCircle: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: mono.paper,
-    borderWidth: 1.5,
-    borderColor: '#E5484D',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 74, 66, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     textAlign: 'center',
     fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.6,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   subtitle: {
     textAlign: 'center',
     fontSize: 14,
     lineHeight: 20,
-    color: '#5F5F5D',
+    color: colors.secondaryText,
   },
   actionWrap: {
     width: '100%',

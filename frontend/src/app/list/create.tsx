@@ -1,32 +1,34 @@
 import { t } from '@/i18n';
-import { useTranslation } from 'react-i18next';
+
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import {
-  Alert,
-  ActivityIndicator,
-  StyleSheet,
-  View,
-  Pressable,
-  Platform,
-  Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { AppText, Screen, TextField, Card } from '@/components/ui';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Dimensions, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+
+import { ListAppearancePicker } from '@/components/lists/ListAppearancePicker';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
+import { AppText, Card, Screen, ScreenHeader, TextField } from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
+import { formatListIcon, getListAppearance } from '@/features/lists/appearance';
 import { useCreateList } from '@/features/lists/hooks';
-import { mono, spacing } from '@/design-system';
+import { haptic } from '@/lib/haptics';
 
 const { width } = Dimensions.get('window');
 
 export default function CreateListScreen() {
   useTranslation();
+  const reducedMotion = useReducedMotion();
   const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
   const [name, setName] = useState('');
+  const [iconToken, setIconToken] = useState<string | undefined>(undefined);
   const create = useCreateList(spaceId ?? '');
 
   async function submit() {
     if (!spaceId || name.trim().length < 2) {
+      haptic.warning();
       Alert.alert(
         t('items.error'),
         t('lists.pleaseEnterAListNameWithAtLeast2Characters'),
@@ -34,10 +36,14 @@ export default function CreateListScreen() {
       return;
     }
     try {
-      const list = await create.mutateAsync(name.trim());
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const resolved = getListAppearance(name.trim(), false, iconToken);
+      const list = await create.mutateAsync({
+        name: name.trim(),
+        icon: iconToken ?? formatListIcon(resolved.icon, resolved.backgroundColor),
+      });
       router.replace(`/list/${list.id}`);
     } catch {
+      haptic.error();
       Alert.alert(t('home.couldnTCreateList'), t('common.checkTheLinkAndTryAgain'));
     }
   }
@@ -45,124 +51,73 @@ export default function CreateListScreen() {
   const isBtnDisabled = create.isPending || name.trim().length < 2;
 
   return (
-    <Screen scroll={true} backgroundColor={mono.background}>
-      <View style={styles.contourTop} pointerEvents="none" />
-      <View style={styles.contourBottom} pointerEvents="none" />
-
-      {/* Header Bar with Back Button */}
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.goBack')}
-        >
-          <Ionicons name="arrow-back" size={22} color={mono.ink} />
-        </Pressable>
-      </View>
+    <Screen scroll={true}>
+      <ScreenHeader />
 
       <View style={styles.content}>
-        {/* Title Section */}
-        <View style={styles.header}>
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInDown.duration(260)}
+          style={styles.header}
+        >
+          <View style={styles.iconCircle}>
+            <Ionicons name="list-outline" size={22} color="#9E7F60" />
+          </View>
           <AppText variant="largeTitle" style={styles.title}>
             {t('lists.newList')}
           </AppText>
           <AppText muted style={styles.subtitle}>
             {t('lists.createASharedListForTheThingsYouWantTo')}
           </AppText>
-        </View>
+        </Animated.View>
 
-        {/* Glassmorphic Form Card */}
-        <Card style={styles.formCard}>
-          <View style={styles.form}>
-            {/* List Icon Decoration */}
-            <View style={styles.iconPreviewContainer}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="list-outline" size={30} color={mono.paper} />
-              </View>
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInDown.delay(70).duration(280)}
+          layout={reducedMotion ? undefined : LAYOUT_SPRING}
+        >
+          <Card style={styles.formCard}>
+            <View style={styles.form}>
+              <TextField
+                label={t('lists.listName')}
+                autoFocus
+                value={name}
+                onChangeText={setName}
+                placeholder={t('lists.eGPlacesMoviesFood')}
+              />
+
+              <ListAppearancePicker
+                name={name}
+                value={iconToken}
+                onChange={setIconToken}
+              />
+
+              <SpringPressable
+                haptic="medium"
+                onPress={() => void submit()}
+                disabled={isBtnDisabled}
+                style={[styles.primaryBtn, isBtnDisabled && styles.btnDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel={t('lists.createList')}
+              >
+                {create.isPending ? (
+                  <ActivityIndicator color={colors.onAccent} />
+                ) : (
+                  <>
+                    <AppText style={styles.primaryBtnText}>
+                      {t('lists.createList')}
+                    </AppText>
+                    <Ionicons name="arrow-forward" size={18} color={colors.onAccent} />
+                  </>
+                )}
+              </SpringPressable>
             </View>
-
-            {/* List Name Input */}
-            <TextField
-              label={t('lists.listName')}
-              autoFocus
-              value={name}
-              onChangeText={setName}
-              placeholder={t('lists.eGPlacesMoviesFood')}
-            />
-
-            {/* Action Button */}
-            <Pressable
-              onPress={() => void submit()}
-              disabled={isBtnDisabled}
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                (pressed || isBtnDisabled) && styles.btnDisabled,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('lists.createList')}
-            >
-              {create.isPending ? (
-                <ActivityIndicator color={mono.paper} />
-              ) : (
-                <>
-                  <AppText style={styles.primaryBtnText}>{t('lists.createList')}</AppText>
-                  <Ionicons
-                    name="arrow-forward"
-                    size={18}
-                    color={mono.paper}
-                    style={styles.btnIcon}
-                  />
-                </>
-              )}
-            </Pressable>
-          </View>
-        </Card>
+          </Card>
+        </Animated.View>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  contourTop: {
-    position: 'absolute',
-    top: -155,
-    right: -155,
-    width: 330,
-    height: 330,
-    borderRadius: 165,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.75,
-  },
-  contourBottom: {
-    position: 'absolute',
-    bottom: -160,
-    left: -180,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.5,
-  },
-  headerBar: {
-    height: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-    marginTop: Platform.OS === 'ios' ? 0 : spacing.sm,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: mono.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: mono.ink,
-  },
   content: {
     flex: 1,
     gap: spacing.lg,
@@ -178,83 +133,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   title: {
-    fontSize: width > 400 ? 26 : 22,
-    lineHeight: width > 400 ? 32 : 28,
-    fontWeight: '800',
-    color: mono.ink,
+    fontSize: width > 400 ? 28 : 24,
+    lineHeight: 34,
+    fontWeight: '700',
+    color: colors.primaryText,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
   subtitle: {
     fontSize: 14,
     lineHeight: 20,
-    color: mono.muted,
+    color: colors.secondaryText,
     textAlign: 'center',
     paddingHorizontal: spacing.sm,
   },
   formCard: {
-    borderRadius: 16,
+    borderRadius: radius.cardLg,
     borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
     padding: spacing.lg,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)',
-      },
-    }),
+    ...shadows.card,
   },
   form: {
     gap: spacing.md,
   },
-  iconPreviewContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
   iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: mono.ink,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(158, 127, 96, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(158, 127, 96, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: mono.ink,
-    minHeight: 52,
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    minHeight: 50,
+    borderRadius: radius.pill,
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
     marginTop: spacing.sm,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 5px 0px rgba(0, 0, 0, 0.16)',
-        transition: 'all 0.2s ease',
-      },
-      default: {
-        shadowColor: mono.ink,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 3,
-      },
-    }),
+    ...shadows.pillAction,
   },
   primaryBtnText: {
-    color: mono.paper,
+    color: colors.onAccent,
     fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  btnIcon: {
-    marginTop: 1,
-  },
-  btnPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
+    fontWeight: '600',
   },
   btnDisabled: {
     opacity: 0.5,

@@ -1,23 +1,31 @@
 import { t } from '@/i18n';
-import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  View,
-  Pressable,
-  Platform,
-  Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { AppText, Card, Screen, SectionHeader } from '@/components/ui';
 
-import { colors, mono, spacing, radius } from '@/design-system';
+import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+import { queryKeys } from '@/api/query-keys';
+import { SpringPressable } from '@/components/motion/SpringPressable';
+import { LAYOUT_SPRING } from '@/components/motion/springs';
+
+import {
+  AppText,
+  Card,
+  GlassSurface,
+  Screen,
+  ScreenHeader,
+  SectionHeader,
+  Skeleton,
+  SkeletonCard,
+} from '@/components/ui';
+import { colors, radius, shadows, spacing } from '@/design-system';
 import { collaborationApi } from '@/features/collaboration/api';
 import { useNotifications } from '@/features/collaboration/hooks';
 import { handleNotificationData } from '@/features/notifications/navigation';
+import { haptic } from '@/lib/haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -25,227 +33,248 @@ export default function NotificationsScreen() {
   useTranslation();
   const result = useNotifications();
   const client = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
   const notifications = result.data?.data ?? [];
+  const hasUnread = notifications.some((n) => !n.read_at);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: queryKeys.notifications }),
+        client.invalidateQueries({ queryKey: queryKeys.unreadCount }),
+      ]);
+      await result.refetch?.();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const listHeader = (
+    <View style={styles.listHeaderWrap}>
+      <ScreenHeader
+        rightAction={
+          hasUnread ? (
+            <SpringPressable
+              onPress={() => {
+                void collaborationApi.readAllNotifications().then(() => {
+                  haptic.success();
+                  void client.invalidateQueries({ queryKey: queryKeys.unreadCount });
+                  return client.invalidateQueries({ queryKey: ['notifications'] });
+                });
+              }}
+              hitSlop={8}
+              pressScale={0.94}
+              haptic="medium"
+              style={styles.pillPressable}
+              accessibilityRole="button"
+              accessibilityLabel={t('notifications.markAllAsRead')}
+            >
+              <GlassSurface
+                elevated
+                interactive
+                tintColor="rgba(255, 255, 255, 0.52)"
+                fallbackBackgroundColor={colors.glassElevated}
+                style={styles.readAllBtn}
+              >
+                <AppText style={styles.readAllText}>
+                  {t('notifications.markAllAsRead_7ac9f')}
+                </AppText>
+              </GlassSurface>
+            </SpringPressable>
+          ) : undefined
+        }
+      />
+
+      <View style={styles.header}>
+        <AppText variant="eyebrow" style={styles.headerCategory}>
+          {t('notifications.updates')}
+        </AppText>
+        <AppText variant="largeTitle" style={styles.title}>
+          {t('common.notifications')}
+        </AppText>
+      </View>
+
+      {!result.isLoading && notifications.length > 0 ? (
+        <SectionHeader
+          title={t('notifications.updateCount', { count: notifications.length })}
+        />
+      ) : null}
+    </View>
+  );
+
+  const emptyComponent = result.isLoading ? (
+    <View style={styles.notificationsList}>
+      {[1, 2, 3].map((key) => (
+        <SkeletonCard key={key} style={styles.skeletonCard}>
+          <Skeleton width={36} height={36} borderRadius={18} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <Skeleton width="62%" height={16} borderRadius={6} />
+            <Skeleton width="88%" height={13} borderRadius={6} />
+          </View>
+        </SkeletonCard>
+      ))}
+    </View>
+  ) : (
+    <Animated.View entering={FadeInDown.duration(240)}>
+      <Card style={styles.emptyCard}>
+        <View style={styles.emptyIconContainer}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="notifications-outline" size={32} color="#9E7F60" />
+          </View>
+        </View>
+        <AppText variant="sectionTitle" style={styles.emptyTitle}>
+          {t('notifications.noNotifications')}
+        </AppText>
+        <AppText muted style={styles.emptySubtitle}>
+          {t('notifications.youReAllCaughtUpNewSharedPlansAndUpdates')}
+        </AppText>
+      </Card>
+    </Animated.View>
+  );
 
   return (
-    <Screen scroll={true} backgroundColor={mono.background}>
-      <View style={styles.contourTop} pointerEvents="none" />
-      <View style={styles.contourBottom} pointerEvents="none" />
-
-      {/* Header Bar with Back Button */}
-      <View style={styles.headerBar}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.goBack')}
-        >
-          <Ionicons name="arrow-back" size={22} color={mono.ink} />
-        </Pressable>
-
-        {notifications.some((n) => !n.read_at) && (
-          <Pressable
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              void collaborationApi
-                .readAllNotifications()
-                .then(() => client.invalidateQueries({ queryKey: ['notifications'] }));
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => [styles.readAllBtn, pressed && styles.btnPressed]}
-            accessibilityRole="button"
-            accessibilityLabel={t('notifications.markAllAsRead')}
-          >
-            <AppText style={styles.readAllText}>
-              {t('notifications.markAllAsRead_7ac9f')}
-            </AppText>
-          </Pressable>
-        )}
-      </View>
-
-      <View style={styles.content}>
-        {/* Title Section */}
-        <View style={styles.header}>
-          <AppText variant="caption" muted style={styles.headerCategory}>
-            {t('notifications.updates')}
-          </AppText>
-          <AppText variant="largeTitle" style={styles.title}>
-            {t('common.notifications')}
-          </AppText>
-        </View>
-
-        {result.isLoading ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={mono.ink} />
-          </View>
-        ) : notifications.length === 0 ? (
-          /* Custom Premium Empty State */
-          <Card style={styles.emptyCard}>
-            <View style={styles.emptyIconContainer}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="notifications-outline" size={38} color={mono.paper} />
-                <View style={styles.emptyBadge} />
-              </View>
-            </View>
-            <AppText variant="sectionTitle" style={styles.emptyTitle}>
-              {t('notifications.noNotifications')}
-            </AppText>
-            <AppText muted style={styles.emptySubtitle}>
-              {t('notifications.youReAllCaughtUpNewSharedPlansAndUpdates')}
-            </AppText>
-          </Card>
-        ) : (
-          <View style={styles.notificationsList}>
-            <SectionHeader
-              title={t('notifications.updateCount', { count: notifications.length })}
-            />
-            {notifications.map((notification) => {
-              const isUnread = !notification.read_at;
-              return (
-                <Card
-                  key={notification.id}
-                  style={[styles.card, isUnread && styles.unreadCard]}
+    <Screen scroll={false} dismissKeyboardOnTap={false} style={styles.screenNoPad}>
+      <Animated.FlatList
+        data={result.isLoading ? [] : notifications}
+        keyExtractor={(entry) => entry.id}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={emptyComponent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor="#9E7F60"
+            colors={['#9E7F60']}
+          />
+        }
+        renderItem={({ item: notification, index }) => {
+          const isUnread = !notification.read_at;
+          return (
+            <Animated.View
+              entering={FadeInDown.delay(Math.min(index, 6) * 35).duration(220)}
+              layout={LAYOUT_SPRING}
+              style={styles.cardRow}
+            >
+              <Card style={[styles.card, isUnread ? styles.unreadCard : styles.readCard]}>
+                <SpringPressable
+                  onPress={() => {
+                    if (isUnread)
+                      void collaborationApi.readNotification(notification.id).then(() => {
+                        void client.invalidateQueries({
+                          queryKey: queryKeys.unreadCount,
+                        });
+                        return client.invalidateQueries({
+                          queryKey: ['notifications'],
+                        });
+                      });
+                    handleNotificationData(notification.data);
+                  }}
+                  pressScale={0.975}
+                  haptic="light"
+                  style={styles.notificationItem}
                 >
-                  <Pressable
-                    onPress={() => {
-                      if (isUnread)
-                        void collaborationApi
-                          .readNotification(notification.id)
-                          .then(() =>
-                            client.invalidateQueries({ queryKey: ['notifications'] }),
-                          );
-                      handleNotificationData(notification.data);
-                    }}
-                    style={styles.notificationItem}
+                  <View
+                    style={[
+                      styles.statusIconCircle,
+                      isUnread ? styles.statusUnread : styles.statusRead,
+                    ]}
                   >
-                    <View
-                      style={[
-                        styles.statusIconCircle,
-                        isUnread ? styles.statusUnread : styles.statusRead,
-                      ]}
-                    >
-                      <Ionicons
-                        name={isUnread ? 'notifications' : 'notifications-outline'}
-                        size={16}
-                        color={isUnread ? colors.accent : colors.secondaryText}
-                      />
-                    </View>
-                    <View style={styles.notificationContent}>
-                      <View style={styles.notificationMeta}>
-                        <AppText
-                          variant="cardTitle"
-                          style={[
-                            styles.notificationTitle,
-                            isUnread && styles.fontWeightBold,
-                          ]}
-                        >
-                          {notification.title}
-                        </AppText>
-                        {isUnread && <View style={styles.unreadDot} />}
-                      </View>
-                      <AppText muted={!isUnread} style={styles.notificationBody}>
-                        {notification.body}
+                    <Ionicons
+                      name={isUnread ? 'notifications' : 'notifications-outline'}
+                      size={16}
+                      color={isUnread ? '#9E7F60' : colors.secondaryText}
+                    />
+                  </View>
+                  <View style={styles.notificationContent}>
+                    <View style={styles.notificationMeta}>
+                      <AppText
+                        variant="cardTitle"
+                        style={[
+                          styles.notificationTitle,
+                          isUnread && styles.fontWeightBold,
+                        ]}
+                      >
+                        {notification.title}
                       </AppText>
+                      {isUnread && <View style={styles.unreadDot} />}
                     </View>
-                  </Pressable>
+                    <AppText muted={!isUnread} style={styles.notificationBody}>
+                      {notification.body}
+                    </AppText>
+                  </View>
+                </SpringPressable>
 
-                  {isUnread && (
-                    <Pressable
-                      onPress={() =>
-                        void collaborationApi
-                          .readNotification(notification.id)
-                          .then(() =>
-                            client.invalidateQueries({ queryKey: ['notifications'] }),
-                          )
-                      }
-                      style={({ pressed }) => [
-                        styles.markReadBtn,
-                        pressed && styles.btnPressed,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('notifications.markAsRead')}
-                    >
-                      <Ionicons name="checkmark" size={14} color={colors.accent} />
-                      <AppText style={styles.markReadText}>
-                        {t('notifications.markAsRead')}
-                      </AppText>
-                    </Pressable>
-                  )}
-                </Card>
-              );
-            })}
-          </View>
-        )}
-      </View>
+                {isUnread && (
+                  <SpringPressable
+                    onPress={() =>
+                      void collaborationApi.readNotification(notification.id).then(() => {
+                        haptic.success();
+                        void client.invalidateQueries({
+                          queryKey: queryKeys.unreadCount,
+                        });
+                        return client.invalidateQueries({
+                          queryKey: ['notifications'],
+                        });
+                      })
+                    }
+                    pressScale={0.94}
+                    haptic="selection"
+                    style={styles.markReadBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('notifications.markAsRead')}
+                  >
+                    <Ionicons name="checkmark" size={14} color={colors.primaryText} />
+                    <AppText style={styles.markReadText}>
+                      {t('notifications.markAsRead')}
+                    </AppText>
+                  </SpringPressable>
+                )}
+              </Card>
+            </Animated.View>
+          );
+        }}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  contourTop: {
-    position: 'absolute',
-    top: -150,
-    right: -155,
-    width: 330,
-    height: 330,
-    borderRadius: 165,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.75,
-  },
-  contourBottom: {
-    position: 'absolute',
-    bottom: -160,
-    left: -185,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    borderWidth: 1,
-    borderColor: mono.line,
-    opacity: 0.5,
-  },
-  headerBar: {
-    height: 48,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xs,
-    marginTop: Platform.OS === 'ios' ? 0 : spacing.sm,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: mono.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: mono.ink,
+  pillPressable: {
+    borderRadius: radius.pill,
   },
   readAllBtn: {
-    height: 36,
-    paddingHorizontal: spacing.md,
+    height: 38,
+    paddingHorizontal: spacing.md + 2,
     borderRadius: radius.pill,
-    backgroundColor: mono.paper,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: mono.ink,
   },
   readAllText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: mono.ink,
+    fontWeight: '600',
+    color: colors.primaryText,
   },
   content: {
-    flex: 1,
-    gap: spacing.lg,
+    flexGrow: 1,
+    gap: spacing.md,
     maxWidth: 480,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.huge,
+  },
+  screenNoPad: {
+    padding: 0,
+    paddingBottom: 0,
+  },
+  listHeaderWrap: {
+    gap: spacing.md,
+  },
+  cardRow: {
+    width: '100%',
   },
   header: {
     alignItems: 'center',
@@ -253,71 +282,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   headerCategory: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    color: mono.ink,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: colors.secondaryText,
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: width > 400 ? 26 : 22,
-    lineHeight: width > 400 ? 32 : 28,
-    fontWeight: '800',
-    color: mono.ink,
+    fontSize: width > 400 ? 28 : 24,
+    lineHeight: 34,
+    fontWeight: '700',
+    color: colors.primaryText,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  skeletonCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 200,
+    padding: spacing.md + 2,
+    gap: spacing.md,
   },
   emptyCard: {
-    borderRadius: 16,
+    borderRadius: radius.cardLg,
     borderWidth: 1,
-    borderColor: mono.ink,
-    backgroundColor: mono.paper,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
     padding: spacing.xl,
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 7px 0px rgba(0, 0, 0, 0.14)',
-      },
-    }),
+    ...shadows.card,
   },
   emptyIconContainer: {
     marginBottom: spacing.md,
   },
   emptyIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: mono.ink,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: '#D4BEA4',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  emptyBadge: {
-    position: 'absolute',
-    top: 18,
-    right: 20,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: mono.paper,
-    borderWidth: 1,
-    borderColor: mono.ink,
+    ...shadows.glass,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: mono.ink,
+    color: colors.primaryText,
     marginBottom: spacing.xs,
   },
   emptySubtitle: {
     fontSize: 13,
     lineHeight: 18,
-    color: mono.muted,
+    color: colors.secondaryText,
     textAlign: 'center',
     maxWidth: 280,
   },
@@ -325,43 +342,37 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   card: {
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.primaryText,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
+    borderRadius: radius.card,
+    padding: spacing.md + 2,
     gap: spacing.sm,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0px 8px 24px rgba(20, 20, 18, 0.04)',
-      },
-    }),
   },
   unreadCard: {
-    borderColor: 'rgba(200, 103, 75, 0.15)',
     backgroundColor: colors.surface,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 8px 32px rgba(200, 103, 75, 0.06)',
-      },
-    }),
+    borderColor: 'rgba(17, 17, 16, 0.12)',
+    ...shadows.card,
+  },
+  readCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.68)',
+    borderColor: colors.border,
+    ...shadows.glass,
   },
   notificationItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.sm,
+    gap: spacing.sm + 2,
   },
   statusIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 1,
   },
   statusUnread: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: '#FAF5EE',
+    borderWidth: 1,
+    borderColor: 'rgba(158, 127, 96, 0.25)',
   },
   statusRead: {
     backgroundColor: colors.surfaceSecondary,
@@ -380,16 +391,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.primaryText,
     fontWeight: '600',
+    flex: 1,
   },
   fontWeightBold: {
-    fontWeight: '800',
+    fontWeight: '700',
   },
   unreadDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.accent,
-    marginRight: spacing.xs,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#9E7F60',
+    marginLeft: spacing.xs,
   },
   notificationBody: {
     fontSize: 13,
@@ -401,16 +413,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingVertical: 6,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
     backgroundColor: colors.accentSoft,
     alignSelf: 'flex-start',
     marginTop: 2,
   },
   markReadText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.accent,
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: colors.primaryText,
   },
   btnPressed: {
     opacity: 0.88,
