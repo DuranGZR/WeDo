@@ -67,6 +67,14 @@ jest.mock('@/features/collaboration/hooks', () => ({
     data: {
       data: [
         {
+          id: 'c0',
+          item_id: 'item-1',
+          user_id: 'u2',
+          body: 'Akşam üstü uğrayalım mı?',
+          created_at: '2026-11-26T10:02:00Z',
+          updated_at: '2026-11-26T10:02:00Z',
+        },
+        {
           id: 'c1',
           item_id: 'item-1',
           user_id: 'u1',
@@ -83,7 +91,10 @@ jest.mock('@/features/collaboration/hooks', () => ({
   useDeleteComment: () => ({ mutate: jest.fn(), isPending: false }),
   useSpaceMembers: () => ({
     data: {
-      data: [{ id: 'm1', user_id: 'u1', display_name: 'İpek', role: 'owner' }],
+      data: [
+        { id: 'm1', user_id: 'u1', display_name: 'İpek', role: 'owner' },
+        { id: 'm2', user_id: 'u2', display_name: 'Can', role: 'member' },
+      ],
     },
   }),
   useNotifications: () => ({
@@ -140,7 +151,15 @@ describe('Step 5 screens (ItemDetail & Notifications)', () => {
 
     expect(ui.getByText('Kadıköy Kahve')).toBeTruthy();
     expect(ui.getByText('Cumartesi sabahı deneyelim')).toBeTruthy();
+    expect(ui.getByText('Can')).toBeTruthy();
+    expect(ui.getByText('Akşam üstü uğrayalım mı?')).toBeTruthy();
     expect(ui.getByText('Kahveleri harika!')).toBeTruthy();
+    expect(ui.getByText('26 Kasım 2026')).toBeTruthy();
+    expect(ui.queryByRole('button', { name: 'Düzenle' })).toBeNull();
+
+    fireEvent.press(ui.getByText('Kahveleri harika!'));
+    expect(ui.getByRole('button', { name: 'Düzenle' })).toBeTruthy();
+    expect(ui.getByRole('button', { name: 'Sil' })).toBeTruthy();
 
     fireEvent.changeText(ui.getByPlaceholderText('Bir not bırak…'), 'Saat 10 da');
     fireEvent.press(ui.getByRole('button', { name: 'Gönder' }));

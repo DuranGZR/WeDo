@@ -87,6 +87,76 @@ const ENGLISH_WEEKDAYS = [
   'Saturday',
 ] as const;
 
+const TURKISH_MONTHS_SHORT = [
+  'OCA',
+  'ŞUB',
+  'MAR',
+  'NİS',
+  'MAY',
+  'HAZ',
+  'TEM',
+  'AĞU',
+  'EYL',
+  'EKİ',
+  'KAS',
+  'ARA',
+] as const;
+
+const ENGLISH_MONTHS_SHORT = [
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC',
+] as const;
+
+export function formatPlanCalendarBadge(value: Date | string): {
+  day: string;
+  monthShort: string;
+} {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return { day: '—', monthShort: '' };
+  const monthsShort =
+    currentLanguage() === 'tr' ? TURKISH_MONTHS_SHORT : ENGLISH_MONTHS_SHORT;
+  return {
+    day: String(date.getDate()),
+    monthShort: monthsShort[date.getMonth()] ?? '',
+  };
+}
+
+export function formatPlanShortDateTime(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const months = currentLanguage() === 'tr' ? TURKISH_MONTHS : ENGLISH_MONTHS;
+  const month = months[date.getMonth()] ?? '';
+  return `${date.getDate()} ${month} ${formatPlanWeekdayLabel(date)} · ${formatPlanTimeLabel(date)}`;
+}
+
+export function formatChatDayDivider(value: Date | string, now = new Date()): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  if (sameDay) return t('items.chatToday');
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getFullYear() === yesterday.getFullYear() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getDate() === yesterday.getDate();
+  if (isYesterday) return t('items.chatYesterday');
+  return formatPlanDateLabel(date);
+}
+
 export function formatPlanDateLabel(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '—';

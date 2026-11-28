@@ -68,7 +68,7 @@ jest.mock('@/features/plans/hooks', () => ({
           timezone: 'Europe/Istanbul',
           note: null,
           reminder_minutes_before: 60,
-          status: 'proposed',
+          status: 'approved',
           created_at: '2026-11-26T10:00:00Z',
           updated_at: '2026-11-26T10:00:00Z',
         },
@@ -211,11 +211,16 @@ describe('Lists & ListDetail Liquid Glass screens', () => {
     await waitFor(() => {
       expect(ui.getByRole('tab', { name: 'Planlar (1)' })).toBeTruthy();
     });
+    expect(ui.queryByText(/Yaklaşan:/)).toBeNull();
+    expect(ui.queryByText('Planlanan içerikler')).toBeNull();
 
     fireEvent.press(ui.getByRole('tab', { name: 'Planlar (1)' }));
     await waitFor(() => {
       expect(ui.getByText('Planlanan içerikler')).toBeTruthy();
       expect(ui.getByText('Kadıköy Kahve')).toBeTruthy();
+      expect(ui.getByText('Planlandı')).toBeTruthy();
+      expect(ui.getByText('Tamamlandı')).toBeTruthy();
+      expect(ui.getByText('İptal et')).toBeTruthy();
       expect(ui.getByText('1 saat önce')).toBeTruthy();
     });
 
