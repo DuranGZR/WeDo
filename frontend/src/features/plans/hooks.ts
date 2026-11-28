@@ -69,13 +69,16 @@ export function usePlanAction(spaceId: string) {
       planId: string;
       action: 'approve' | 'reject' | 'cancel' | 'complete';
     }) => collaborationApi.planAction(planId, action),
-    onSuccess: (_plan, input) => {
+    onSuccess: (updated, input) => {
       if (input.action === 'reject' || input.action === 'cancel') {
         haptic.warning();
       } else {
         haptic.success();
       }
       void client.invalidateQueries({ queryKey: queryKeys.plans(spaceId) });
+      if (updated?.item_id) {
+        void client.invalidateQueries({ queryKey: queryKeys.item(updated.item_id) });
+      }
       void client.invalidateQueries({ queryKey: ['items'] });
       void client.invalidateQueries({ queryKey: ['lists'] });
     },

@@ -69,8 +69,8 @@ Great ideas shared between partners and friends rarely live in one place—they 
 ### What Is New & Core Capabilities
 
 * **Warm Alabaster UI, Tactile Motion & Haptics:** Redesigned screens with a breathable ambient glow canvas, consistent translucent Liquid Glass icon buttons across tab switches, calm eased sheet entrances, configurable `expo-haptics` feedback (`HapticsToggle`), customizable list icons & warm color swatches, and persisted list reordering.
-* **Collaborative Date Planning & Calendar Deep Links:** Schedule saved items via an interactive spinner Date & Time sheet (`PlanSheet` with localized Turkish/English month names and `15m / 1h / 1d` reminders), review/approve/decline plans in a dedicated **Plans** view inside the Lists tab with inline rescheduling (`PATCH /api/v1/plans/{id}`), open venues in Apple or Google Maps, and save **`WeDo plan`** calendar events that deep-link directly back to `/item/{id}`.
-* **Notes, Comments & Unified Activity Feed:** Discuss saved links inline inside item details (`ItemCommentsSection`), edit titles and notes cleanly, track unread notifications directly on the `SpaceHeaderBar` bell badge, and inspect unified item, comment, and plan events in the activity timeline.
+* **Calm Date Planning & Calendar Deep Links:** Schedule saved items directly as active plans (`PlanSheet` with localized Turkish/English month names and `15m / 1h / 1d` reminders — no approval bottleneck), manage every plan uniformly via `PlanCard` across Home, the dedicated **Plans** view in Lists, and Item Details (inline rescheduling via `PATCH /api/v1/plans/{id}`, complete, or cancel), open venues in Apple or Google Maps, and save **`WeDo plan`** calendar events that deep-link directly back to `/item/{id}`.
+* **WhatsApp-Style Notes, Comments & Activity Feed:** Discuss saved links in a two-sided conversational chat (`ItemCommentsSection` with day dividers, grouped sender bubbles, and tap-to-edit/delete own messages), edit titles and notes cleanly, track unread notifications directly on the `SpaceHeaderBar` bell badge, and inspect unified item, comment, and plan events in the activity timeline.
 * **Fast Discovery, Swipe Actions & Offline Outbox:** Search every list from a bottom modal sheet (`/search`), sort (`Newest`, `Oldest`, `A–Z`) and filter by source (`Instagram`, `TikTok`, `YouTube`, `Shopping`, `Maps`, `Web`), switch smoothly between Grid and swipe-enabled Row cards with **Undo** toasts (`AppToast`), detect URLs from the iOS/Android clipboard, cache fast previews with `expo-image`, invite partners with scannable QR codes (`InviteQrSheet`), and monitor queued shares via `OutboxStatusBanner`.
 * **Native Share-to-Save & SSRF-Hardened Thumbnails:** Capture links from the iOS Share Extension (`WeDoShare` App Group) and Android Share Intents into an `owner_id`-scoped `expo-sqlite` outbox; extract rich previews via DNS-pinned `curl-cffi` and persist expiring social CDN images behind short-lived viewer-scoped signed URLs.
 * **Multi-Provider Auth & Safety Governance:** Supports Argon2 email/password with Resend verification, Sign in with Apple (including verified S2S notifications and background revocation), Google Sign-In, one-tap account deletion, abuse reporting, and atomic space isolation on user blocks.
@@ -110,9 +110,9 @@ Great ideas shared between partners and friends rarely live in one place—they 
 
 1. **Discover & Capture:** Save links from Instagram, TikTok, YouTube, Maps, or Safari via the native Share Sheet or automatic clipboard detection.
 2. **Organize & Discuss:** Group links into custom icon-and-color lists, leave comments inline, filter by platform, and mark items done or move them with swipe gestures.
-3. **Schedule & Sync to Calendar:** Pick a date and time together, approve or adjust plans directly from the Lists tab, and tap calendar reminders to jump right back to the planned item inside WeDo.
+3. **Schedule & Sync to Calendar:** Pick a date and time cleanly, adjust, complete, or cancel plans directly from Home, Lists → Plans, or Item Details, and tap calendar events to jump right back to the planned item inside WeDo.
 
-*(Production ships with full English and Turkish parity across `761` synchronized localization keys and `1,000` checked UI call sites.)*
+*(Production ships with full English and Turkish parity across `766` synchronized localization keys and `974` checked UI call sites.)*
 
 ---
 
@@ -130,7 +130,7 @@ WeDo cleanly separates mobile capture and metadata enrichment (**Write Path**) f
 
 * **2. Collaborate, Plan & Lifecycle (Read & Worker Path):**
   `Spaces, Plans & Comments` → `Signed Preview URLs` → `Background Worker (60s)` → `iOS & Android Client`
-  Members browse spaces, comment on items, propose and edit plans, sync deep-linked events into iOS/Google Calendar, load private thumbnails via 5-minute viewer-scoped JWT URLs, and rely on the background worker for plan reminder notifications, Expo Push dispatch, and Apple token revocations.
+  Members browse spaces, chat inline on saved items, schedule and reschedule shared plans, sync deep-linked events into iOS/Google Calendar, load private thumbnails via 5-minute viewer-scoped JWT URLs, and rely on the background worker for plan reminder notifications, Expo Push dispatch, and Apple token revocations.
 
 ### Stack Breakdown
 
@@ -138,7 +138,7 @@ WeDo cleanly separates mobile capture and metadata enrichment (**Write Path**) f
 | :--- | :--- | :--- |
 | **Mobile & Web Client** | Expo SDK 58 · React Native 0.88 · React 19.3 · TypeScript 6.0 | Typed Expo Router navigation across iOS, Android, and web with `Zustand` and `TanStack Query` |
 | **Native Capabilities** | `expo-share-intent` · `expo-sqlite` · `expo-calendar` · `expo-haptics` · `expo-image` · `expo-clipboard` | `WeDoShare` iOS Share Extension (App Group), offline outbox, device calendar deep links, haptics, cached previews, and smart clipboard detection |
-| **Localization** | `i18next` · `react-i18next` · `expo-localization` · `LanguageMiddleware` | End-to-end TR/EN parity across `761` mobile keys and backend catalogs with native TR/EN date/month formatting |
+| **Localization** | `i18next` · `react-i18next` · `expo-localization` · `LanguageMiddleware` | End-to-end TR/EN parity across `766` mobile keys and backend catalogs with native TR/EN date/month formatting |
 | **API Core** | FastAPI · Pydantic Settings · SQLAlchemy 2 · Alembic (`18` migrations) | Modular monolith separating `auth`, `users`, `spaces`, `invitations`, `members`, `lists`, `items`, `comments`, `plans`, `activities`, `notifications`, and `safety` |
 | **Metadata & Imaging** | `curl-cffi` · `BeautifulSoup4` · `Pillow` | Browser TLS impersonation, HTML/oEmbed parsing, and `600×600` JPEG thumbnail caching |
 | **Persistence & Worker** | PostgreSQL 17 · Python Background Worker (`app.worker`) | ACID relational state, cached preview binaries, plan reminders, Apple revocation retries, and push dispatch |
@@ -155,7 +155,7 @@ WeDo cleanly separates mobile capture and metadata enrichment (**Write Path**) f
 | **iOS Liquid Glass buttons turning opaque white across `NativeTabs` switches** | Replaced volatile UIKit backdrop sampling on tab header circular buttons (`IconButton`) and `SegmentedControl` with deterministic layered `LinearGradient` + hairline rim overlays over `AmbientBackground` | Preserves the frosted translucent glass look identically on cold launch and after tab switches |
 | **Calendar entries losing context back to saved items** | Stored short clean calendar event titles (`WeDo plan` / `WeDo planı`) paired with Expo Router deep links (`url` field on iOS EventKit + clickable hint URL) pointing to `/item/{itemId}` | Keeps device calendars uncluttered while opening the exact planned item in WeDo in one tap |
 | **Lost shares & jarring view toggles on mobile** | Persisted shares inside an `owner_id`-partitioned `expo-sqlite` outbox with visible `OutboxStatusBanner` retry UI; moved `ListDetail` headers outside keyed `FlatList` and replaced bouncy springs with `ENTER_EASING` | Prevents data loss offline and eliminates full-screen header flicker when switching between Grid and swipe-Row views |
-| **Cross-platform TR/EN localization drift** | Verified `761` translation keys (`1,000` calls) via `frontend/scripts/check-locales.cjs` plus deterministic Turkish/English month/weekday arrays independent of OS ICU settings | Prevents missing keys and guarantees Turkish month names on Turkish iOS/Android pickers |
+| **Cross-platform TR/EN localization drift** | Verified `766` translation keys (`974` calls) via `frontend/scripts/check-locales.cjs` plus deterministic Turkish/English month/weekday arrays independent of OS ICU settings | Prevents missing keys and guarantees Turkish month names on Turkish iOS/Android pickers |
 
 ---
 
@@ -241,7 +241,7 @@ Authenticated endpoints use `Authorization: Bearer <access_token>` (`15`-minute 
 | `/api/v1/lists/*` & `.../spaces/{id}/lists` | Bearer JWT | Shared list CRUD, custom icon/color tokens, and persisted list ordering (`/api/v1/lists/reorder`) |
 | `/api/v1/items/*` & `.../lists/{id}/items` | Bearer JWT / Signed JWT | Link/text creation, metadata enrichment, note/title editing, move, complete/restore, activity feed (`/items/{id}/activity`), and signed preview serving (`/items/{id}/preview`) |
 | `/api/v1/items/{id}/comments` & `/api/v1/comments/*` | Bearer JWT | Item discussion comments CRUD with safety checks, push dispatch, and activity logging |
-| `/api/v1/spaces/{id}/plans` & `/api/v1/plans/*` | Bearer JWT | Shared date scheduling, reminder offsets, inline rescheduling (`PATCH /plans/{id}`), and `approve` / `reject` / `cancel` / `complete` transitions |
+| `/api/v1/spaces/{id}/plans` & `/api/v1/plans/*` | Bearer JWT | Immediate shared date scheduling, reminder offsets, inline rescheduling (`PATCH /plans/{id}`), and `complete` / `cancel` transitions |
 | `/api/v1/notifications/*` & `/api/v1/devices/*` | Bearer JWT | Notification inbox, unread count, mark-read, and Expo push device registration |
 | `/api/v1/safety/*` | Bearer JWT | Content/user reporting (`POST /safety/reports`) and user blocking (`GET/PUT/DELETE /safety/blocks`) |
 | `/legal/*`, `/privacy`, `/terms`, `/delete-account` | Public (`10 / min` POST) | Hosted privacy policy, terms of service, and web account-deletion request intake (`202 Accepted`) |
@@ -250,7 +250,7 @@ Authenticated endpoints use `Authorization: Bearer <access_token>` (`15`-minute 
 
 ## Quality Gates & Project Layout
 
-GitHub Actions ([`backend-quality.yml`](.github/workflows/backend-quality.yml) and [`frontend-quality.yml`](.github/workflows/frontend-quality.yml)) verify formatting, linting, static types, localization parity, and all `264` automated tests (`166` backend + `98` frontend):
+GitHub Actions ([`backend-quality.yml`](.github/workflows/backend-quality.yml) and [`frontend-quality.yml`](.github/workflows/frontend-quality.yml)) verify formatting, linting, static types, localization parity, and all `265` automated tests (`166` backend + `99` frontend):
 
 ```bash
 # Backend format, lint & test suite (166 pytest tests)
@@ -260,7 +260,7 @@ uv run ruff format --check app tests
 uv run ruff check .
 uv run pytest
 
-# Frontend format, typecheck, lint, localization parity (761 keys / 1,000 calls) & Jest suite (22 suites / 98 tests)
+# Frontend format, typecheck, lint, localization parity (766 keys / 974 calls) & Jest suite (22 suites / 99 tests)
 cd frontend
 pnpm install --frozen-lockfile
 pnpm exec prettier --check "jest.setup.ts" "src/**/*.{ts,tsx}" "src/i18n/resources/*.json"
@@ -301,11 +301,11 @@ WeDo/
 │   │   ├── app/                  # Expo Router screens ((auth), (onboarding), (share), (tabs), search, item, list, space, settings, legal)
 │   │   ├── database/             # SQLite client & owner-scoped offline sharing outbox
 │   │   ├── design-system/        # Warm Alabaster tokens, shadows, typography & UI primitives
-│   │   ├── features/             # Domain APIs, PlanSheet, UpcomingPlansSection, QR invite & ShareIntentNavigator
-│   │   ├── i18n/                 # Synchronized EN/TR catalogs (761 keys) & native calendar date formatters
+│   │   ├── features/             # Domain APIs, PlanSheet, PlanCard, UpcomingPlansSection, QR invite & ShareIntentNavigator
+│   │   ├── i18n/                 # Synchronized EN/TR catalogs (766 keys) & native calendar date formatters
 │   │   ├── lib/                  # Calendar/Maps deep-linking helpers & Expo haptics wrappers
 │   │   ├── store/                # Zustand auth, selected-space & haptic preference state
-│   │   └── __tests__/            # 22 Jest test suites (98 tests)
+│   │   └── __tests__/            # 22 Jest test suites (99 tests)
 │   ├── app.config.ts             # Expo SDK 58 app & native plugin manifest
 │   └── package.json              # RN 0.88.1, React 19.3, TS 6.0 & scripts
 ├── docs/

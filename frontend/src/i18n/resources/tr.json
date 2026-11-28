@@ -759,5 +759,10 @@
   "plans.noPlansTitle": "Henüz planlanmış içerik yok",
   "plans.noPlansSubtitle": "Kaydettiğin bir içeriğin içinden \"Tarih planla\"ya dokunduğunda burada gün ve saatiyle görünür.",
   "plans.scheduledSectionTitle": "Planlanan içerikler",
-  "plans.nextPlanHint": "Yaklaşan: {{date}}"
+  "plans.nextPlanHint": "Yaklaşan: {{date}}",
+  "plans.calendarPickerTitle": "Takvime ekle",
+  "plans.deviceCalendarOption": "Cihaz Takvimi",
+  "items.chatToday": "Bugün",
+  "items.chatYesterday": "Dün",
+  "items.commentActionsHint": "Düzenlemek için mesajına dokun"
 }

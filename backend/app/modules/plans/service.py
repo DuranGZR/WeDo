@@ -69,6 +69,7 @@ def create_plan(session: Session, user_id: UUID, data: PlanCreate) -> PlanRespon
         raise HTTPException(
             status_code=400, detail=message("message.theItemMustBelongToTheSameSpace")
         )
+    now = datetime.now(UTC)
     plan = Plan(
         space_id=data.space_id,
         item_id=data.item_id,
@@ -76,6 +77,8 @@ def create_plan(session: Session, user_id: UUID, data: PlanCreate) -> PlanRespon
         scheduled_at=data.scheduled_at,
         timezone=data.timezone,
         note=data.note,
+        status=PlanStatus.APPROVED,
+        approved_at=now,
     )
     session.add(plan)
     item.status = ItemStatus.PLANNED
@@ -92,7 +95,7 @@ def create_plan(session: Session, user_id: UUID, data: PlanCreate) -> PlanRespon
         session,
         space_id=data.space_id,
         actor_id=user_id,
-        activity_type="plan_proposed",
+        activity_type="plan_scheduled",
         entity_type="plan",
         entity_id=plan.id,
         payload={"item_id": str(item.id)},
@@ -101,9 +104,9 @@ def create_plan(session: Session, user_id: UUID, data: PlanCreate) -> PlanRespon
         session,
         space_id=data.space_id,
         actor_id=user_id,
-        notification_type="plan_proposed",
-        title=message("message.newPlanProposed"),
-        body=message("message.someoneProposedAPlan"),
+        notification_type="plan_scheduled",
+        title=message("message.newPlanScheduled"),
+        body=message("message.someoneScheduledAPlan"),
         data={
             "plan_id": str(plan.id),
             "item_id": str(item.id),

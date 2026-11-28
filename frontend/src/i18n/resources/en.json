@@ -759,5 +759,10 @@
   "plans.noPlansTitle": "No planned items yet",
   "plans.noPlansSubtitle": "When you schedule any saved item with \"Plan a date\", it appears here with its day and time.",
   "plans.scheduledSectionTitle": "Planned items",
-  "plans.nextPlanHint": "Next: {{date}}"
+  "plans.nextPlanHint": "Next: {{date}}",
+  "plans.calendarPickerTitle": "Add to calendar",
+  "plans.deviceCalendarOption": "Device Calendar",
+  "items.chatToday": "Today",
+  "items.chatYesterday": "Yesterday",
+  "items.commentActionsHint": "Tap your message to edit"
 }

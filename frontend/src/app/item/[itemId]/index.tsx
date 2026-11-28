@@ -1,4 +1,4 @@
-import { formatPlanDateTime, formatRelativeTime, t } from '@/i18n';
+import { formatRelativeTime, t } from '@/i18n';
 
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -57,20 +57,17 @@ import {
   useUpdateItem,
 } from '@/features/items/hooks';
 import { useLists } from '@/features/lists/hooks';
+import { PlanCard } from '@/features/plans/PlanCard';
 import { usePlanAction, useSpacePlans } from '@/features/plans/hooks';
-import { decodePlanNote } from '@/features/plans/note-meta';
 import { PlanSheet } from '@/features/plans/PlanSheet';
 import { SafetyActions } from '@/features/safety/SafetyActions';
 import {
-  addPlanToDeviceCalendar,
   buildLocationQuery,
   isPlaceLikeItem,
   openInAppleMaps,
-  openInGoogleCalendar,
   openInGoogleMaps,
 } from '@/lib/external-apps';
 import { haptic } from '@/lib/haptics';
-import { useAuthStore } from '@/store/auth-store';
 
 export default function ItemDetailScreen() {
   useTranslation();
@@ -79,7 +76,6 @@ export default function ItemDetailScreen() {
   const { showToast } = useToast();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const item = useItem(itemId);
-  const ownId = useAuthStore((state) => state.user?.id);
   const [isMoveOpen, setIsMoveOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPlanOpen, setIsPlanOpen] = useState(false);
@@ -216,10 +212,6 @@ export default function ItemDetailScreen() {
     (entry) =>
       entry.item_id === value.id &&
       (entry.status === 'proposed' || entry.status === 'approved'),
-  );
-  const activePlanMeta = activePlan ? decodePlanNote(activePlan.note) : null;
-  const activePlanCreatedByOther = Boolean(
-    activePlan && activePlan.created_by && activePlan.created_by !== ownId,
   );
 
   const pendingPreview =
@@ -359,192 +351,28 @@ export default function ItemDetailScreen() {
         />
 
         {activePlan ? (
-          <Card variant="elevated" style={styles.planCard}>
-            <View style={styles.planHeaderRow}>
-              <View style={styles.planIconWrap}>
-                <Ionicons name="calendar" size={18} color="#9E7F60" />
-              </View>
-              <View style={styles.planHeaderCopy}>
-                <AppText variant="caption" style={styles.planEyebrow}>
-                  {t('plans.activePlan')}
-                </AppText>
-                <AppText style={styles.planDateTitle}>
-                  {formatPlanDateTime(activePlan.scheduled_at)}
-                </AppText>
-              </View>
-              <View
-                style={[
-                  styles.planStatusBadge,
-                  activePlan.status === 'approved' && styles.planStatusApproved,
-                ]}
-              >
-                <AppText
-                  style={[
-                    styles.planStatusText,
-                    activePlan.status === 'approved' && styles.planStatusTextApproved,
-                  ]}
-                >
-                  {activePlan.status === 'approved'
-                    ? t('plans.statusApproved')
-                    : t('plans.statusProposed')}
-                </AppText>
-              </View>
-            </View>
-            {activePlanMeta?.location ? (
-              <AppText variant="caption" style={styles.planLocationText}>
-                {activePlanMeta.location}
-              </AppText>
-            ) : null}
-            {activePlanMeta?.note ? (
-              <AppText variant="caption" muted>
-                {activePlanMeta.note}
-              </AppText>
-            ) : null}
-            <View style={styles.mapsRow}>
-              {Platform.OS !== 'web' ? (
-                <SpringPressable
-                  accessibilityRole="button"
-                  pressScale={0.95}
-                  haptic="selection"
-                  onPress={() =>
-                    void addPlanToDeviceCalendar({
-                      itemId: value.id,
-                      scheduledAt: activePlan.scheduled_at,
-                      reminderMinutesBefore: activePlan.reminder_minutes_before,
-                    }).then((res) => {
-                      showToast({
-                        type: res.status === 'saved' ? 'success' : 'warning',
-                        title:
-                          res.status === 'saved'
-                            ? t('plans.addedToCalendar')
-                            : t('plans.calendarPermissionDenied'),
-                      });
-                    })
-                  }
-                  style={styles.mapPill}
-                >
-                  <Ionicons name="calendar-outline" size={14} color="#5F4932" />
-                  <AppText style={styles.mapPillText}>
-                    {t('plans.addToAppleCalendar')}
-                  </AppText>
-                </SpringPressable>
-              ) : null}
-              <SpringPressable
-                accessibilityRole="button"
-                pressScale={0.95}
-                haptic="selection"
-                onPress={() =>
-                  void openInGoogleCalendar({
-                    itemId: value.id,
-                    scheduledAt: activePlan.scheduled_at,
-                  })
-                }
-                style={styles.mapPill}
-              >
-                <Ionicons name="logo-google" size={13} color="#5F4932" />
-                <AppText style={styles.mapPillText}>
-                  {t('plans.addToGoogleCalendar')}
-                </AppText>
-              </SpringPressable>
-              <SpringPressable
-                accessibilityRole="button"
-                pressScale={0.95}
-                haptic="light"
-                onPress={() => setIsPlanOpen(true)}
-                style={styles.mapPill}
-              >
-                <Ionicons name="create-outline" size={14} color="#5F4932" />
-                <AppText style={styles.mapPillText}>{t('plans.editAction')}</AppText>
-              </SpringPressable>
-            </View>
-            <View style={styles.planDecisionRow}>
-              {activePlan.status === 'proposed' && activePlanCreatedByOther ? (
-                <>
-                  <SpringPressable
-                    accessibilityRole="button"
-                    pressScale={0.95}
-                    haptic="medium"
-                    disabled={planAction.isPending}
-                    onPress={() =>
-                      planAction.mutate(
-                        { planId: activePlan.id, action: 'approve' },
-                        {
-                          onSuccess: () =>
-                            showToast({
-                              type: 'success',
-                              title: t('plans.planUpdated'),
-                            }),
-                        },
-                      )
-                    }
-                    style={styles.planApproveBtn}
-                  >
-                    <Ionicons name="checkmark" size={14} color={colors.onAccent} />
-                    <AppText style={styles.planApproveText}>{t('plans.approve')}</AppText>
-                  </SpringPressable>
-                  <SpringPressable
-                    accessibilityRole="button"
-                    pressScale={0.95}
-                    haptic="warning"
-                    disabled={planAction.isPending}
-                    onPress={() =>
-                      planAction.mutate({ planId: activePlan.id, action: 'reject' })
-                    }
-                    style={styles.planDeclineBtn}
-                  >
-                    <AppText style={styles.planDeclineText}>{t('plans.decline')}</AppText>
-                  </SpringPressable>
-                </>
-              ) : activePlan.status === 'proposed' ? (
-                <SpringPressable
-                  accessibilityRole="button"
-                  pressScale={0.95}
-                  haptic="warning"
-                  disabled={planAction.isPending}
-                  onPress={() =>
-                    planAction.mutate(
-                      { planId: activePlan.id, action: 'cancel' },
-                      {
-                        onSuccess: () =>
-                          showToast({
-                            type: 'info',
-                            title: t('plans.cancelledToast'),
-                          }),
-                      },
-                    )
-                  }
-                  style={styles.planDeclineBtn}
-                >
-                  <AppText style={styles.planDeclineText}>
-                    {t('plans.cancelPlan')}
-                  </AppText>
-                </SpringPressable>
-              ) : (
-                <SpringPressable
-                  accessibilityRole="button"
-                  pressScale={0.95}
-                  haptic="medium"
-                  disabled={planAction.isPending}
-                  onPress={() =>
-                    planAction.mutate(
-                      { planId: activePlan.id, action: 'complete' },
-                      {
-                        onSuccess: () =>
-                          showToast({
-                            type: 'success',
-                            title: t('plans.planUpdated'),
-                          }),
-                      },
-                    )
-                  }
-                  style={styles.planApproveBtn}
-                >
-                  <Ionicons name="checkmark-done" size={14} color={colors.onAccent} />
-                  <AppText style={styles.planApproveText}>{t('plans.complete')}</AppText>
-                </SpringPressable>
-              )}
-            </View>
-          </Card>
+          <PlanCard
+            plan={activePlan}
+            item={value}
+            variant="detail"
+            isActionPending={planAction.isPending}
+            onEdit={() => setIsPlanOpen(true)}
+            onAction={(action) => {
+              planAction.mutate(
+                { planId: activePlan.id, action },
+                {
+                  onSuccess: () =>
+                    showToast({
+                      type: action === 'cancel' ? 'info' : 'success',
+                      title:
+                        action === 'cancel'
+                          ? t('plans.cancelledToast')
+                          : t('plans.planUpdated'),
+                    }),
+                },
+              );
+            }}
+          />
         ) : (
           <SpringPressable
             onPress={() => setIsPlanOpen(true)}
@@ -1020,91 +848,5 @@ const styles = StyleSheet.create({
     color: '#5F4932',
     fontSize: 15,
     fontWeight: '600',
-  },
-  planCard: {
-    borderRadius: 24,
-    padding: spacing.md + 2,
-    gap: spacing.sm + 2,
-  },
-  planHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-  },
-  planIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#FAF5EE',
-    borderWidth: 1,
-    borderColor: '#D4BEA4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  planHeaderCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 1,
-  },
-  planEyebrow: {
-    color: '#7A5E42',
-    fontWeight: '700',
-  },
-  planDateTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primaryText,
-  },
-  planStatusBadge: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.warningSoft,
-  },
-  planStatusApproved: {
-    backgroundColor: colors.successSoft,
-  },
-  planStatusText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.warning,
-  },
-  planStatusTextApproved: {
-    color: colors.success,
-  },
-  planLocationText: {
-    color: '#5F4932',
-    fontWeight: '600',
-  },
-  planDecisionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs + 2,
-    paddingTop: spacing.xs,
-  },
-  planApproveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-  },
-  planApproveText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: colors.onAccent,
-  },
-  planDeclineBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.errorSoft,
-  },
-  planDeclineText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: colors.error,
   },
 });

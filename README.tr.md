@@ -69,8 +69,8 @@ WeDo, sıcak **Warm Alabaster (`#F6F4F0`)** zeminini **Warm Bronze (`#9E7F60`)**
 ### Yenilikler ve Temel Yetenekler
 
 * **Warm Alabaster Arayüz, Haptics & Sade Hareket Dili:** Hareketli bronz ortam parıltısı üzerinde sekme geçişlerinde rengini koruyan yarı saydam cam butonlar, sadeleştirilmiş animasyonlar, Ayarlar'dan yönetilebilen `expo-haptics` dokunsal geri bildirimi (`HapticsToggle`), özelleştirilebilir liste ikon/renk seçenekleri ve kalıcı liste sıralama.
-* **Ortak Tarih Planlama & Takvim Deep-Link Entegrasyonu:** Etkileşimli çark (`spinner`) tarih/saat seçicisi (`PlanSheet` — Türkçe ay ve gün adlarıyla), `15 dk / 1 sa / 1 gün` hatırlatıcıları, partner onay/ret/iptal akışı, **Listeler** ekranındaki özel **Planlar** sekmesinden anında tarih/saat düzenleme (`PATCH /api/v1/plans/{id}`), Apple/Google Maps mekân açma ve **`WeDo planı`** başlığıyla kaydedilip takvimden tıklandığında ilgili içeriği doğrudan WeDo içinde açan takvim etkinlikleri.
-* **Öğe Notları, Yorumlar & Birleşik Aktivite Geçmişi:** İçerik detayının altında satır içi tartışma kartları (`ItemCommentsSection`), başlık/açıklama düzenleme (`PATCH /api/v1/items/{id}`), üst çubuktaki bildirim zilinde okunmamış sayısı rozeti (`SpaceHeaderBar`) ve içerik/yorum/plan geçmişini tek akışta gösteren aktivite ekranı.
+* **Sade Tarih Planlama & Takvim Deep-Link Entegrasyonu:** Etkileşimli çark (`spinner`) tarih/saat seçicisi (`PlanSheet` — Türkçe ay ve gün adlarıyla) ve `15 dk / 1 sa / 1 gün` hatırlatıcılarıyla içerikler onay beklemeden doğrudan **Planlandı** olarak kaydedilir; tüm üyeler Ana Sayfa, **Listeler → Planlar** sekmesi ve İçerik Detayı üzerindeki ortak `PlanCard` üzerinden düzenleme (`PATCH /api/v1/plans/{id}`), tamamlama ve iptal işlemlerini tek dokunuşla yapabilir, **`WeDo planı`** takvim etkinliklerinden tek tıkla `/item/{id}` içeriğine dönebilir.
+* **WhatsApp Tarzı Notlar, Yorumlar & Aktivite Geçmişi:** İçerik detayında iki yönlü sohbet balonları, gün ayıracı ve mesaja dokununca açılan düzenle/sil akışıyla (`ItemCommentsSection`) mesajlaşabilir; başlık/açıklamayı güncelleyebilir (`PATCH /api/v1/items/{id}`), üst çubuktaki bildirim zilinde okunmamış sayısı rozetini (`SpaceHeaderBar`) görebilir ve içerik/yorum/plan geçmişini tek akışta inceleyebilirsin.
 * **Hızlı Keşif, Kaydırma Aksiyonları & Çevrimdışı Görünürlük:** Alttan açılan modal pencereyle tüm alanda arama (`/search`), liste içi sıralama (`En yeni`, `En eski`, `A–Z`) ve kaynak filtresi (`Instagram`, `TikTok`, `YouTube`, `Alışveriş`, `Harita`, `Web`), başlığı zıplatmadan değişen Izgara/Liste görünümü, **Geri Al (Undo)** toast destekli sağa/sola kaydırma aksiyonları, akıllı pano (Clipboard) link önerisi, `expo-image` önbellekli görsel shimmer'ı, QR kod ile tek dokunuşla davet (`InviteQrSheet`) ve canlı `OutboxStatusBanner` senkronizasyon çubuğu.
 * **Native Paylaşarak Kaydetme ve SSRF Korumalı Önizlemeler:** iOS Share Extension (`WeDoShare`, App Group) ve Android Share Intent üzerinden gelen linkleri kullanıcıya izole (`owner_id`) `expo-sqlite` outbox'ına yazar; DNS IP sabitlemeli `curl-cffi` istekleriyle önizleme çeker ve süresi dolan sosyal medya CDN görsellerini yeniden boyutlandırıp kısa ömürlü imzalı URL'lerle servis eder.
 * **Çoklu Kimlik Doğrulama & Güvenlik Kontrolleri:** Argon2 parola hashleme ve Resend e-posta doğrulaması, Apple Sign-In (S2S bildirimler + arka plan token iptali), Google Sign-In, tek dokunuşla hesap silme, içerik/kullanıcı şikâyetleri ve kullanıcı engellemede atomik alan izolasyonu sunar.
@@ -112,7 +112,7 @@ WeDo, sıcak **Warm Alabaster (`#F6F4F0`)** zeminini **Warm Bronze (`#9E7F60`)**
 2. **Düzenle ve Tartış:** Kayıtları özel ikonlu ortak listelerde topla, içerik altına not/yorum bırak, platforma göre filtrele ve kaydırma hareketleriyle işaretle.
 3. **Planla ve Takvime Bağla:** Birlikte gün ve saat belirle, Listeler → Planlar sekmesinden tarihleri düzenle ve cihaz takvimindeki etkinlikten tek dokunuşla WeDo içindeki içeriğe dön.
 
-*(Uygulama, CI doğrulamalı `761` senkronize anahtar ve `1.000` kontrol edilen çağrı ile tam Türkçe ve İngilizce dil eşdeğerliğine sahiptir.)*
+*(Uygulama, CI doğrulamalı `766` senkronize anahtar ve `974` kontrol edilen çağrı ile tam Türkçe ve İngilizce dil eşdeğerliğine sahiptir.)*
 
 ---
 
@@ -130,7 +130,7 @@ WeDo, mobil içerik yakalama ve zenginleştirme hattını (**Write Path**) ortak
 
 * **2. Ortak Çalışma, Planlama ve Arka Plan İşleri (Read & Worker Path):**
   `Spaces, Plans & Comments` → `Signed Preview URLs` → `Background Worker (60s)` → `iOS & Android Client`
-  Üyeler listeleri yönetir, içeriklere yorum yazar, buluşma planı önerir ve düzenler, cihaz takvimine deep-link ekler, imzalı URL'lerle önizlemeleri yükler; `60` saniyelik arka plan worker'ı ise plan hatırlatmalarını, Apple token iptallerini ve Expo Push bildirimlerini işler.
+  Üyeler listeleri yönetir, içeriklere sohbet balonlarıyla not yazar, ortak planları doğrudan planlayıp düzenler, cihaz takvimine deep-link ekler, imzalı URL'lerle önizlemeleri yükler; `60` saniyelik arka plan worker'ı ise plan hatırlatmalarını, Apple token iptallerini ve Expo Push bildirimlerini işler.
 
 ### Teknoloji Yığını
 
@@ -138,7 +138,7 @@ WeDo, mobil içerik yakalama ve zenginleştirme hattını (**Write Path**) ortak
 | :--- | :--- | :--- |
 | **Mobil ve Web İstemci** | Expo SDK 58 · React Native 0.88 · React 19.3 · TypeScript 6.0 | iOS, Android ve web üzerinde tip güvenli Expo Router navigasyonu, `Zustand` ve `TanStack Query` |
 | **Native Yetenekler** | `expo-share-intent` · `expo-sqlite` · `expo-calendar` · `expo-haptics` · `expo-image` · `expo-clipboard` | `WeDoShare` iOS Share Extension (App Group), SQLite outbox, takvim deep-link, dokunsal titreşim, önbellekli görseller ve akıllı pano yakalama |
-| **Yerelleştirme** | `i18next` · `react-i18next` · `expo-localization` · `LanguageMiddleware` | CI'da doğrulanan `761` mobil anahtar, backend mesajları ve yerli Türkçe ay/gün biçimlendirme |
+| **Yerelleştirme** | `i18next` · `react-i18next` · `expo-localization` · `LanguageMiddleware` | CI'da doğrulanan `766` mobil anahtar, backend mesajları ve yerli Türkçe ay/gün biçimlendirme |
 | **API Çekirdeği** | FastAPI · Pydantic Settings · SQLAlchemy 2 · Alembic (`18` migration) | `auth`, `users`, `spaces`, `invitations`, `members`, `lists`, `items`, `comments`, `plans`, `activities`, `notifications` ve `safety` modüllerini ayıran modüler monolith |
 | **Metadata ve Görsel İşleme** | `curl-cffi` · `BeautifulSoup4` · `Pillow` | Tarayıcı TLS taklidi, HTML/oEmbed ayrıştırma ve `600×600` JPEG önizleme sıkıştırma |
 | **Veri ve Arka Plan İşleri** | PostgreSQL 17 · Python Background Worker (`app.worker`) | ACID veri bütünlüğü, önbellekli görseller, plan hatırlatma kuyruğu, Apple iptal döngüsü ve push gönderimi |
@@ -155,7 +155,7 @@ WeDo, mobil içerik yakalama ve zenginleştirme hattını (**Write Path**) ortak
 | **iOS `NativeTabs` geçişlerinde Liquid Glass butonların beyaza dönmesi** | Sekme üst çubuğundaki dairesel `IconButton` ve `SegmentedControl` bileşenlerinde değişken UIKit backdrop örneklemesi yerine deterministik katmanlı `LinearGradient` + ince beyaz kenarlık uygulandı | İlk açılışta ve tüm sekme geçişlerinde aynı yarı saydam cam görünümünü korur |
 | **Takvim etkinliklerinden uygulamadaki plana dönüş** | Takvime yalnızca temiz `WeDo planı` başlığı yazılır; iOS EventKit `url` alanı ve not bağlantısı olarak doğrudan `/item/{itemId}` rotasına giden deep-link eklenir | Telefon takvimini kalabalıklaştırmaz; etkinlikten tek dokunuşla ilgili içeriği açar |
 | **Zayıf ağlarda paylaşım kaybı ve görünüm geçişinde ekran zıplaması** | Paylaşımlar kullanıcıya özel `expo-sqlite` outbox kuyruğunda tutulup `OutboxStatusBanner` ile izlenir; liste başlığı `FlatList` dışına alınarak Grid/Liste geçişinde sabit bırakıldı | Çevrimdışı paylaşımları korur ve görünüm değişiminde başlık/filtre titremesini sıfırlar |
-| **TR/EN çeviri ve tarih biçimlerinin kayması** | `frontend/scripts/check-locales.cjs` ile `761` anahtar (`1.000` çağrı) CI'da doğrulanır; ay/gün adları işletim sistemi ICU ayarından bağımsız biçimlendirilir | Eksik çeviri anahtarı oluşmaz; Türkçe ekranda aylar her cihazda eksiksiz Türkçe görünür |
+| **TR/EN çeviri ve tarih biçimlerinin kayması** | `frontend/scripts/check-locales.cjs` ile `766` anahtar (`974` çağrı) CI'da doğrulanır; ay/gün adları işletim sistemi ICU ayarından bağımsız biçimlendirilir | Eksik çeviri anahtarı oluşmaz; Türkçe ekranda aylar her cihazda eksiksiz Türkçe görünür |
 
 ---
 
@@ -237,7 +237,7 @@ Kimlik doğrulama gerektiren uç noktalar `Authorization: Bearer <access_token>`
 | `/api/v1/lists/*` ve `.../spaces/{id}/lists` | Bearer JWT | Ortak liste CRUD, ikon/renk özelleştirme ve kalıcı liste sıralama (`/api/v1/lists/reorder`) |
 | `/api/v1/items/*` ve `.../lists/{id}/items` | Bearer JWT / İmzalı JWT | Bağlantı ekleme, metadata çekme, başlık/not düzenleme, liste taşıma, tamamlama/geri alma, aktivite geçmişi (`/items/{id}/activity`) ve imzalı önizleme sunumu (`/items/{id}/preview`) |
 | `/api/v1/items/{id}/comments` ve `/api/v1/comments/*` | Bearer JWT | İçerik altı yorum ve not CRUD akışı, güvenlik kontrolü ve bildirim dağıtımı |
-| `/api/v1/spaces/{id}/plans` ve `/api/v1/plans/*` | Bearer JWT | Ortak tarih planlama, hatırlatıcılar, plan güncelleme (`PATCH /plans/{id}`) ve `approve` / `reject` / `cancel` / `complete` geçişleri |
+| `/api/v1/spaces/{id}/plans` ve `/api/v1/plans/*` | Bearer JWT | Doğrudan aktif tarih planlama, hatırlatıcılar, plan güncelleme (`PATCH /plans/{id}`) ve `complete` / `cancel` geçişleri |
 | `/api/v1/notifications/*` ve `/api/v1/devices/*` | Bearer JWT | Bildirim kutusu, okunmamış rozet sayacı, okundu işaretleme ve Expo push kaydı |
 | `/api/v1/safety/*` | Bearer JWT | İçerik/kullanıcı bildirimi (`POST /safety/reports`) ve engellenen kullanıcılar (`GET/PUT/DELETE /safety/blocks`) |
 | `/legal/*`, `/privacy`, `/terms`, `/delete-account` | Herkese açık (`POST` için `10 / dk`) | Gizlilik politikası, kullanım koşulları ve web hesap silme talebi (`202 Accepted`) |
@@ -246,7 +246,7 @@ Kimlik doğrulama gerektiren uç noktalar `Authorization: Bearer <access_token>`
 
 ## Kalite Kapıları ve Proje Yapısı
 
-GitHub Actions ([`backend-quality.yml`](.github/workflows/backend-quality.yml) ve [`frontend-quality.yml`](.github/workflows/frontend-quality.yml)) tüm `264` otomatik testi (`166` backend + `98` frontend), statik tip kontrollerini ve çeviri bütünlüğünü doğrular:
+GitHub Actions ([`backend-quality.yml`](.github/workflows/backend-quality.yml) ve [`frontend-quality.yml`](.github/workflows/frontend-quality.yml)) tüm `265` otomatik testi (`166` backend + `99` frontend), statik tip kontrollerini ve çeviri bütünlüğünü doğrular:
 
 ```bash
 # Backend format, lint ve test paketi (166 pytest testi)
@@ -256,7 +256,7 @@ uv run ruff format --check app tests
 uv run ruff check .
 uv run pytest
 
-# Frontend format, tip kontrolü, lint, çeviri (761 anahtar / 1.000 çağrı) ve Jest (22 suite / 98 test)
+# Frontend format, tip kontrolü, lint, çeviri (766 anahtar / 974 çağrı) ve Jest (22 suite / 99 test)
 cd frontend
 pnpm install --frozen-lockfile
 pnpm exec prettier --check "jest.setup.ts" "src/**/*.{ts,tsx}" "src/i18n/resources/*.json"
@@ -297,11 +297,11 @@ WeDo/
 │   │   ├── app/                  # Expo Router ekranları ((auth), (onboarding), (share), (tabs), search, item, list, space, settings, legal)
 │   │   ├── database/             # SQLite istemcisi ve kullanıcıya izole outbox
 │   │   ├── design-system/        # Warm Alabaster token'ları, gölgeler, tipografi ve UI bileşenleri
-│   │   ├── features/             # Domain API'leri, PlanSheet, UpcomingPlansSection, QR davet & paylaşım
-│   │   ├── i18n/                 # Senkronize TR/EN katalogları (761 anahtar) ve yerli tarih biçimleyiciler
+│   │   ├── features/             # Domain API'leri, PlanSheet, PlanCard, UpcomingPlansSection, QR davet & paylaşım
+│   │   ├── i18n/                 # Senkronize TR/EN katalogları (766 anahtar) ve yerli tarih biçimleyiciler
 │   │   ├── lib/                  # Takvim/Harita deep-link ve Haptics yardımcıları
 │   │   ├── store/                # Zustand oturum, seçili alan ve haptics tercihi
-│   │   └── __tests__/            # 22 Jest test paketi (98 test)
+│   │   └── __tests__/            # 22 Jest test paketi (99 test)
 │   ├── app.config.ts             # Expo SDK 58 uygulama ve native eklenti manifestosu
 │   └── package.json              # RN 0.88.1, React 19.3, TS 6.0 ve betikler
 ├── docs/

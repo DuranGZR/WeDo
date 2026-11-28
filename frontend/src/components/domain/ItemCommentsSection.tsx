@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
 import { useToast } from '@/components/feedback/AppToast';
@@ -9,6 +9,7 @@ import { SpringPressable } from '@/components/motion/SpringPressable';
 import { LAYOUT_SPRING } from '@/components/motion/springs';
 import { AppText, Card, Skeleton } from '@/components/ui';
 import { colors, radius, spacing } from '@/design-system';
+import type { Comment } from '@/features/collaboration/api';
 import {
   useCreateComment,
   useDeleteComment,
@@ -16,9 +17,15 @@ import {
   useSpaceMembers,
   useUpdateComment,
 } from '@/features/collaboration/hooks';
-import { formatLocale, formatRelativeTime, t } from '@/i18n';
+import { formatChatDayDivider, formatLocale, formatPlanTimeLabel, t } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import { useAuthStore } from '@/store/auth-store';
+
+function calendarDayKey(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
 
 export function ItemCommentsSection({
   itemId,
@@ -40,6 +47,7 @@ export function ItemCommentsSection({
   const deleteComment = useDeleteComment(itemId);
 
   const [draft, setDraft] = useState('');
+  const [selectedOwnId, setSelectedOwnId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingBody, setEditingBody] = useState('');
 
@@ -51,7 +59,7 @@ export function ItemCommentsSection({
     return map;
   }, [membersQuery.data?.data]);
 
-  const comments = commentsQuery.data?.data ?? [];
+  const comments: Comment[] = commentsQuery.data?.data ?? [];
 
   const handleSend = () => {
     const text = draft.trim();
@@ -59,6 +67,7 @@ export function ItemCommentsSection({
     createComment.mutate(text, {
       onSuccess: () => {
         setDraft('');
+        setSelectedOwnId(null);
       },
       onError: (err) => {
         showToast({
@@ -80,6 +89,7 @@ export function ItemCommentsSection({
         onSuccess: () => {
           setEditingId(null);
           setEditingBody('');
+          setSelectedOwnId(null);
         },
         onError: (err) => {
           showToast({
@@ -102,6 +112,7 @@ export function ItemCommentsSection({
         onPress: () => {
           deleteComment.mutate(commentId, {
             onSuccess: () => {
+              setSelectedOwnId(null);
               showToast({ type: 'success', title: t('items.commentDeleted') });
             },
           });
@@ -115,141 +126,242 @@ export function ItemCommentsSection({
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <View style={styles.iconBadge}>
-            <Ionicons name="chatbubble-ellipses-outline" size={16} color="#9E7F60" />
+            <Ionicons name="chatbubble-ellipses-outline" size={15} color="#9E7F60" />
           </View>
           <AppText variant="sectionTitle" style={styles.title}>
             {t('items.commentsTitle')}
           </AppText>
         </View>
-        <View style={styles.countBadge}>
-          <AppText style={styles.countText}>{comments.length}</AppText>
-        </View>
+        {comments.length > 0 ? (
+          <View style={styles.countBadge}>
+            <AppText style={styles.countText}>{comments.length}</AppText>
+          </View>
+        ) : null}
       </View>
 
-      {commentsQuery.isLoading ? (
-        <View style={styles.skeletonList}>
-          <Skeleton width="85%" height={42} borderRadius={14} />
-          <Skeleton width="65%" height={42} borderRadius={14} />
-        </View>
-      ) : comments.length === 0 ? (
-        <AppText variant="caption" muted style={styles.emptyText}>
-          {t('items.noCommentsYet')}
-        </AppText>
-      ) : (
-        <View style={styles.commentList}>
-          {comments.map((comment, index) => {
-            const author = memberNameByUserId.get(comment.user_id) ?? t('common.someone');
-            const initial = author.trim().charAt(0).toLocaleUpperCase(locale) || 'W';
-            const isOwn = comment.user_id === ownId;
-            const isEditing = editingId === comment.id;
+      <View style={styles.chatCanvas}>
+        {commentsQuery.isLoading ? (
+          <View style={styles.skeletonList}>
+            <Skeleton width="72%" height={40} borderRadius={16} />
+            <Skeleton
+              width="62%"
+              height={40}
+              borderRadius={16}
+              style={styles.skeletonRight}
+            />
+          </View>
+        ) : comments.length === 0 ? (
+          <AppText variant="caption" muted style={styles.emptyText}>
+            {t('items.noCommentsYet')}
+          </AppText>
+        ) : (
+          <View style={styles.thread}>
+            {comments.map((comment, index) => {
+              const previous = index > 0 ? comments[index - 1] : undefined;
+              const next = index < comments.length - 1 ? comments[index + 1] : undefined;
+              const currentDay = calendarDayKey(comment.created_at);
+              const previousDay = previous ? calendarDayKey(previous.created_at) : null;
+              const showDayDivider = currentDay !== previousDay;
 
-            return (
-              <Animated.View
-                key={comment.id}
-                entering={
-                  reducedMotion
-                    ? undefined
-                    : FadeInDown.delay(Math.min(index, 5) * 30).duration(200)
-                }
-                layout={reducedMotion ? undefined : LAYOUT_SPRING}
-                style={[styles.commentBubble, isOwn && styles.commentBubbleOwn]}
-              >
-                <View style={[styles.avatar, isOwn && styles.avatarOwn]}>
-                  <AppText style={[styles.avatarText, isOwn && styles.avatarTextOwn]}>
-                    {initial}
-                  </AppText>
-                </View>
+              const isOwn = Boolean(ownId && comment.user_id === ownId);
+              const sameSenderAsPrevious =
+                !showDayDivider && previous?.user_id === comment.user_id;
+              const sameSenderAsNext =
+                next &&
+                calendarDayKey(next.created_at) === currentDay &&
+                next.user_id === comment.user_id;
 
-                <View style={styles.commentContent}>
-                  <View style={styles.commentMeta}>
-                    <AppText style={styles.authorName}>{author}</AppText>
-                    <AppText variant="caption" muted style={styles.timeText}>
-                      {formatRelativeTime(comment.created_at)}
-                    </AppText>
-                  </View>
+              const isFirstInRun = !sameSenderAsPrevious;
+              const isLastInRun = !sameSenderAsNext;
 
-                  {isEditing ? (
-                    <View style={styles.editBox}>
-                      <TextInput
-                        value={editingBody}
-                        onChangeText={setEditingBody}
-                        style={styles.editInput}
-                        multiline
-                        maxLength={1000}
-                        autoFocus
-                      />
-                      <View style={styles.editActions}>
-                        <SpringPressable
-                          accessibilityRole="button"
-                          pressScale={0.94}
-                          haptic="selection"
-                          onPress={() => {
-                            setEditingId(null);
-                            setEditingBody('');
-                          }}
-                          style={styles.smallGhostBtn}
-                        >
-                          <AppText style={styles.smallGhostText}>
-                            {t('items.cancel')}
-                          </AppText>
-                        </SpringPressable>
-                        <SpringPressable
-                          accessibilityRole="button"
-                          pressScale={0.94}
-                          haptic="medium"
-                          disabled={updateComment.isPending || !editingBody.trim()}
-                          onPress={handleSaveEdit}
-                          style={styles.smallSaveBtn}
-                        >
-                          <AppText style={styles.smallSaveText}>
-                            {t('sharing.save')}
-                          </AppText>
-                        </SpringPressable>
+              const author =
+                memberNameByUserId.get(comment.user_id) ?? t('common.someone');
+              const initial = author.trim().charAt(0).toLocaleUpperCase(locale) || 'W';
+              const isEditing = editingId === comment.id;
+              const showOwnMenu = isOwn && !isEditing && selectedOwnId === comment.id;
+
+              return (
+                <View key={comment.id}>
+                  {showDayDivider ? (
+                    <View style={styles.dayDividerWrap}>
+                      <View style={styles.dayDividerPill}>
+                        <AppText style={styles.dayDividerText}>
+                          {formatChatDayDivider(comment.created_at)}
+                        </AppText>
                       </View>
                     </View>
-                  ) : (
-                    <AppText style={styles.bodyText}>{comment.body}</AppText>
-                  )}
-                </View>
+                  ) : null}
 
-                {isOwn && !isEditing ? (
-                  <View style={styles.ownActions}>
-                    <SpringPressable
-                      accessibilityRole="button"
-                      accessibilityLabel={t('lists.edit')}
-                      hitSlop={6}
-                      pressScale={0.9}
-                      haptic="selection"
-                      onPress={() => {
-                        setEditingId(comment.id);
-                        setEditingBody(comment.body);
-                      }}
-                      style={styles.microBtn}
+                  <Animated.View
+                    entering={
+                      reducedMotion
+                        ? undefined
+                        : FadeInDown.delay(Math.min(index, 5) * 25).duration(180)
+                    }
+                    layout={reducedMotion ? undefined : LAYOUT_SPRING}
+                    style={[
+                      styles.messageRow,
+                      isOwn ? styles.messageRowOwn : styles.messageRowPartner,
+                      isFirstInRun ? styles.rowGroupStart : styles.rowGroupContinue,
+                    ]}
+                  >
+                    {!isOwn ? (
+                      <View style={styles.avatarSlot}>
+                        {isFirstInRun ? (
+                          <View style={styles.partnerAvatar}>
+                            <AppText style={styles.partnerAvatarText}>{initial}</AppText>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    <View
+                      style={[
+                        styles.bubbleColumn,
+                        isOwn ? styles.bubbleColumnOwn : styles.bubbleColumnPartner,
+                      ]}
                     >
-                      <Ionicons
-                        name="pencil-outline"
-                        size={14}
-                        color={colors.secondaryText}
-                      />
-                    </SpringPressable>
-                    <SpringPressable
-                      accessibilityRole="button"
-                      accessibilityLabel={t('items.delete')}
-                      hitSlop={6}
-                      pressScale={0.9}
-                      haptic="warning"
-                      onPress={() => handleDelete(comment.id)}
-                      style={styles.microBtn}
-                    >
-                      <Ionicons name="trash-outline" size={14} color={colors.error} />
-                    </SpringPressable>
-                  </View>
-                ) : null}
-              </Animated.View>
-            );
-          })}
-        </View>
-      )}
+                      {isEditing ? (
+                        <View
+                          style={[styles.bubble, styles.bubbleOwn, styles.editBubble]}
+                        >
+                          <TextInput
+                            value={editingBody}
+                            onChangeText={setEditingBody}
+                            style={styles.editInput}
+                            multiline
+                            maxLength={1000}
+                            autoFocus
+                          />
+                          <View style={styles.editActions}>
+                            <SpringPressable
+                              accessibilityRole="button"
+                              pressScale={0.94}
+                              haptic="selection"
+                              onPress={() => {
+                                setEditingId(null);
+                                setEditingBody('');
+                              }}
+                              style={styles.smallGhostBtn}
+                            >
+                              <AppText style={styles.smallGhostText}>
+                                {t('items.cancel')}
+                              </AppText>
+                            </SpringPressable>
+                            <SpringPressable
+                              accessibilityRole="button"
+                              pressScale={0.94}
+                              haptic="medium"
+                              disabled={updateComment.isPending || !editingBody.trim()}
+                              onPress={handleSaveEdit}
+                              style={styles.smallSaveBtn}
+                            >
+                              <AppText style={styles.smallSaveText}>
+                                {t('sharing.save')}
+                              </AppText>
+                            </SpringPressable>
+                          </View>
+                        </View>
+                      ) : (
+                        <Pressable
+                          accessibilityRole={isOwn ? 'button' : undefined}
+                          accessibilityHint={
+                            isOwn ? t('items.commentActionsHint') : undefined
+                          }
+                          onPress={
+                            isOwn
+                              ? () => {
+                                  haptic.selection();
+                                  setSelectedOwnId((prev) =>
+                                    prev === comment.id ? null : comment.id,
+                                  );
+                                }
+                              : undefined
+                          }
+                          onLongPress={
+                            isOwn
+                              ? () => {
+                                  haptic.medium();
+                                  setSelectedOwnId(comment.id);
+                                }
+                              : undefined
+                          }
+                          style={[
+                            styles.bubble,
+                            isOwn ? styles.bubbleOwn : styles.bubblePartner,
+                            isOwn && isLastInRun && styles.bubbleOwnTail,
+                            !isOwn && isFirstInRun && styles.bubblePartnerTail,
+                          ]}
+                        >
+                          {!isOwn && isFirstInRun ? (
+                            <AppText style={styles.partnerName}>{author}</AppText>
+                          ) : null}
+
+                          <AppText style={styles.bodyText}>{comment.body}</AppText>
+
+                          <View style={styles.bubbleFooter}>
+                            <AppText
+                              style={[styles.timeText, isOwn && styles.timeTextOwn]}
+                            >
+                              {formatPlanTimeLabel(comment.created_at)}
+                            </AppText>
+                            {isOwn ? (
+                              <Ionicons name="checkmark-done" size={13} color="#8D6F52" />
+                            ) : null}
+                          </View>
+                        </Pressable>
+                      )}
+
+                      {showOwnMenu ? (
+                        <View style={styles.ownQuickMenu}>
+                          <SpringPressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t('lists.edit')}
+                            pressScale={0.94}
+                            haptic="selection"
+                            onPress={() => {
+                              setEditingId(comment.id);
+                              setEditingBody(comment.body);
+                              setSelectedOwnId(null);
+                            }}
+                            style={styles.quickActionPill}
+                          >
+                            <Ionicons
+                              name="pencil-outline"
+                              size={12}
+                              color={colors.primaryText}
+                            />
+                            <AppText style={styles.quickActionText}>
+                              {t('lists.edit')}
+                            </AppText>
+                          </SpringPressable>
+                          <SpringPressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t('items.delete')}
+                            pressScale={0.94}
+                            haptic="warning"
+                            onPress={() => handleDelete(comment.id)}
+                            style={[styles.quickActionPill, styles.quickDeletePill]}
+                          >
+                            <Ionicons
+                              name="trash-outline"
+                              size={12}
+                              color={colors.error}
+                            />
+                            <AppText style={styles.quickDeleteText}>
+                              {t('items.delete')}
+                            </AppText>
+                          </SpringPressable>
+                        </View>
+                      ) : null}
+                    </View>
+                  </Animated.View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
 
       <View style={styles.composerRow}>
         <TextInput
@@ -285,7 +397,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     padding: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.sm + 4,
   },
   headerRow: {
     flexDirection: 'row',
@@ -298,9 +410,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   iconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#FAF5EE',
     borderWidth: 1,
     borderColor: '#D4BEA4',
@@ -313,100 +425,179 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
   },
   countBadge: {
-    minWidth: 24,
-    height: 24,
+    minWidth: 22,
+    height: 22,
     paddingHorizontal: 7,
-    borderRadius: 12,
+    borderRadius: 11,
     backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   countText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: colors.secondaryText,
+  },
+  chatCanvas: {
+    borderRadius: 18,
+    backgroundColor: '#F4F1EA',
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.sm + 4,
   },
   skeletonList: {
     gap: spacing.sm,
   },
+  skeletonRight: {
+    alignSelf: 'flex-end',
+  },
   emptyText: {
     fontSize: 13,
-    paddingVertical: spacing.xs,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
   },
-  commentList: {
-    gap: spacing.sm,
+  thread: {
+    gap: 2,
   },
-  commentBubble: {
+  dayDividerWrap: {
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: spacing.xs + 2,
+  },
+  dayDividerPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(17, 17, 16, 0.06)',
+  },
+  dayDividerText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.secondaryText,
+  },
+  messageRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    padding: spacing.sm + 2,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'flex-end',
   },
-  commentBubbleOwn: {
-    backgroundColor: '#FAF5EE',
-    borderWidth: 1,
-    borderColor: 'rgba(158, 127, 96, 0.24)',
+  messageRowPartner: {
+    justifyContent: 'flex-start',
+    gap: 6,
   },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(17, 17, 16, 0.08)',
+  messageRowOwn: {
+    justifyContent: 'flex-end',
+  },
+  rowGroupStart: {
+    marginTop: 7,
+  },
+  rowGroupContinue: {
+    marginTop: 2,
+  },
+  avatarSlot: {
+    width: 24,
+    alignItems: 'center',
+  },
+  partnerAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E8DFD1',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
   },
-  avatarOwn: {
-    backgroundColor: '#9E7F60',
+  partnerAvatarText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#5F4932',
   },
-  avatarText: {
+  bubbleColumn: {
+    maxWidth: '82%',
+    gap: 4,
+  },
+  bubbleColumnOwn: {
+    alignItems: 'flex-end',
+  },
+  bubbleColumnPartner: {
+    alignItems: 'flex-start',
+  },
+  bubble: {
+    paddingHorizontal: 12,
+    paddingTop: 7,
+    paddingBottom: 6,
+    borderRadius: 16,
+    gap: 2,
+  },
+  bubblePartner: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(17, 17, 16, 0.06)',
+  },
+  bubblePartnerTail: {
+    borderTopLeftRadius: 5,
+  },
+  bubbleOwn: {
+    backgroundColor: '#EFE4D4',
+    borderWidth: 1,
+    borderColor: 'rgba(158, 127, 96, 0.22)',
+  },
+  bubbleOwnTail: {
+    borderBottomRightRadius: 5,
+  },
+  partnerName: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: colors.primaryText,
-  },
-  avatarTextOwn: {
-    color: '#FFFFFF',
-  },
-  commentContent: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  commentMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  authorName: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: colors.primaryText,
-  },
-  timeText: {
-    fontSize: 11,
+    color: '#8D6F52',
   },
   bodyText: {
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 19.5,
     color: colors.primaryText,
   },
-  ownActions: {
+  bubbleFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'flex-end',
+    gap: 3,
+    marginTop: 1,
   },
-  microBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  timeText: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: colors.tertiaryText,
+  },
+  timeTextOwn: {
+    color: '#7E6A56',
+  },
+  ownQuickMenu: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
   },
-  editBox: {
+  quickActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  quickActionText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
+  quickDeletePill: {
+    borderColor: 'rgba(184, 74, 66, 0.22)',
+  },
+  quickDeleteText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: colors.error,
+  },
+  editBubble: {
+    minWidth: 220,
     gap: spacing.xs,
-    marginTop: 2,
   },
   editInput: {
     backgroundColor: '#FFFFFF',
@@ -425,7 +616,7 @@ const styles = StyleSheet.create({
   },
   smallGhostBtn: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: radius.pill,
   },
   smallGhostText: {
@@ -435,7 +626,7 @@ const styles = StyleSheet.create({
   },
   smallSaveBtn: {
     paddingHorizontal: spacing.md,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.accent,
   },
@@ -448,11 +639,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingTop: spacing.xs,
   },
   input: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 40,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
@@ -463,9 +653,9 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#9E7F60',
     alignItems: 'center',
     justifyContent: 'center',

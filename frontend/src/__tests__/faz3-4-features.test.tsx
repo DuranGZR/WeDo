@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import * as Calendar from 'expo-calendar';
-import { Linking } from 'react-native';
+import { Alert, Linking } from 'react-native';
 
 import { buildQrSvgPath } from '@/components/invite/InviteQrSheet';
 import { ItemCard } from '@/components/domain/ItemCard';
@@ -37,7 +37,7 @@ let mockPlansList = [
     timezone: 'Europe/Istanbul',
     note: null as string | null,
     reminder_minutes_before: 60,
-    status: 'proposed',
+    status: 'approved',
     created_by: 'u2',
     created_at: '2026-11-26T10:00:00Z',
     updated_at: '2026-11-26T10:00:00Z',
@@ -149,7 +149,7 @@ describe('Phase 3 & 4 UX utilities and components', () => {
     expect(result?.path).toContain('M');
   });
 
-  it('renders UpcomingPlansSection with approve and calendar triggers', async () => {
+  it('renders UpcomingPlansSection directly as planned with edit, cancel, and complete actions', async () => {
     const client = new QueryClient();
     const ui = render(
       <QueryClientProvider client={client}>
@@ -164,7 +164,7 @@ describe('Phase 3 & 4 UX utilities and components', () => {
                 title: 'Moda Sahil Kahve',
                 created_by: 'u2',
                 created_by_name: 'Can',
-                status: 'open',
+                status: 'planned',
                 created_at: '2026-11-26T10:00:00Z',
               } as never,
             ]}
@@ -175,23 +175,32 @@ describe('Phase 3 & 4 UX utilities and components', () => {
 
     expect(ui.getByText('Yaklaşan planlar')).toBeTruthy();
     expect(ui.getByText('Moda Sahil Kahve')).toBeTruthy();
+    expect(ui.getByText('Planlandı')).toBeTruthy();
+    expect(ui.queryByText('Onay bekliyor')).toBeNull();
+    expect(ui.queryByText('Onayla')).toBeNull();
+    expect(ui.queryByText('Reddet')).toBeNull();
 
-    fireEvent.press(ui.getByText('Onayla'));
+    fireEvent.press(ui.getByText('Tamamlandı'));
     await waitFor(() => {
       expect(mockPlanActionMutate).toHaveBeenCalledWith(
-        { planId: 'plan-1', action: 'approve' },
+        { planId: 'plan-1', action: 'complete' },
         expect.any(Object),
       );
     });
+
+    fireEvent.press(ui.getByRole('button', { name: 'Düzenle · Moda Sahil Kahve' }));
+    await waitFor(() => {
+      expect(ui.getByText('Planı düzenle')).toBeTruthy();
+    });
   });
 
-  it('shows cancel button for own proposed plan and renders planned pill on ItemCard', async () => {
+  it('shows cancel, complete, and planned status on UpcomingPlansSection and ItemCard without approval gate', async () => {
     mockPlansList = [
       {
         ...mockPlansList[0]!,
         id: 'plan-own',
         created_by: 'u1',
-        status: 'proposed',
+        status: 'approved',
       },
     ];
     const plannedItem: Item = {
@@ -226,9 +235,9 @@ describe('Phase 3 & 4 UX utilities and components', () => {
       </QueryClientProvider>,
     );
 
-    expect(ui.queryByText('Tamamlandı')).toBeNull();
+    expect(ui.getByText('Tamamlandı')).toBeTruthy();
     expect(ui.getByText('İptal et')).toBeTruthy();
-    expect(ui.getByText('Planlandı')).toBeTruthy();
+    expect(ui.getAllByText('Planlandı').length).toBeGreaterThanOrEqual(2);
 
     fireEvent.press(ui.getByText('İptal et'));
     await waitFor(() => {
@@ -304,5 +313,44 @@ describe('Phase 3 & 4 UX utilities and components', () => {
         }),
       );
     });
+  });
+
+  it('opens calendar provider options alert when pressing compact Takvime ekle link on UpcomingPlansSection', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const client = new QueryClient();
+    const ui = render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <UpcomingPlansSection
+            spaceId="space-1"
+            items={[
+              {
+                id: 'item-1',
+                space_id: 'space-1',
+                list_id: 'list-1',
+                title: 'Moda Sahil Kahve',
+                created_by: 'u2',
+                created_by_name: 'Can',
+                status: 'planned',
+                created_at: '2026-11-26T10:00:00Z',
+              } as never,
+            ]}
+          />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(ui.queryByText('Google Takvim')).toBeNull();
+    fireEvent.press(ui.getByRole('button', { name: 'Takvime ekle' }));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Takvime ekle',
+      undefined,
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Cihaz Takvimi' }),
+        expect.objectContaining({ text: 'Google Takvim' }),
+      ]),
+    );
+    alertSpy.mockRestore();
   });
 });
