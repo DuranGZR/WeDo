@@ -35,6 +35,9 @@ LEGACY_MESSAGES = {
         "message.someoneReactedToASavedItemInYourShared",
     ),
     "plan_reminder": ("message.planReminder", "message.youHaveAnUpcomingPlan"),
+    "plan_proposed": ("message.newPlanProposed", "message.someoneProposedAPlan"),
+    "plan_approved": ("message.planApprovedTitle", "message.partnerApprovedYourPlan"),
+    "plan_rejected": ("message.planRejectedTitle", "message.partnerRejectedYourPlan"),
 }
 
 

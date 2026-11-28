@@ -10,12 +10,17 @@ from app.modules.comments.models import Comment
 from app.modules.comments.repository import comment_repository
 from app.modules.comments.schemas import CommentCreate, CommentResponse, CommentUpdate
 from app.modules.items.service import get_item
-from app.modules.notifications.service import notify_space_members
+from app.modules.notifications.service import (
+    dispatch_pending_pushes,
+    notify_space_members,
+)
+from app.modules.safety.policy import check_content
 
 
 def create_comment(
     session: Session, item_id: UUID, user_id: UUID, data: CommentCreate
 ) -> CommentResponse:
+    check_content(data.body)
     item = get_item(session, item_id)
     comment = Comment(item_id=item_id, user_id=user_id, body=data.body.strip())
     session.add(comment)
@@ -27,6 +32,7 @@ def create_comment(
         activity_type="comment_created",
         entity_type="comment",
         entity_id=comment.id,
+        payload={"item_id": str(item.id)},
     )
     notify_space_members(
         session,
@@ -38,6 +44,7 @@ def create_comment(
         data={"item_id": str(item.id), "comment_id": str(comment.id)},
     )
     session.commit()
+    dispatch_pending_pushes(session)
     return CommentResponse.model_validate(comment, from_attributes=True)
 
 
@@ -51,6 +58,7 @@ def list_comments(session: Session, item_id: UUID) -> list[CommentResponse]:
 def update_comment(
     session: Session, comment_id: UUID, user_id: UUID, data: CommentUpdate
 ) -> CommentResponse:
+    check_content(data.body)
     comment = comment_repository.get_by_id(session, comment_id)
     if comment is None:
         raise HTTPException(status_code=404, detail=message("message.commentNotFound"))

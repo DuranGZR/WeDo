@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.localization import message
+from app.modules.activities.service import record_activity
 from app.modules.items.enums import ItemStatus, MetadataStatus
 from app.modules.items.models import Item
 from app.modules.items.previews import preview_path, signed_preview_url
@@ -88,6 +89,15 @@ def create_item(session: Session, user_id: UUID, data: ItemCreate) -> ItemRespon
             else MetadataStatus.NOT_AVAILABLE,
         ),
     )
+    record_activity(
+        session,
+        space_id=item.space_id,
+        actor_id=user_id,
+        activity_type="item_created",
+        entity_type="item",
+        entity_id=item.id,
+        payload={"item_id": str(item.id)},
+    )
     notify_space_members(
         session,
         space_id=item.space_id,
@@ -124,7 +134,16 @@ def update_item(
     if data.title is not None:
         item.title = data.title.strip()
     if data.description is not None:
-        item.description = data.description
+        item.description = data.description.strip() or None
+    record_activity(
+        session,
+        space_id=item.space_id,
+        actor_id=viewer_id,
+        activity_type="item_updated",
+        entity_type="item",
+        entity_id=item.id,
+        payload={"item_id": str(item.id)},
+    )
     session.commit()
     return response_for_item(session, item, viewer_id)
 
@@ -139,13 +158,32 @@ def move_item(
             status_code=404, detail=message("message.destinationListNotFound")
         )
     item.list_id = data.list_id
+    record_activity(
+        session,
+        space_id=item.space_id,
+        actor_id=viewer_id,
+        activity_type="item_moved",
+        entity_type="item",
+        entity_id=item.id,
+        payload={"item_id": str(item.id), "list_id": str(data.list_id)},
+    )
     session.commit()
     return response_for_item(session, item, viewer_id)
 
 
-def delete_item(session: Session, item_id: UUID) -> None:
+def delete_item(session: Session, item_id: UUID, viewer_id: UUID | None = None) -> None:
     item = get_item(session, item_id)
     item.deleted_at = datetime.now(UTC)
+    if viewer_id is not None:
+        record_activity(
+            session,
+            space_id=item.space_id,
+            actor_id=viewer_id,
+            activity_type="item_deleted",
+            entity_type="item",
+            entity_id=item.id,
+            payload={"item_id": str(item.id)},
+        )
     session.commit()
 
 
@@ -153,6 +191,15 @@ def complete_item(session: Session, item_id: UUID, viewer_id: UUID) -> ItemRespo
     item = get_item(session, item_id)
     item.status = ItemStatus.COMPLETED
     item.completed_at = datetime.now(UTC)
+    record_activity(
+        session,
+        space_id=item.space_id,
+        actor_id=viewer_id,
+        activity_type="item_completed",
+        entity_type="item",
+        entity_id=item.id,
+        payload={"item_id": str(item.id)},
+    )
     session.commit()
     return response_for_item(session, item, viewer_id)
 
@@ -161,5 +208,14 @@ def restore_item(session: Session, item_id: UUID, viewer_id: UUID) -> ItemRespon
     item = get_item(session, item_id)
     item.status = ItemStatus.NEW
     item.completed_at = None
+    record_activity(
+        session,
+        space_id=item.space_id,
+        actor_id=viewer_id,
+        activity_type="item_restored",
+        entity_type="item",
+        entity_id=item.id,
+        payload={"item_id": str(item.id)},
+    )
     session.commit()
     return response_for_item(session, item, viewer_id)

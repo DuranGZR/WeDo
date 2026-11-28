@@ -102,7 +102,9 @@ def test_invalid_requests_do_not_send_email(auth_client, mail, payload):
 
 
 def test_request_does_not_delete_account_or_reveal_membership(auth_client, mail):
-    verified_sign_up(auth_client, "/api/v1/auth/sign-up",
+    verified_sign_up(
+        auth_client,
+        "/api/v1/auth/sign-up",
         json={
             "email": "user@example.com",
             "password": "Correct-horse-battery-staple1",

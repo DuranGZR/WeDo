@@ -11,6 +11,7 @@ from app.modules.plans.service import (
     change_status,
     create_plan,
     get_plan,
+    get_plan_response,
     list_plans,
     update_plan,
 )
@@ -45,7 +46,7 @@ def get_plan_endpoint(
 ) -> PlanResponse:
     plan = get_plan(session, plan_id)
     get_space_member(session, plan.space_id, current_user.id)
-    return PlanResponse.model_validate(plan, from_attributes=True)
+    return get_plan_response(session, plan_id)
 
 
 @router.patch("/plans/{plan_id}", response_model=PlanResponse)
@@ -54,7 +55,7 @@ def update_plan_endpoint(
 ) -> PlanResponse:
     plan = get_plan(session, plan_id)
     get_space_member(session, plan.space_id, current_user.id)
-    return update_plan(session, plan_id, data)
+    return update_plan(session, plan_id, data, actor_id=current_user.id)
 
 
 def _change(

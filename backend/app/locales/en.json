@@ -176,5 +176,19 @@
   "web.reportAndBlockPolicy": "Use the report button on item details or Members and safety, or the form under Settings > Help. Our team reviews reports within 24 hours; objectionable content is removed and offending accounts may be suspended. You can also contact contact@durangezer.com. You can block a user from Members and safety or an item detail screen. The blocked person is removed from shared spaces you own; you leave shared spaces you do not own. Previously saved content remains in those spaces. You cannot rejoin the same space while a block is active. Remove blocks under Settings > Blocked users; previous memberships are not restored automatically.",
   "web.updated20October2026": "20 October 2026",
   "members.chooseSuccessor": "Choose an active member of this space as the next owner before leaving.",
-  "members.onlyOwnerTransfers": "Only the owner can transfer ownership."
+  "members.onlyOwnerTransfers": "Only the owner can transfer ownership.",
+  "activity.item_created": "Item saved",
+  "activity.item_updated": "Item updated",
+  "activity.item_moved": "Moved to another list",
+  "activity.item_completed": "Marked as done",
+  "activity.item_restored": "Moved back to open",
+  "activity.item_deleted": "Item deleted",
+  "activity.plan_updated": "Plan updated",
+  "activity.plan_rejected": "Plan declined",
+  "message.newPlanProposed": "New date plan proposed",
+  "message.someoneProposedAPlan": "A new date plan was proposed for a saved item.",
+  "message.planApprovedTitle": "Plan approved",
+  "message.partnerApprovedYourPlan": "Your partner approved the proposed date plan.",
+  "message.planRejectedTitle": "Plan declined",
+  "message.partnerRejectedYourPlan": "Your partner declined the proposed date plan."
 }

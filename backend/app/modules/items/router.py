@@ -128,7 +128,7 @@ def delete_item_endpoint(
     item_id: UUID, session: SessionDep, current_user: CurrentUserDep
 ) -> None:
     _check_item_access(session, item_id, current_user.id)
-    delete_item(session, item_id)
+    delete_item(session, item_id, current_user.id)
 
 
 @router.post("/items/{item_id}/move", response_model=ItemResponse)
